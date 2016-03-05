@@ -3,6 +3,7 @@
 *.lo
 *.o
 *.obj
+*.sdf
 
 # Precompiled Headers
 *.gch
@@ -26,3 +27,8 @@
 *.exe
 *.out
 *.app
+
+# Visual Studio settings and build product folders
+Debug
+Release
+.vs
