@@ -47,3 +47,25 @@ SCENARIO("Adding nodes to the tree", "[treeConstruction]")
       }
    }
 }
+
+TEST_CASE()
+{
+   Tree<std::string> tree{ "F" };
+   tree.GetHead()->AppendChild("B")->AppendChild("A");
+   tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
+   tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+
+   SECTION("Pre-order Traversal")
+   {
+      // @todo
+   }
+   SECTION("In-order Traversal")
+   {
+      // @todo
+   }
+   SECTION("Post-order Traversal")
+   {
+      // @todo
+   }
+}
