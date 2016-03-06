@@ -5,6 +5,8 @@
 
 #include "../Tree/Tree.hpp"
 
+#include <algorithm>
+
 SCENARIO("Adding nodes to the tree", "[treeConstruction]")
 {
    GIVEN("a tree with only a head node")
@@ -48,7 +50,47 @@ SCENARIO("Adding nodes to the tree", "[treeConstruction]")
    }
 }
 
-TEST_CASE()
+TEST_CASE("TreeNode Construction")
+{
+   TreeNode<std::string> node{ "Bar" };
+
+   SECTION("Default Construction")
+   {
+      TreeNode<std::string> default{};
+      const std::string emptyString;
+
+      REQUIRE(default.GetChildCount() == 0);
+      REQUIRE(default.GetFirstChild() == nullptr);
+      REQUIRE(default.GetLastChild() == nullptr);
+      REQUIRE(default.GetParent() == nullptr);
+      REQUIRE(default.GetNextSibling() == nullptr);
+      REQUIRE(default.GetPreviousSibling() == nullptr);
+      REQUIRE(default.GetData() == emptyString);
+   }
+   SECTION("Copy Construction")
+   {
+      TreeNode<std::string> copy{ node };
+
+      REQUIRE(copy.GetData() == node.GetData());
+      REQUIRE(&copy.GetData() != &node.GetData());
+   }
+}
+
+TEST_CASE("TreeNode Alterations")
+{
+   TreeNode<std::string> node{ "Bar" };
+   REQUIRE(node.GetData() == "Bar");
+
+   SECTION("Altering Data")
+   {
+      auto& data = node.GetData();
+      std::transform(std::begin(data), std::end(data), std::begin(data), ::toupper);
+
+      REQUIRE(node.GetData() == "BAR");
+   }
+}
+
+TEST_CASE("Pre-, In-, and Post-Order Traversal of Simple Binary Tree")
 {
    Tree<std::string> tree{ "F" };
    tree.GetHead()->AppendChild("B")->AppendChild("A");
@@ -56,8 +98,13 @@ TEST_CASE()
    tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
    tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
 
-   SECTION("Pre-order Traversal")
+   SECTION("Node Count")
    {
+      REQUIRE(tree.Size() == 9);
+      //REQUIRE(Tree<std::string>::Depth(*tree.GetHead()) == 0);
+   }
+   SECTION("Pre-order Traversal")
+   {///
       // @todo
    }
    SECTION("In-order Traversal")
