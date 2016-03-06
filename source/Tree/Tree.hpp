@@ -10,7 +10,7 @@ template<typename DataType> class Tree;
 template<typename DataType> class TreeNode;
 
 /**
-* @returns True if the data encapsulated in the left-hand side TreeNode is of lesser value that
+* @returns True if the data encapsulated in the left-hand side TreeNode is less than
 * the data encapsulated in the right-hand side TreeNode.
 */
 template<typename DataType>
@@ -114,7 +114,7 @@ public:
    /**
    * @brief TreeNode performs a shallow copy-construction of the specified TreeNode.
    */
-   explicit TreeNode(const TreeNode<DataType>& other) :
+   TreeNode(const TreeNode<DataType>& other) :
       m_parent(other.m_parent),
       m_firstChild(other.m_firstChild),
       m_lastChild(other.m_lastChild),
@@ -641,6 +641,12 @@ public:
    class ReversePostOrderIterator;
    class LeafIterator;
 
+   // Typedefs needed for STL compliance:
+   typedef TreeNode<DataType>                value_type;
+   typedef TreeNode<DataType>*               pointer;
+   typedef TreeNode<DataType>&               reference;
+   typedef const TreeNode<DataType>&         const_reference;
+
    /**
    * @brief Tree constructs a new Tree with the provided data encapsulated in a new
    * TreeNode.
@@ -687,13 +693,10 @@ public:
    *
    * @returns The total number of nodes in the Tree (both leaf and non-leaf).
    */
-   unsigned int Size() const
+   size_t Size() const
    {
       return std::count_if(std::begin(*this), std::end(*this),
-         [](const TreeNode<DataType>&)
-      {
-         return true;
-      });
+         [] (const_reference) { return true; });
    }
 
    /**
@@ -706,12 +709,11 @@ public:
    * @returns The total number of nodes (both leaf and branching) in the tree, starting at the
    * passed in node.
    */
-   static unsigned int Size(const TreeNode<DataType>& node)
+   size_t Size(const TreeNode<DataType>& node)
    {
       unsigned int count = 0;
 
-      Tree<DataType>::PostOrderIterator itr = 
-         Tree<DataType>::PostOrderIterator(std::make_shared<TreeNode<DataType>>(node));
+      auto itr = PostOrderIterator(std::make_shared<TreeNode<DataType>>(node));
       for (++itr; itr && &*itr != &node; ++itr)
       {
          count++;
@@ -935,6 +937,22 @@ public:
    }
 
    /**
+   * @returns A pointer to the TreeNode.
+   */
+   TreeNode<DataType>* operator&()
+   {
+      return m_currentNode.get();
+   }
+
+   /**
+   * @overload
+   */
+   const TreeNode<DataType>* operator&() const
+   {
+      return m_currentNode.get();
+   }
+
+   /**
    * @returns A pointer to the TreeNode pointed to by the Tree:Iterator.
    */
    TreeNode<DataType>* operator->()
@@ -951,7 +969,23 @@ public:
    }
 
    /**
-   *
+   * @returns True if the Iterator points to the same node as the other Iterator.
+   */
+   bool operator==(const Iterator& other) const
+   {
+      return m_currentNode == other.m_currentNode;
+   }
+
+   /**
+   * @returns True if the Iterator points to the same node as the other Iterator.
+   */
+   bool operator!=(const Iterator& other) const
+   {
+      return m_currentNode != other.m_currentNode;
+   }
+
+   /**
+   * @todo Would it make more sense to have this iterate over child TreeNodes.
    */
    typename Tree::SiblingIterator begin() const
    {
@@ -967,7 +1001,7 @@ public:
    }
 
    /**
-   *
+   * @todo Would it make more sense to have this iterate over child TreeNodes.
    */
    typename Tree::SiblingIterator end() const
    {
@@ -975,22 +1009,6 @@ public:
       iterator.m_parent = m_currentNode;
 
       return iterator;
-   }
-
-   /**
-   *
-   */
-   bool operator==(const Iterator& other) const
-   {
-      return m_currentNode == other.m_currentNode;
-   }
-
-   /**
-   *
-   */
-   bool operator!=(const Iterator& other) const
-   {
-      return m_currentNode != other.m_currentNode;
    }
 
 protected:

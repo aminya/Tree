@@ -90,7 +90,7 @@ TEST_CASE("TreeNode Alterations")
    }
 }
 
-TEST_CASE("Pre-, In-, and Post-Order Traversal of Simple Binary Tree")
+TEST_CASE("Forward Pre- and Post-Order Traversal of Simple Binary Tree")
 {
    Tree<std::string> tree{ "F" };
    tree.GetHead()->AppendChild("B")->AppendChild("A");
@@ -101,18 +101,96 @@ TEST_CASE("Pre-, In-, and Post-Order Traversal of Simple Binary Tree")
    SECTION("Node Count")
    {
       REQUIRE(tree.Size() == 9);
-      //REQUIRE(Tree<std::string>::Depth(*tree.GetHead()) == 0);
+      REQUIRE(Tree<std::string>::Depth(*tree.GetHead()) == 0);
    }
    SECTION("Pre-order Traversal")
-   {///
-      // @todo
-   }
-   SECTION("In-order Traversal")
    {
-      // @todo
+      const std::vector<std::string> expectedTraversal =
+         { "F", "B", "A", "D", "C", "E", "G", "I", "H" };
+
+      int index = 0;
+
+      bool traversalError = false;
+      for (auto itr = tree.beginPreOrder(); itr != tree.endPreOrder(); ++itr)
+      {
+         if (itr->GetData() != expectedTraversal[index++])
+         {
+            traversalError = true;
+            break;
+         }
+      }
+
+      REQUIRE(traversalError == false);
+      REQUIRE(index == expectedTraversal.size());
    }
    SECTION("Post-order Traversal")
    {
-      // @todo
+      const std::vector<std::string> expectedTraversal =
+         { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
+
+      int index = 0;
+
+      bool traversalError = false;
+      for (auto itr = tree.begin(); itr != tree.end(); ++itr)
+      {
+         if (itr->GetData() != expectedTraversal[index++])
+         {
+            traversalError = true;
+            break;
+         }
+      }
+
+      REQUIRE(traversalError == false);
+      REQUIRE(index == expectedTraversal.size());
+   }
+}
+
+TEST_CASE("STL Compliance")
+{
+   Tree<std::string> tree{ "F" };
+   tree.GetHead()->AppendChild("B")->AppendChild("A");
+   tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
+   tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+
+   SECTION("Standard Algorithms and Parameter Passing by value_type")
+   {
+      const size_t count = std::count_if(std::begin(tree), std::end(tree), 
+         [](Tree<std::string>::value_type node)
+      {
+         return (node.GetData() == "A");
+      });
+
+      REQUIRE(count == 1);
+   }
+   //SECTION("Standard Algorithms and Parameter Passing by pointer")
+   //{
+   //   const size_t count = std::count_if(std::begin(tree), std::end(tree),
+   //      [](Tree<std::string>::pointer node)
+   //   {
+   //      return (node->GetData() == "B");
+   //   });
+
+   //   REQUIRE(count == 1);
+   //}
+   SECTION("Standard Algorithms and Parameter Passing by reference")
+   {
+      const size_t count = std::count_if(std::begin(tree), std::end(tree),
+         [](Tree<std::string>::reference node)
+      {
+         return (node.GetData() == "C");
+      });
+
+      REQUIRE(count == 1);
+   }
+   SECTION("Standard Algorithms and Parameter Passing by const_reference")
+   {
+      const size_t count = std::count_if(std::begin(tree), std::end(tree),
+         [](Tree<std::string>::const_reference node)
+      {
+         return (node.GetData() == "D");
+      });
+
+      REQUIRE(count == 1);
    }
 }
