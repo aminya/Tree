@@ -83,7 +83,7 @@ public:
    * @brief TreeNode default constructs a new TreeNode. All outgoing links from this new node will
    * initialized to a nullptr.
    */
-   explicit TreeNode() :
+   TreeNode() :
       m_parent(nullptr),
       m_firstChild(nullptr),
       m_lastChild(nullptr),
@@ -99,7 +99,7 @@ public:
    * @brief TreeNode constructs a new TreeNode encapsulating the specified data. All outgoing links
    * from the node will be initialized to nullptr.
    */
-   explicit TreeNode(DataType data) :
+   TreeNode(DataType data) :
       m_parent(nullptr),
       m_firstChild(nullptr),
       m_lastChild(nullptr),
@@ -210,7 +210,7 @@ public:
    */
    std::shared_ptr<TreeNode<DataType>> PrependChild(const DataType& data)
    {
-      const auto newNode = std::make_shared<TreeNode<DataType>>(data);
+      auto newNode = std::make_shared<TreeNode<DataType>>(data);
       return AppendChild(newNode);
    }
 
@@ -268,7 +268,7 @@ public:
    */
    std::shared_ptr<TreeNode<DataType>> AppendChild(const DataType& data)
    {
-      const auto newNode = std::make_shared<TreeNode<DataType>>(data);
+      auto newNode = std::make_shared<TreeNode<DataType>>(data);
       return AppendChild(newNode);
    }
 
@@ -638,12 +638,10 @@ public:
    class SiblingIterator;
    class PreOrderIterator;
    class PostOrderIterator;
-   class ReversePostOrderIterator;
    class LeafIterator;
 
    // Typedefs needed for STL compliance:
    typedef TreeNode<DataType>                value_type;
-   typedef TreeNode<DataType>*               pointer;
    typedef TreeNode<DataType>&               reference;
    typedef const TreeNode<DataType>&         const_reference;
 
@@ -747,9 +745,9 @@ public:
    * @param[in] printer             A function (or lambda) that returns the std::wstrig to be
    *                                printed.
    */
-   static void Print(TreeNode<DataType>& node, std::function<std::wstring(const DataType&)> printer)
+   static void Print(TreeNode<DataType>& node, std::function<std::wstring (const DataType&)> printer)
    {
-      Tree<DataType>::PreOrderIterator itr = Tree<DataType>::PreOrderIterator(std::make_shared<TreeNode<DataType>>(node));
+      auto itr = Tree<DataType>::PreOrderIterator(std::make_shared<TreeNode<DataType>>(node));
       while (&*itr != &node)
       {
          if (&*itr == nullptr)
@@ -776,7 +774,8 @@ public:
    */
    typename Tree::SiblingIterator beginSibling(const std::shared_ptr<TreeNode<DataType>> node) const
    {
-      return Tree<DataType>::SiblingIterator(node);
+      const auto iterator = Tree<DataType>::SiblingIterator(node);
+      return iterator;
    }
 
    /**
@@ -800,9 +799,7 @@ public:
    */
    typename Tree::PreOrderIterator beginPreOrder() const
    {
-      auto iterator = Tree<DataType>::PreOrderIterator(m_head);
-      iterator.m_head = m_head;
-
+      const auto iterator = Tree<DataType>::PreOrderIterator(m_head);
       return iterator;
    }
 
@@ -811,9 +808,7 @@ public:
    */
    typename Tree::PreOrderIterator endPreOrder() const
    {
-      auto iterator = Tree<DataType>::PreOrderIterator();
-      iterator.m_head = m_head;
-
+      const auto iterator = Tree<DataType>::PreOrderIterator(nullptr);
       return iterator;
    }
 
@@ -824,8 +819,6 @@ public:
    typename Tree::PostOrderIterator begin() const
    {
       auto iterator = Tree<DataType>::PostOrderIterator(m_head);
-      iterator.m_head = m_head;
-
       return ++iterator;
    }
 
@@ -834,32 +827,7 @@ public:
    */
    typename Tree::PostOrderIterator end() const
    {
-      auto iterator = Tree<DataType>::PostOrderIterator();
-      iterator.m_head = m_head;
-
-      return iterator;
-   }
-
-   /**
-   * @returns An iterator that will iterate over the Tree in reverse post-order fashion, ending
-   * at the head node.
-   */
-   typename Tree::ReversePostOrderIterator rbegin() const
-   {
-      auto iterator = Tree<DataType>::ReversePostOrderIterator(m_head);
-      iterator.m_head = m_head;
-
-      return iterator;
-   }
-
-   /**
-   * @returns An reverse post order iterator that points past the end of the iteration cycle.
-   */
-   typename Tree::ReversePostOrderIterator rend() const
-   {
-      auto iterator = Tree<DataType>::ReversePostOrderIterator();
-      iterator.m_head = m_head;
-
+      const auto iterator = Tree<DataType>::PostOrderIterator(nullptr);
       return iterator;
    }
 
@@ -870,8 +838,6 @@ public:
    typename Tree::LeafIterator beginLeaf() const
    {
       auto iterator = Tree<DataType>::LeafIterator(m_head);
-      iterator.m_head = m_head;
-
       return ++iterator;
    }
 
@@ -880,9 +846,7 @@ public:
    */
    typename Tree::LeafIterator endLeaf() const
    {
-      auto iterator = Tree<DataType>::LeafIterator();
-      iterator.m_head = m_head;
-
+      const auto iterator = Tree<DataType>::LeafIterator(nullptr);
       return iterator;
    }
 
@@ -984,75 +948,38 @@ public:
       return m_currentNode != other.m_currentNode;
    }
 
-   /**
-   * @todo Would it make more sense to have this iterate over child TreeNodes.
-   */
-   typename Tree::SiblingIterator begin() const
-   {
-      if (m_currentNode && !m_currentNode->m_firstChild)
-      {
-         return end();
-      }
-
-      Tree<DataType>::SiblingIterator iterator(m_currentNode->m_firstChild);
-      iterator.m_parent = m_currentNode;
-
-      return iterator;
-   }
-
-   /**
-   * @todo Would it make more sense to have this iterate over child TreeNodes.
-   */
-   typename Tree::SiblingIterator end() const
-   {
-      Tree<DataType>::SiblingIterator iterator(nullptr);
-      iterator.m_parent = m_currentNode;
-
-      return iterator;
-   }
-
 protected:
 
    /**
-   *
+   * Default constructor.
    */
    explicit Iterator() :
       m_currentNode(nullptr),
-      m_head(nullptr)
+      m_startingNode(nullptr),
+      m_endingNode(nullptr)
    {
    }
-
+   
    /**
-   *
+   * Copy constructor.
    */
    explicit Iterator(const Iterator& other) :
       m_currentNode(other.m_currentNode),
-      m_head(other.m_head)
+      m_startingNode(other.m_startingNode),
+      m_endingNode(other.m_endingNode)
    {
    }
 
-   /**
-   *
-   */
    explicit Iterator(std::shared_ptr<TreeNode<DataType>> node) :
       m_currentNode(node),
-      m_head(nullptr)
-   {
-   }
-
-   /**
-   *
-   */
-   explicit Iterator(
-      std::shared_ptr<TreeNode<DataType>> node,
-      std::shared_ptr<TreeNode<DataType>> head) :
-      m_currentNode(node),
-      m_head(head)
+      m_startingNode(node),
+      m_endingNode(nullptr)
    {
    }
 
    std::shared_ptr<TreeNode<DataType>> m_currentNode;
-   std::shared_ptr<TreeNode<DataType>> m_head;
+   std::shared_ptr<TreeNode<DataType>> m_startingNode;
+   std::shared_ptr<TreeNode<DataType>> m_endingNode;
 };
 
 /**
@@ -1063,19 +990,18 @@ class Tree<DataType>::SiblingIterator : public Tree<DataType>::Iterator
 {
 public:
    /**
-   *
+   * Default constructor.
    */
-   explicit SiblingIterator()
-      : Iterator()
+   explicit SiblingIterator() :
+      Iterator()
    {
    }
 
    /**
-   *
+   * Copy constructor.
    */
    explicit SiblingIterator(const Iterator& other) :
-      m_currentNode(other.m_currentNode),
-      m_head(other.m_head)
+      Iterator(other)
    {
    }
 
@@ -1088,18 +1014,7 @@ public:
    }
 
    /**
-   *
-   */
-   typename Tree::SiblingIterator operator++(int)
-   {
-      auto result = *this;
-      ++(*this);
-
-      return result;
-   }
-
-   /**
-   *
+   * Prefix increment operator.
    */
    typename Tree::SiblingIterator& operator++()
    {
@@ -1112,18 +1027,18 @@ public:
    }
 
    /**
-   *
+   * Postfix increment operator.
    */
-   typename Tree::SiblingIterator operator--(int)
+   typename Tree::SiblingIterator operator++(int)
    {
-      auto result = *this;
-      --(*this);
+      const auto result = *this;
+      ++(*this);
 
       return result;
    }
 
    /**
-   *
+   * Prefix decrement operator.
    */
    typename Tree::SiblingIterator& operator--()
    {
@@ -1137,7 +1052,7 @@ public:
          {
             // If no parent exists, then the node in question must be the one "past" the head,
             // so decrementing from there should return the head node:
-            m_currentNode = m_head;
+            m_currentNode = m_startingNode;
          }
       }
       else
@@ -1146,6 +1061,17 @@ public:
       }
 
       return *this;
+   }
+
+   /**
+   * Postfix decrement operator.
+   */
+   typename Tree::SiblingIterator operator--(int)
+   {
+      const auto result = *this;
+      --(*this);
+
+      return result;
    }
 
 private:
@@ -1160,7 +1086,7 @@ class Tree<DataType>::PreOrderIterator : public Tree<DataType>::Iterator
 {
 public:
    /**
-   *
+   * Default constructor.
    */
    explicit PreOrderIterator() :
       Iterator()
@@ -1168,119 +1094,118 @@ public:
    }
 
    /**
-   *
+   * Copy constructor.
    */
    explicit PreOrderIterator(const Iterator& other) :
-      m_currentNode(other.m_currentNode),
-      m_head(other.m_head)
+      Iterator(other)
    {
    }
 
    /**
-   *
+   * Constructs an iterator that starts and ends at the specified node.
    */
    explicit PreOrderIterator(std::shared_ptr<TreeNode<DataType>> node) :
       Iterator(node)
    {
+      m_endingNode = (node && node->GetNextSibling())
+         ? node->GetNextSibling()
+         : nullptr;
    }
 
    /**
-   *
+   * Prefix increment operator.
    */
-   explicit PreOrderIterator(
-      std::shared_ptr<TreeNode<DataType>> node,
-      std::shared_ptr<TreeNode<DataType>> head) :
-      Iterator(node, head)
+   typename Tree::PreOrderIterator& operator++()
    {
+      assert(m_currentNode);
+      auto traversingNode = m_currentNode;
+
+      if (traversingNode->HasChildren())
+      {
+         traversingNode = traversingNode->GetFirstChild();
+      }
+      else if (traversingNode->GetNextSibling())
+      {
+         traversingNode = traversingNode->GetNextSibling();
+      }
+      else
+      {
+         while (traversingNode->GetParent() && !traversingNode->GetParent()->GetNextSibling())
+         {
+            traversingNode = traversingNode->GetParent();
+         }
+
+         if (traversingNode->GetParent())
+         {
+            traversingNode = traversingNode->GetParent()->GetNextSibling();
+         }
+         else
+         {
+            traversingNode = nullptr;
+         }
+      }
+
+      m_currentNode = (traversingNode != m_endingNode) ? traversingNode : nullptr;
+      return *this;
    }
 
    /**
-   *
+   * Postfix increment operator.
    */
    typename Tree::PreOrderIterator operator++(int)
    {
-      auto result = *this;
+      const auto result = *this;
       ++(*this);
 
       return result;
    }
 
    /**
-   *
-   */
-   typename Tree::PreOrderIterator& operator++()
-   {
-      assert(m_currentNode);
-
-      if (m_currentNode->HasChildren())
-      {
-         m_currentNode = m_currentNode->GetFirstChild();
-      }
-      else if (m_currentNode->GetNextSibling())
-      {
-         m_currentNode = m_currentNode->GetNextSibling();
-      }
-      else
-      {
-         while (m_currentNode->GetParent() && !m_currentNode->GetParent()->GetNextSibling())
-         {
-            m_currentNode = m_currentNode->GetParent();
-         }
-
-         if (m_currentNode->GetParent())
-         {
-            m_currentNode = m_currentNode->GetParent()->GetNextSibling();
-         }
-         else
-         {
-            m_currentNode = nullptr;
-         }
-      }
-
-      return *this;
-   }
-
-   /**
-   *
+   * Prefix decrement operator.
    */
    typename Tree::PreOrderIterator operator--()
    {
-      if (!m_currentNode)
-      {
-         m_currentNode = m_head;
+      auto traversingNode = m_currentNode;
 
-         while (m_currentNode->GetLastChild())
+      if (!traversingNode)
+      {
+         traversingNode = m_startingNode;
+
+         while (traversingNode->GetLastChild())
          {
-            m_currentNode = m_currentNode->GetLastChild();
+            traversingNode = traversingNode->GetLastChild();
          }
       }
-      else if (m_currentNode->GetPreviousSibling())
+      else if (traversingNode->GetPreviousSibling())
       {
-         m_currentNode = m_currentNode->GetPreviousSibling();
+         traversingNode = traversingNode->GetPreviousSibling();
 
-         while (m_currentNode->GetLastChild())
+         while (traversingNode->GetLastChild())
          {
-            m_currentNode = m_currentNode->GetLastChild();
+            traversingNode = traversingNode->GetLastChild();
          }
       }
-      else if (m_currentNode->GetParent())
+      else if (traversingNode->GetParent())
       {
-         m_currentNode = m_currentNode->GetParent();
+         traversingNode = traversingNode->GetParent();
       }
       else
       {
-         m_currentNode = nullptr;
+         traversingNode = nullptr;
       }
 
+      // @todo Check against ending node.
+
+      m_currentNode = traversingNode;
       return *this;
    }
 
    /**
-   *
+   * Postfix decrement operator.
    */
    typename Tree::PreOrderIterator& operator--(int)
    {
-      auto result = *this;
+      const auto result = *this;
       --(*this);
 
       return result;
@@ -1295,7 +1220,7 @@ class Tree<DataType>::PostOrderIterator : public Tree<DataType>::Iterator
 {
 public:
    /**
-   *
+   * Default constructor.
    */
    explicit PostOrderIterator() :
       Iterator(),
@@ -1304,11 +1229,10 @@ public:
    }
 
    /**
-   *
+   * Copy constructor.
    */
    explicit PostOrderIterator(const Iterator& other) :
-      m_currentNode(other.m_currentNode),
-      m_head(other.m_head),
+      Iterator(other),
       m_traversingUpTheTree(false)
    {
    }
@@ -1323,235 +1247,106 @@ public:
    }
 
    /**
-   *
-   */
-   explicit PostOrderIterator(
-      std::shared_ptr<TreeNode<DataType>> node,
-      std::shared_ptr<TreeNode<DataType>> head) :
-      Iterator(node, head),
-      m_haveChildrenBeenVisited(false)
-   {
-   }
-
-   /**
-   *
-   */
-   typename Tree::PostOrderIterator operator++(int)
-   {
-      auto result = *this;
-      ++(*this);
-
-      return result;
-   }
-
-   /**
-   *
+   * Prefix increment operator.
    */
    typename Tree::PostOrderIterator& operator++()
    {
       assert(m_currentNode);
+      auto traversingNode = m_currentNode;
 
-      if (m_currentNode->HasChildren() && !m_traversingUpTheTree)
+      if (traversingNode->HasChildren() && !m_traversingUpTheTree)
       {
-         while (m_currentNode->GetFirstChild())
+         while (traversingNode->GetFirstChild())
          {
-            m_currentNode = m_currentNode->GetFirstChild();
+            traversingNode = traversingNode->GetFirstChild();
          }
       }
-      else if (m_currentNode->GetNextSibling())
+      else if (traversingNode->GetNextSibling())
       {
-         m_currentNode = m_currentNode->GetNextSibling();
+         m_traversingUpTheTree = false;
 
-         while (m_currentNode->HasChildren())
+         traversingNode = traversingNode->GetNextSibling();
+         while (traversingNode->HasChildren())
          {
-            m_currentNode = m_currentNode->GetFirstChild();
+            traversingNode = traversingNode->GetFirstChild();
          }
       }
       else
       {
          m_traversingUpTheTree = true;
 
-         m_currentNode = m_currentNode->GetParent();
+         traversingNode = traversingNode->GetParent();
       }
 
+      m_currentNode = traversingNode;
       return *this;
    }
 
    /**
-   *
+   * Postfix increment operator.
    */
-   typename Tree::PostOrderIterator operator--(int)
+   typename Tree::PostOrderIterator operator++(int)
    {
-      auto result = *this;
-      --(*this);
-
-      return result;
-   }
-
-   /**
-   *
-   */
-   typename Tree::PostOrderIterator& operator--()
-   {
-      // When the iterator is at the end(), then the next position should be the head:
-      if (!m_currentNode)
-      {
-         assert(m_currentNode);
-
-         m_currentNode = m_head;
-      }
-      else if (m_currentNode->HasChildren())
-      {
-         m_currentNode = m_currentNode->GetLastChild();
-      }
-      else if (m_currentNode->GetPreviousSibling())
-      {
-         m_currentNode = m_currentNode->GetPreviousSibling();
-      }
-      else if (m_currentNode->GetParent())
-      {
-         while (m_currentNode->GetParent() && !m_currentNode->GetParent()->GetPreviousSibling())
-         {
-            m_currentNode = m_currentNode->GetParent();
-         }
-
-         m_currentNode = m_currentNode->GetParent();
-
-         if (m_currentNode)
-         {
-            m_currentNode = m_currentNode->GetPreviousSibling();
-         }
-      }
-
-      return *this;
-   }
-
-private:
-   bool m_traversingUpTheTree;
-};
-
-/**
-* @brief The ReversePostOrderIterator class
-*/
-template<typename DataType>
-class Tree<DataType>::ReversePostOrderIterator : public Tree<DataType>::Iterator
-{
-public:
-   /**
-   *
-   */
-   explicit ReversePostOrderIterator() :
-      Iterator()
-   {
-   }
-
-   /**
-   *
-   */
-   explicit ReversePostOrderIterator(const Iterator& other) :
-      m_currentNode(other.m_currentNode),
-      m_head(other.m_head)
-   {
-   }
-
-   /**
-   *
-   */
-   explicit ReversePostOrderIterator(std::shared_ptr<TreeNode<DataType>> node) :
-      Iterator(node)
-   {
-   }
-
-   /**
-   *
-   */
-   typename Tree::ReversePostOrderIterator operator++(int)
-   {
-      auto result = *this;
+      const auto result = *this;
       ++(*this);
 
       return result;
    }
 
    /**
-   *
+   * Prefix decrement operator.
    */
-   typename Tree::ReversePostOrderIterator& operator++()
+   typename Tree::PostOrderIterator& operator--()
    {
+      auto traversingNode = m_currentNode;
+
       // When the iterator is at the end(), then the next position should be the head:
-      if (!m_currentNode)
+      if (!traversingNode)
       {
-         assert(m_head);
+         assert(traversingNode);
 
-         m_currentNode = m_head;
+         traversingNode = m_startingNode;
       }
-      else if (m_currentNode->HasChildren())
+      else if (traversingNode->HasChildren())
       {
-         m_currentNode = m_currentNode->GetLastChild();
+         traversingNode = traversingNode->GetLastChild();
       }
-      else if (m_currentNode->GetPreviousSibling())
+      else if (traversingNode->GetPreviousSibling())
       {
-         m_currentNode = m_currentNode->GetPreviousSibling();
+         traversingNode = traversingNode->GetPreviousSibling();
       }
-      else if (m_currentNode->GetParent())
+      else if (traversingNode->GetParent())
       {
-         while (m_currentNode->GetParent() && !m_currentNode->GetParent()->GetPreviousSibling())
+         while (traversingNode->GetParent() && !traversingNode->GetParent()->GetPreviousSibling())
          {
-            m_currentNode = m_currentNode->GetParent();
+            traversingNode = traversingNode->GetParent();
          }
 
-         m_currentNode = m_currentNode->GetParent();
+         traversingNode = traversingNode->GetParent();
 
-         if (m_currentNode)
+         if (traversingNode)
          {
-            m_currentNode = m_currentNode->GetPreviousSibling();
+            traversingNode = traversingNode->GetPreviousSibling();
          }
       }
 
+      m_currentNode = traversingNode;
       return *this;
    }
 
    /**
-   *
+   * Postfix decrement operator.
    */
-   typename Tree::ReversePostOrderIterator operator--(int)
+   typename Tree::PostOrderIterator operator--(int)
    {
-      auto result = *this;
+      const auto result = *this;
       --(*this);
 
       return result;
    }
 
-   /**
-   *
-   */
-   typename Tree::ReversePostOrderIterator& operator--()
-   {
-      assert(m_currentNode);
-
-      if (m_currentNode->HasChildren())
-      {
-         while (m_currentNode->GetFirstChild())
-         {
-            m_currentNode = m_currentNode->GetFirstChild();
-         }
-      }
-      else if (m_currentNode->GetNextSibling())
-      {
-         m_currentNode = m_currentNode->GetNextSibling();
-
-         while (m_currentNode->HasChildren())
-         {
-            m_currentNode = m_currentNode->GetFirstChild();
-         }
-      }
-      else
-      {
-         m_currentNode = m_currentNode->GetParent();
-      }
-
-      return *this;
-   }
+private:
+   bool m_traversingUpTheTree;
 };
 
 /**
@@ -1562,7 +1357,7 @@ class Tree<DataType>::LeafIterator : public Tree<DataType>::Iterator
 {
 public:
    /**
-   *
+   * Default constructor.
    */
    explicit LeafIterator() :
       Iterator()
@@ -1570,11 +1365,10 @@ public:
    }
 
    /**
-   *
+   * Copy constructor.
    */
    explicit LeafIterator(const Iterator& other) :
-      m_currentNode(other.m_currentNode),
-      m_head(other.m_head)
+      Iterator(other)
    {
    }
 
@@ -1587,125 +1381,131 @@ public:
    }
 
    /**
-   *
+   * Prefix increment operator.
+   */
+   typename Tree::LeafIterator& operator++()
+   {
+      assert(m_currentNode);
+      auto traversingNode = m_currentNode;
+
+      if (traversingNode->HasChildren())
+      {
+         while (traversingNode->GetFirstChild())
+         {
+            traversingNode = traversingNode->GetFirstChild();
+         }
+      }
+      else if (traversingNode->GetNextSibling())
+      {
+         traversingNode = traversingNode->GetNextSibling();
+
+         while (traversingNode->GetFirstChild())
+         {
+            traversingNode = traversingNode->GetFirstChild();
+         }
+      }
+      else if (traversingNode->GetParent())
+      {
+         while (traversingNode->GetParent() && !traversingNode->GetParent()->GetNextSibling())
+         {
+            traversingNode = traversingNode->GetParent();
+         }
+
+         if (traversingNode->GetParent())
+         {
+            traversingNode = traversingNode->GetParent()->GetNextSibling();
+
+            while (traversingNode->HasChildren())
+            {
+               traversingNode = m_currentNode->GetFirstChild();
+            }
+
+            return *this;
+         }
+
+         // Otherwise, the traversal is at the end:
+         traversingNode = nullptr;
+      }
+
+      m_currentNode = traversingNode;
+      return *this;
+   }
+
+   /**
+   * Postfix increment operator.
    */
    typename Tree::LeafIterator operator++(int)
    {
-      auto result = *this;
+      const auto result = *this;
       ++(*this);
 
       return result;
    }
 
    /**
-   *
-   */
-   typename Tree::LeafIterator& operator++()
-   {
-      assert(m_currentNode);
-
-      if (m_currentNode->HasChildren())
-      {
-         while (m_currentNode->GetFirstChild())
-         {
-            m_currentNode = m_currentNode->GetFirstChild();
-         }
-      }
-      else if (m_currentNode->GetNextSibling())
-      {
-         m_currentNode = m_currentNode->GetNextSibling();
-
-         while (m_currentNode->GetFirstChild())
-         {
-            m_currentNode = m_currentNode->GetFirstChild();
-         }
-      }
-      else if (m_currentNode->GetParent())
-      {
-         while (m_currentNode->GetParent() && !m_currentNode->GetParent()->GetNextSibling())
-         {
-            m_currentNode = m_currentNode->GetParent();
-         }
-
-         if (m_currentNode->GetParent())
-         {
-            m_currentNode = m_currentNode->GetParent()->GetNextSibling();
-
-            while (m_currentNode->HasChildren())
-            {
-               m_currentNode = m_currentNode->GetFirstChild();
-            }
-
-            return *this;
-         }
-
-         // Otherwise, the traversal is at the end:
-         m_currentNode = nullptr;
-      }
-
-      return *this;
-   }
-
-   /**
-   *
-   */
-   typename Tree::LeafIterator operator--(int)
-   {
-      auto result = *this;
-      --(*this);
-
-      return result;
-   }
-
-   /**
-   *
+   * Prefix decrement operator.
    */
    typename Tree::LeafIterator& operator--()
    {
-      if (!m_currentNode)
+      assert(m_currentNode);
+      auto traversingNode = m_currentNode;
+
+      if (!traversingNode)
       {
-         m_currentNode = m_head;
+         traversingNode = m_startingNode;
       }
 
-      if (m_currentNode->HasChildren())
+      if (traversingNode->HasChildren())
       {
-         while (m_currentNode->GetLastChild())
+         while (traversingNode->GetLastChild())
          {
-            m_currentNode = m_currentNode->GetLastChild();
+            traversingNode = traversingNode->GetLastChild();
          }
       }
-      else if (m_currentNode->GetPreviousSibling())
+      else if (traversingNode->GetPreviousSibling())
       {
-         m_currentNode = m_currentNode->GetPreviousSibling();
+         traversingNode = traversingNode->GetPreviousSibling();
 
-         while (m_currentNode->GetLastChild())
+         while (traversingNode->GetLastChild())
          {
-            m_currentNode->GetLastChild();
+            traversingNode->GetLastChild();
          }
       }
-      else if (m_currentNode->GetParent())
+      else if (traversingNode->GetParent())
       {
-         while (m_currentNode->GetParent() && !m_currentNode->GetParent()->GetPreviousSibling())
+         while (traversingNode->GetParent() && !traversingNode->GetParent()->GetPreviousSibling())
          {
-            m_currentNode = m_currentNode->GetParent();
+            traversingNode = traversingNode->GetParent();
          }
 
-         if (m_currentNode->GetParent())
+         if (traversingNode->GetParent())
          {
-            m_currentNode = m_currentNode->GetParent()->GetPreviousSibling();
+            traversingNode = traversingNode->GetParent()->GetPreviousSibling();
 
-            while (m_currentNode->HasChildren())
+            while (traversingNode->HasChildren())
             {
-               m_currentNode = m_currentNode->GetLastChild();
+               traversingNode = traversingNode->GetLastChild();
             }
 
             return *this;
          }
 
          // Otherwise, the traversal is at the end:
-         m_currentNode = nullptr;
+         traversingNode = nullptr;
       }
 
+      m_currentNode = traversingNode;
       return *this;
+   }
+
+   /**
+   * Postfix decrement operator.
+   */
+   typename Tree::LeafIterator operator--(int)
+   {
+      const auto result = *this;
+      --(*this);
+
+      return result;
    }
 };

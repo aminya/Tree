@@ -18,7 +18,7 @@ SCENARIO("Adding nodes to the tree", "[treeConstruction]")
 
       WHEN("a single child node is added to the head node")
       {
-         std::string firstChildLabel{ "First Child" };
+         const std::string firstChildLabel{ "First Child" };
          tree.GetHead()->AppendChild(firstChildLabel);
 
          THEN("that child is reachable from the head node")
@@ -32,7 +32,7 @@ SCENARIO("Adding nodes to the tree", "[treeConstruction]")
 
          WHEN("a sibling is added to the head node's only child")
          {
-            std::string secondChildLabel{ "Second Child" };
+            const std::string secondChildLabel{ "Second Child" };
             tree.GetHead()->AppendChild(secondChildLabel);
 
             THEN("both the first child and second child are properly reachable")
@@ -52,11 +52,11 @@ SCENARIO("Adding nodes to the tree", "[treeConstruction]")
 
 TEST_CASE("TreeNode Construction")
 {
-   TreeNode<std::string> node{ "Bar" };
+   const TreeNode<std::string> node{ "Bar" };
 
    SECTION("Default Construction")
    {
-      TreeNode<std::string> default{};
+      const TreeNode<std::string> default{};
       const std::string emptyString;
 
       REQUIRE(default.GetChildCount() == 0);
@@ -69,10 +69,44 @@ TEST_CASE("TreeNode Construction")
    }
    SECTION("Copy Construction")
    {
-      TreeNode<std::string> copy{ node };
+      const TreeNode<std::string> copy{ node };
 
       REQUIRE(copy.GetData() == node.GetData());
       REQUIRE(&copy.GetData() != &node.GetData());
+   }
+}
+
+TEST_CASE("TreeNode Comparison Operations")
+{
+   const TreeNode<int> ten{ 10 };
+   const TreeNode<int> twenty{ 20 };
+
+   SECTION("Less Than")
+   {
+      REQUIRE(ten < twenty);
+      REQUIRE(!(twenty < ten));
+   }
+   SECTION("Less Than or Equal")
+   {
+      REQUIRE(ten <= ten);
+      REQUIRE(ten <= twenty);
+      REQUIRE(!(twenty <= ten));
+   }
+   SECTION("Equality")
+   {
+      REQUIRE(ten == ten);
+      REQUIRE(!(ten == twenty));
+   }
+   SECTION("Greater Than")
+   {
+      REQUIRE(twenty > ten);
+      REQUIRE(!(ten > twenty));
+   }
+   SECTION("Greater Than or Equal")
+   {
+      REQUIRE(twenty >= twenty);
+      REQUIRE(twenty >= ten);
+      REQUIRE(!(ten >= twenty));
    }
 }
 
@@ -113,7 +147,8 @@ TEST_CASE("Forward Pre- and Post-Order Traversal of Simple Binary Tree")
       bool traversalError = false;
       for (auto itr = tree.beginPreOrder(); itr != tree.endPreOrder(); ++itr)
       {
-         if (itr->GetData() != expectedTraversal[index++])
+         const auto& data = itr->GetData();
+         if (data != expectedTraversal[index++])
          {
             traversalError = true;
             break;
@@ -133,7 +168,8 @@ TEST_CASE("Forward Pre- and Post-Order Traversal of Simple Binary Tree")
       bool traversalError = false;
       for (auto itr = tree.begin(); itr != tree.end(); ++itr)
       {
-         if (itr->GetData() != expectedTraversal[index++])
+         const auto& data = itr->GetData();
+         if (data != expectedTraversal[index++])
          {
             traversalError = true;
             break;
@@ -145,7 +181,69 @@ TEST_CASE("Forward Pre- and Post-Order Traversal of Simple Binary Tree")
    }
 }
 
-TEST_CASE("STL Compliance")
+TEST_CASE("Partial Tree Iteration")
+{
+   Tree<std::string> tree{ "F" };
+   tree.GetHead()->AppendChild("B")->AppendChild("A");
+   tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
+   tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+
+   SECTION("Pre-Order Iteration")
+   {
+      auto startingNode = tree.GetHead()->GetFirstChild();
+
+      const std::vector<std::string> expectedTraversal =
+         { "B", "A", "D", "C", "E" };
+
+      int index = 0;
+
+      bool traversalError = false;
+
+      auto itr = Tree<std::string>::PreOrderIterator(startingNode);
+      const auto end = Tree<std::string>::PreOrderIterator();
+      for (; itr != end; ++itr)
+      {
+         const auto& data = itr->GetData();
+         if (data != expectedTraversal[index++])
+         {
+            traversalError = true;
+            break;
+         }
+      }
+
+      REQUIRE(traversalError == false);
+      REQUIRE(index == expectedTraversal.size());
+   }
+   //SECTION("Post-Order Iteration")
+   //{
+   //   auto startingNode = tree.GetHead()->GetFirstChild();
+
+   //   const std::vector<std::string> expectedTraversal =
+   //      { "A", "C", "E", "D", "B" };
+
+   //   int index = 0;
+
+   //   bool traversalError = false;
+
+   //   auto itr = Tree<std::string>::PostOrderIterator(startingNode);
+   //   const auto end = Tree<std::string>::PostOrderIterator();
+   //   for (; itr != end; ++itr)
+   //   {
+   //      const auto& data = itr->GetData();
+   //      if (data != expectedTraversal[index++])
+   //      {
+   //         traversalError = true;
+   //         break;
+   //      }
+   //   }
+
+   //   REQUIRE(traversalError == false);
+   //   REQUIRE(index == expectedTraversal.size());
+   //}
+}
+
+TEST_CASE("STL Typedef Compliance")
 {
    Tree<std::string> tree{ "F" };
    tree.GetHead()->AppendChild("B")->AppendChild("A");
@@ -163,16 +261,6 @@ TEST_CASE("STL Compliance")
 
       REQUIRE(count == 1);
    }
-   //SECTION("Standard Algorithms and Parameter Passing by pointer")
-   //{
-   //   const size_t count = std::count_if(std::begin(tree), std::end(tree),
-   //      [](Tree<std::string>::pointer node)
-   //   {
-   //      return (node->GetData() == "B");
-   //   });
-
-   //   REQUIRE(count == 1);
-   //}
    SECTION("Standard Algorithms and Parameter Passing by reference")
    {
       const size_t count = std::count_if(std::begin(tree), std::end(tree),
