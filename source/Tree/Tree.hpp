@@ -360,6 +360,8 @@ public:
    */
    unsigned int CountAllDescendants() const
    {
+      assert(!"Test me!");
+
       return Tree<DataType>::Size(*this) - 1;
    }
 
@@ -368,6 +370,8 @@ public:
    */
    void DetachFromTree()
    {
+      assert(!"Test me!");
+
       // First, remove all references to this node as parent:
       auto& currentChild = m_firstChild;
       while (currentChild)
@@ -418,6 +422,8 @@ public:
    */
    void SortChildren(const std::function<bool(TreeNode<DataType>, TreeNode<DataType>)>& comparator)
    {
+      assert(!"Test me!");
+
       MergeSort(m_firstChild, comparator);
    }
 
@@ -613,6 +619,8 @@ private:
 template<typename DataType>
 TreeNode<DataType>& TreeNode<DataType>::operator=(TreeNode<DataType> other)
 {
+   assert(!"Test me!");
+
    std::swap(this->m_childCount, other.m_childCount);
    std::swap(this->m_data, other.m_data);
    std::swap(this->m_firstChild, other.m_firstChild);
@@ -660,6 +668,7 @@ public:
    explicit Tree(const Tree<DataType>& other) :
       m_head(other.m_head)
    {
+      assert(!"Test me!");
    }
 
    /**
@@ -675,6 +684,8 @@ public:
    */
    unsigned int CountLeafNodes() const
    {
+      assert(!"Test me!");
+
       unsigned int count = 0;
       for (auto itr = beginLeaf(); itr != endLeaf(); ++itr)
       {
@@ -709,13 +720,11 @@ public:
    */
    size_t Size(const TreeNode<DataType>& node)
    {
-      unsigned int count = 0;
+      assert(!"Test me!");
 
-      auto itr = PostOrderIterator(std::make_shared<TreeNode<DataType>>(node));
-      for (++itr; itr && &*itr != &node; ++itr)
-      {
-         count++;
-      }
+      auto itr = Tree<DataType>::PostOrderIterator(node);
+      const auto nodeCount = std::count_if(itr, std::end(*this),
+         [] (const_reference) { return true; });
 
       return count;
    }
@@ -747,6 +756,8 @@ public:
    */
    static void Print(TreeNode<DataType>& node, std::function<std::wstring (const DataType&)> printer)
    {
+      assert(!"Test me!");
+
       auto itr = Tree<DataType>::PreOrderIterator(std::make_shared<TreeNode<DataType>>(node));
       while (&*itr != &node)
       {
@@ -774,6 +785,8 @@ public:
    */
    typename Tree::SiblingIterator beginSibling(const std::shared_ptr<TreeNode<DataType>> node) const
    {
+      assert(!"Test me!");
+
       const auto iterator = Tree<DataType>::SiblingIterator(node);
       return iterator;
    }
@@ -788,6 +801,8 @@ public:
    */
    typename Tree::SiblingIterator endSibling(const std::shared_ptr<TreeNode<DataType>> node) const
    {
+      assert(!"Test me!");
+
       Tree<DataType>::SiblingIterator siblingIterator(nullptr);
       siblingIterator.m_parent = node->GetParent();
 
@@ -818,8 +833,8 @@ public:
    */
    typename Tree::PostOrderIterator begin() const
    {
-      auto iterator = Tree<DataType>::PostOrderIterator(m_head);
-      return ++iterator;
+      const auto iterator = Tree<DataType>::PostOrderIterator(m_head);
+      return iterator;
    }
 
    /**
@@ -837,6 +852,8 @@ public:
    */
    typename Tree::LeafIterator beginLeaf() const
    {
+      assert(!"Test me!");
+
       auto iterator = Tree<DataType>::LeafIterator(m_head);
       return ++iterator;
    }
@@ -846,6 +863,8 @@ public:
    */
    typename Tree::LeafIterator endLeaf() const
    {
+      assert(!"Test me!");
+
       const auto iterator = Tree<DataType>::LeafIterator(nullptr);
       return iterator;
    }
@@ -880,6 +899,8 @@ public:
    */
    explicit operator bool() const
    {
+      assert(!"Test me!");
+
       const bool isValid = (m_currentNode != nullptr);
       return isValid;
    }
@@ -897,6 +918,8 @@ public:
    */
    const TreeNode<DataType>& operator*() const
    {
+      assert(!"Test me!");
+
       return *m_currentNode;
    }
 
@@ -905,6 +928,8 @@ public:
    */
    TreeNode<DataType>* operator&()
    {
+      assert(!"Test me!");
+
       return m_currentNode.get();
    }
 
@@ -913,6 +938,8 @@ public:
    */
    const TreeNode<DataType>* operator&() const
    {
+      assert(!"Test me!");
+
       return m_currentNode.get();
    }
 
@@ -929,6 +956,8 @@ public:
    */
    const TreeNode<DataType>* operator->() const
    {
+      assert(!"Test me!");
+
       return m_currentNode.get();
    }
 
@@ -937,6 +966,8 @@ public:
    */
    bool operator==(const Iterator& other) const
    {
+      assert(!"Test me!");
+
       return m_currentNode == other.m_currentNode;
    }
 
@@ -995,6 +1026,7 @@ public:
    explicit SiblingIterator() :
       Iterator()
    {
+      assert(!"Test me!");
    }
 
    /**
@@ -1003,6 +1035,7 @@ public:
    explicit SiblingIterator(const Iterator& other) :
       Iterator(other)
    {
+      assert(!"Test me!");
    }
 
    /**
@@ -1011,6 +1044,7 @@ public:
    explicit SiblingIterator(std::shared_ptr<TreeNode<DataType>> node) :
       Iterator(node)
    {
+      assert(!"Test me!");
    }
 
    /**
@@ -1018,6 +1052,8 @@ public:
    */
    typename Tree::SiblingIterator& operator++()
    {
+      assert(!"Test me!");
+
       if (m_currentNode)
       {
          m_currentNode = m_currentNode->GetNextSibling();
@@ -1031,6 +1067,8 @@ public:
    */
    typename Tree::SiblingIterator operator++(int)
    {
+      assert(!"Test me!");
+
       const auto result = *this;
       ++(*this);
 
@@ -1042,6 +1080,8 @@ public:
    */
    typename Tree::SiblingIterator& operator--()
    {
+      assert(!"Test me!");
+
       if (!m_currentNode)
       {
          if (m_parent)
@@ -1068,6 +1108,8 @@ public:
    */
    typename Tree::SiblingIterator operator--(int)
    {
+      assert(!"Test me!");
+
       const auto result = *this;
       --(*this);
 
@@ -1099,6 +1141,7 @@ public:
    explicit PreOrderIterator(const Iterator& other) :
       Iterator(other)
    {
+      assert(!"Test me!");
    }
 
    /**
@@ -1154,6 +1197,8 @@ public:
    */
    typename Tree::PreOrderIterator operator++(int)
    {
+      assert(!"Test me!");
+
       const auto result = *this;
       ++(*this);
 
@@ -1165,6 +1210,8 @@ public:
    */
    typename Tree::PreOrderIterator operator--()
    {
+      assert(!"Test me!");
+
       auto traversingNode = m_currentNode;
 
       if (!traversingNode)
@@ -1205,6 +1252,8 @@ public:
    */
    typename Tree::PreOrderIterator& operator--(int)
    {
+      assert(!"Test me!");
+
       const auto result = *this;
       --(*this);
 
@@ -1235,6 +1284,7 @@ public:
       Iterator(other),
       m_traversingUpTheTree(false)
    {
+      assert(!"Test me!");
    }
 
    /**
@@ -1244,6 +1294,26 @@ public:
       Iterator(node),
       m_traversingUpTheTree(false)
    {
+      if (node && node->GetNextSibling())
+      {
+         auto traversingNode = node->GetNextSibling();
+         while (traversingNode->HasChildren())
+         {
+            traversingNode = traversingNode->GetFirstChild();
+         }
+
+         m_endingNode = traversingNode;
+      }
+
+      if (node)
+      {
+         while (node->GetFirstChild())
+         {
+            node = node->GetFirstChild();
+         }
+
+         m_currentNode = node;
+      }
    }
 
    /**
@@ -1278,7 +1348,7 @@ public:
          traversingNode = traversingNode->GetParent();
       }
 
-      m_currentNode = traversingNode;
+      m_currentNode = (traversingNode != m_endingNode) ? traversingNode : nullptr;
       return *this;
    }
 
@@ -1287,6 +1357,8 @@ public:
    */
    typename Tree::PostOrderIterator operator++(int)
    {
+      assert(!"Test me!");
+
       const auto result = *this;
       ++(*this);
 
@@ -1298,6 +1370,8 @@ public:
    */
    typename Tree::PostOrderIterator& operator--()
    {
+      assert(!"Test me!");
+
       auto traversingNode = m_currentNode;
 
       // When the iterator is at the end(), then the next position should be the head:
@@ -1339,6 +1413,8 @@ public:
    */
    typename Tree::PostOrderIterator operator--(int)
    {
+      assert(!"Test me!");
+
       const auto result = *this;
       --(*this);
 
@@ -1362,6 +1438,7 @@ public:
    explicit LeafIterator() :
       Iterator()
    {
+      assert(!"Test me!");
    }
 
    /**
@@ -1370,6 +1447,7 @@ public:
    explicit LeafIterator(const Iterator& other) :
       Iterator(other)
    {
+      assert(!"Test me!");
    }
 
    /**
@@ -1378,6 +1456,7 @@ public:
    explicit LeafIterator(std::shared_ptr<TreeNode<DataType>> node) :
       Iterator(node)
    {
+      assert(!"Test me!");
    }
 
    /**
@@ -1385,6 +1464,8 @@ public:
    */
    typename Tree::LeafIterator& operator++()
    {
+      assert(!"Test me!");
+
       assert(m_currentNode);
       auto traversingNode = m_currentNode;
 
@@ -1436,6 +1517,8 @@ public:
    */
    typename Tree::LeafIterator operator++(int)
    {
+      assert(!"Test me!");
+
       const auto result = *this;
       ++(*this);
 
@@ -1447,6 +1530,8 @@ public:
    */
    typename Tree::LeafIterator& operator--()
    {
+      assert(!"Test me!");
+
       assert(m_currentNode);
       auto traversingNode = m_currentNode;
 
@@ -1503,6 +1588,8 @@ public:
    */
    typename Tree::LeafIterator operator--(int)
    {
+      assert(!"Test me!");
+
       const auto result = *this;
       --(*this);
 

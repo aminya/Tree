@@ -215,32 +215,32 @@ TEST_CASE("Partial Tree Iteration")
       REQUIRE(traversalError == false);
       REQUIRE(index == expectedTraversal.size());
    }
-   //SECTION("Post-Order Iteration")
-   //{
-   //   auto startingNode = tree.GetHead()->GetFirstChild();
+   SECTION("Post-Order Iteration")
+   {
+      auto startingNode = tree.GetHead()->GetFirstChild();
 
-   //   const std::vector<std::string> expectedTraversal =
-   //      { "A", "C", "E", "D", "B" };
+      const std::vector<std::string> expectedTraversal =
+         { "A", "C", "E", "D", "B" };
 
-   //   int index = 0;
+      int index = 0;
 
-   //   bool traversalError = false;
+      bool traversalError = false;
 
-   //   auto itr = Tree<std::string>::PostOrderIterator(startingNode);
-   //   const auto end = Tree<std::string>::PostOrderIterator();
-   //   for (; itr != end; ++itr)
-   //   {
-   //      const auto& data = itr->GetData();
-   //      if (data != expectedTraversal[index++])
-   //      {
-   //         traversalError = true;
-   //         break;
-   //      }
-   //   }
+      auto itr = Tree<std::string>::PostOrderIterator(startingNode);
+      const auto end = Tree<std::string>::PostOrderIterator();
+      for (; itr != end; ++itr)
+      {
+         const auto& data = itr->GetData();
+         if (data != expectedTraversal[index++])
+         {
+            traversalError = true;
+            break;
+         }
+      }
 
-   //   REQUIRE(traversalError == false);
-   //   REQUIRE(index == expectedTraversal.size());
-   //}
+      REQUIRE(traversalError == false);
+      REQUIRE(index == expectedTraversal.size());
+   }
 }
 
 TEST_CASE("STL Typedef Compliance")
