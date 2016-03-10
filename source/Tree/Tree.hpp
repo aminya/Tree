@@ -324,7 +324,7 @@ public:
    /**
    * @returns A std::shared_ptr to the TreeNode's parent, if it exists; nullptr otherwise.
    */
-   inline const std::shared_ptr<TreeNode<DataType>> GetParent() const
+   inline const std::shared_ptr<TreeNode<DataType>>& GetParent() const
    {
       return m_parent;
    }
@@ -332,7 +332,7 @@ public:
    /**
    * @returns A std::shared_ptr to the TreeNode's first child.
    */
-   inline const std::shared_ptr<TreeNode<DataType>> GetFirstChild() const
+   inline const std::shared_ptr<TreeNode<DataType>>& GetFirstChild() const
    {
       return m_firstChild;
    }
@@ -340,7 +340,7 @@ public:
    /**
    * @returns A std::shared_ptr to the TreeNode's last child.
    */
-   inline const std::shared_ptr<TreeNode<DataType>> GetLastChild() const
+   inline const std::shared_ptr<TreeNode<DataType>>& GetLastChild() const
    {
       return m_lastChild;
    }
@@ -348,7 +348,7 @@ public:
    /**
    * @returns A std::shared_ptr to the TreeNode's next sibling.
    */
-   inline const std::shared_ptr<TreeNode<DataType>> GetNextSibling() const
+   inline const std::shared_ptr<TreeNode<DataType>>& GetNextSibling() const
    {
       return m_nextSibling;
    }
@@ -356,7 +356,7 @@ public:
    /**
    * @returns A std::shared_ptr to the TreeNode's previous sibling.
    */
-   inline const std::shared_ptr<TreeNode<DataType>> GetPreviousSibling() const
+   inline const std::shared_ptr<TreeNode<DataType>>& GetPreviousSibling() const
    {
       return m_previousSibling;
    }
