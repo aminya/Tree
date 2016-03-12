@@ -79,6 +79,10 @@ template<typename DataType>
 class TreeNode : public std::enable_shared_from_this<TreeNode<DataType>>
 {
 public:
+   typedef DataType           value_type;
+   typedef DataType&          reference;
+   typedef const DataType&    const_reference;
+
    /**
    * @brief TreeNode default constructs a new TreeNode. All outgoing links from this new node will
    * initialized to a nullptr.
@@ -636,10 +640,6 @@ private:
 
    bool m_visited;
 };
-
-/***************************************************************************************************
-* Start of TreeNode<T> Class Definitions
-**************************************************************************************************/
 
 /**
 * The Tree class declares a basic n-ary tree, built on top of templatized TreeNode nodes.
@@ -1446,7 +1446,6 @@ public:
    explicit SiblingIterator() :
       Iterator()
    {
-      assert(!"Test me!");
    }
 
    /**
@@ -1464,7 +1463,6 @@ public:
    explicit SiblingIterator(std::shared_ptr<TreeNode<DataType>> node) :
       Iterator(node)
    {
-      assert(!"Test me!");
    }
 
    /**
@@ -1472,8 +1470,6 @@ public:
    */
    typename Tree::SiblingIterator& operator++()
    {
-      assert(!"Test me!");
-
       if (m_currentNode)
       {
          m_currentNode = m_currentNode->GetNextSibling();
@@ -1487,8 +1483,6 @@ public:
    */
    typename Tree::SiblingIterator operator++(int)
    {
-      assert(!"Test me!");
-
       const auto result = *this;
       ++(*this);
 
@@ -1517,7 +1511,7 @@ public:
       }
       else
       {
-         m_currentNode = m_currentNode->m_previousSibling;
+         m_currentNode = m_currentNode->GetPreviousSibling();
       }
 
       return *this;

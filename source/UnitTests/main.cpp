@@ -134,8 +134,8 @@ TEST_CASE("TreeNode Alterations")
 TEST_CASE("Tree Constructors")
 {
    const Tree<std::string> tree{ "Test" };
-   const auto copy{ tree };
-   
+   const Tree<std::string> copy{ tree };
+
    REQUIRE(tree.GetHead() == copy.GetHead());
 }
 
@@ -400,7 +400,46 @@ TEST_CASE("Leaf Iterator")
       REQUIRE(traversalError == false);
       REQUIRE(index == expectedTraversal.size());
    }
+}
 
+TEST_CASE("Sibling Iterator")
+{
+   Tree<std::string> tree{ "IDK" };
+   tree.GetHead()->AppendChild("B");
+   tree.GetHead()->AppendChild("D");
+   tree.GetHead()->AppendChild("A");
+   tree.GetHead()->AppendChild("C");
+   tree.GetHead()->AppendChild("F");
+   tree.GetHead()->AppendChild("G");
+   tree.GetHead()->AppendChild("E");
+   tree.GetHead()->AppendChild("H");
+
+   SECTION("Forward Traversal")
+   {
+      const std::vector<std::string> expectedTraversal =
+      { "B", "D", "A", "C", "F", "G", "E", "H", };
+
+      int index = 0;
+
+      bool traversalError = false;
+
+      const auto& startingNode = tree.GetHead()->GetFirstChild();
+
+      auto itr = Tree<std::string>::SiblingIterator(startingNode);
+      const auto end = Tree<std::string>::SiblingIterator();
+      for (; itr != end; itr++)
+      {
+         const auto& data = itr->GetData();
+         if (data != expectedTraversal[index++])
+         {
+            traversalError = true;
+            break;
+         }
+      }
+
+      REQUIRE(traversalError == false);
+      REQUIRE(index == expectedTraversal.size());
+   }
 }
 
 TEST_CASE("Sorting")
