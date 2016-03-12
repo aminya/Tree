@@ -131,13 +131,22 @@ public:
    }
 
    /**
+   * Since we not using std::weak_ptrs to keep track of sibling and parent links, the Tree
+   * is going to have cycles. These cycles will prevent TreeNode objects from being garbage
+   * collected when all other consumers have released their references. It is therefore
+   * important that we break these cycles whenever a TreeNode is deleted.
+   */
+   ~TreeNode()
+   {
+      // @todo Figure out a clean way of cleaning up---no pun intended.
+   }
+
+   /**
    *
    */
    TreeNode<DataType>& operator=(TreeNode<DataType> other)
    {
-      assert(!"Test Me");
-
-      swap(this, other);
+      swap(*this, other);
       return *this;
    }
 
@@ -402,48 +411,13 @@ public:
    void DetachFromTree()
    {
       assert(!"Test me!");
-
-      // First, remove all references to this node as parent:
-      auto& currentChild = m_firstChild;
-      while (currentChild)
-      {
-         currentChild->m_parent = nullptr;
-         currentChild = currentChild->m_nextSibling;
-      }
-
-      // Now update all sibling and parent relations:
-      if (m_previousSibling && m_nextSibling)
-      {
-         m_previousSibling->m_nextSibling = m_nextSibling;
-         m_nextSibling->m_previousSibling = m_previousSibling;
-      }
-      else if (m_previousSibling && !m_nextSibling)
-      {
-         m_previousSibling->m_nextSibling = nullptr;
-
-         if (m_parent)
-         {
-            m_parent->m_lastChild = m_previousSibling;
-         }
-      }
-      else if (m_nextSibling && !m_previousSibling)
-      {
-         m_nextSibling->m_previousSibling = nullptr;
-
-         if (m_parent)
-         {
-            m_parent->m_firstChild = m_nextSibling;
-         }
-      }
-
-      // Clear references to anything below this node:
-      m_firstChild = nullptr;
-      m_lastChild = nullptr;
-
-      if (m_parent)
-      {
-         m_parent->m_childCount--;
-      }
+   
+      // @todo
+      // This is going to require a bit of work to sort out. The easiest thing
+      // to do would be to use std::weak_ptrs for all links from nodes to their 
+      // parents, and for all links between sibling nodes. Unfortunately, atomic
+      // references counting isn't super fast, and I would therefore expect
+      // traversal speeds to take a significant hit...
    }
 
    /**
@@ -662,18 +636,26 @@ public:
    typedef const TreeNode<DataType>&         const_reference;
 
    /**
+   * @brief Default constructor.
+   */
+   Tree() :
+      m_head(new TreeNode<DataType>())
+   {
+   }
+
+   /**
    * @brief Tree constructs a new Tree with the provided data encapsulated in a new
    * TreeNode.
    */
-   explicit Tree(DataType data) :
+   Tree(DataType data) :
       m_head(new TreeNode<DataType>(data))
    {
    }
 
    /**
-   * @brief Tree copy-constructs a shallow-copy of the specified Tree.
+   * @brief Tree copy-constructs a copy of the specified Tree.
    */
-   explicit Tree(const Tree<DataType>& other) :
+   Tree(const Tree<DataType>& other) :
       m_head(other.m_head)
    {
    }
@@ -817,10 +799,8 @@ public:
    */
    typename Tree::LeafIterator beginLeaf() const
    {
-      assert(!"Test me!");
-
-      auto iterator = Tree<DataType>::LeafIterator(m_head);
-      return ++iterator;
+      const auto iterator = Tree<DataType>::LeafIterator(m_head);
+      return iterator;
    }
 
    /**
@@ -828,8 +808,6 @@ public:
    */
    typename Tree::LeafIterator endLeaf() const
    {
-      assert(!"Test me!");
-
       const auto iterator = Tree<DataType>::LeafIterator(nullptr);
       return iterator;
    }
@@ -1297,6 +1275,21 @@ public:
    explicit LeafIterator(std::shared_ptr<TreeNode<DataType>> node) :
       Iterator(node)
    {
+      if (!m_currentNode)
+      {
+         return;
+      }
+
+      auto traversingNode = m_currentNode;
+      if (traversingNode->HasChildren())
+      {
+         while (traversingNode->GetFirstChild())
+         {
+            traversingNode = traversingNode->GetFirstChild();
+         }
+      }
+
+      m_currentNode = traversingNode;
    }
 
    /**
@@ -1334,16 +1327,15 @@ public:
          {
             traversingNode = traversingNode->GetParent()->GetNextSibling();
 
-            while (traversingNode->HasChildren())
+            while (traversingNode && traversingNode->HasChildren())
             {
-               traversingNode = m_currentNode->GetFirstChild();
+               traversingNode = traversingNode->GetFirstChild();
             }
-
-            return *this;
          }
-
-         // Otherwise, the traversal is at the end:
-         traversingNode = nullptr;
+         else
+         {
+            traversingNode = nullptr;
+         }
       }
 
       m_currentNode = traversingNode;

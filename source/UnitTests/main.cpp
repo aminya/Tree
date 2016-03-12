@@ -364,28 +364,22 @@ TEST_CASE("STL Typedef Compliance")
 
 TEST_CASE("Leaf Iterator")
 {
-   Tree<std::string> tree{ "IDK" };
-   tree.GetHead()->AppendChild("B");
-   tree.GetHead()->AppendChild("D");
-   tree.GetHead()->AppendChild("A");
-   tree.GetHead()->AppendChild("C");
-   tree.GetHead()->AppendChild("F");
-   tree.GetHead()->AppendChild("G");
-   tree.GetHead()->AppendChild("E");
-   tree.GetHead()->AppendChild("H");
+   Tree<std::string> tree{ "F" };
+   tree.GetHead()->AppendChild("B")->AppendChild("A");
+   tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
+   tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
 
    SECTION("Forward Traversal")
    {
       const std::vector<std::string> expectedTraversal =
-         { "B", "D", "A", "C", "F", "G", "E", "H", };
+         { "A", "C", "E", "H", };
 
       int index = 0;
 
       bool traversalError = false;
 
-      const auto& startingNode = tree.GetHead()->GetFirstChild();
-
-      auto itr = Tree<std::string>::LeafIterator(startingNode);
+      auto itr = Tree<std::string>::LeafIterator(tree.GetHead());
       const auto end = Tree<std::string>::LeafIterator();
       for (; itr != end; ++itr)
       {
