@@ -394,6 +394,44 @@ TEST_CASE("Leaf Iterator")
       REQUIRE(traversalError == false);
       REQUIRE(index == expectedTraversal.size());
    }
+   SECTION("Partial Tree Iteration")
+   {
+      const std::vector<std::string> expectedTraversal =
+         { "A", "C", "E" };
+
+      int index = 0;
+
+      bool traversalError = false;
+
+      auto itr = Tree<std::string>::LeafIterator(tree.GetHead()->GetFirstChild());
+      const auto end = Tree<std::string>::LeafIterator();
+      for (; itr != end; ++itr)
+      {
+         const auto& data = itr->GetData();
+         if (data != expectedTraversal[index++])
+         {
+            traversalError = true;
+            break;
+         }
+      }
+
+      REQUIRE(traversalError == false);
+      REQUIRE(index == expectedTraversal.size());
+   }
+   SECTION("Tree<T>::beginLeaf and Tree<T>::endLeaf")
+   {
+      const std::vector<std::string> expectedTraversal =
+         { "A", "C", "E", "H", };
+
+      std::vector<std::string> output;
+      std::transform(tree.beginLeaf(), tree.endLeaf(), std::back_inserter(output),
+         [](Tree<std::string>::const_reference node)
+      {
+         return node.GetData();
+      });
+
+      REQUIRE(output.size() == expectedTraversal.size());
+   }
 }
 
 TEST_CASE("Sibling Iterator")
@@ -411,7 +449,7 @@ TEST_CASE("Sibling Iterator")
    SECTION("Forward Traversal")
    {
       const std::vector<std::string> expectedTraversal =
-      { "B", "D", "A", "C", "F", "G", "E", "H", };
+         { "B", "D", "A", "C", "F", "G", "E", "H", };
 
       int index = 0;
 
@@ -465,9 +503,7 @@ TEST_CASE("Sorting")
 
       bool traversalError = false;
 
-      const auto& startingNode = tree.GetHead()->GetFirstChild();
-
-      auto itr = Tree<std::string>::LeafIterator(startingNode);
+      auto itr = Tree<std::string>::LeafIterator(tree.GetHead());
       const auto end = Tree<std::string>::LeafIterator();
       for (; itr != end; itr++)  ///< Using the post-fix operator for more test coverage.
       {
@@ -540,5 +576,48 @@ TEST_CASE("Sorting")
 
       REQUIRE(sizeBeforeSort == sizeAfterSort);
       REQUIRE(sortingError == false);
+   }
+}
+
+unsigned int CONSTRUCTION_COUNT = 0;
+unsigned int DESTRUCTION_COUNT = 0;
+
+struct VerboseNode
+{
+   VerboseNode(const char* const data) :
+      m_data(data)
+   {
+      CONSTRUCTION_COUNT++;
+   }
+
+   ~VerboseNode()
+   {
+      DESTRUCTION_COUNT++;
+   }
+
+   std::string m_data;
+};
+
+TEST_CASE("Tree and TreeNode Destruction")
+{
+   SECTION("Node Destruction Count")
+   {
+      CONSTRUCTION_COUNT = 0;
+
+      {
+         Tree<VerboseNode> tree{ "F" };
+         tree.GetHead()->AppendChild("B")->AppendChild("A");
+         tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+         tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
+         tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+
+         // Reset the destruction count, so that we don't accidentally count any destructor calls
+         // that took place during the construction of the tree.
+         DESTRUCTION_COUNT = 0;
+
+         REQUIRE(tree.Size() == CONSTRUCTION_COUNT);
+      }
+
+      REQUIRE(CONSTRUCTION_COUNT == DESTRUCTION_COUNT);
    }
 }

@@ -136,10 +136,10 @@ public:
    * collected when all other consumers have released their references. It is therefore
    * important that we break these cycles whenever a TreeNode is deleted.
    */
-   ~TreeNode()
-   {
-      // @todo Figure out a clean way of cleaning up---no pun intended.
-   }
+   //~TreeNode()
+   //{
+   //   // @todo Figure out a clean way of cleaning up---no pun intended.
+   //}
 
    /**
    *
@@ -410,14 +410,18 @@ public:
    */
    void DetachFromTree()
    {
-      assert(!"Test me!");
-   
       // @todo
       // This is going to require a bit of work to sort out. The easiest thing
       // to do would be to use std::weak_ptrs for all links from nodes to their 
       // parents, and for all links between sibling nodes. Unfortunately, atomic
       // references counting isn't super fast, and I would therefore expect
       // traversal speeds to take a significant hit...
+
+      m_parent.reset();
+      m_firstChild.reset();
+      m_lastChild.reset();
+      m_previousSibling.reset();
+      m_nextSibling.reset();
    }
 
    /**
@@ -659,6 +663,29 @@ public:
       m_head(other.m_head)
    {
    }
+
+   //**
+   //*
+   //*/
+   //~Tree()
+   //{
+   //   //std::cout << "Destroying Tree..." << std::endl;
+
+   //   TreeNode<DataType>* lastNodeVisited = nullptr;
+
+   //   std::for_each(
+   //      Tree<DataType>::PostOrderIterator(m_head),
+   //      Tree<DataType>::PostOrderIterator(),
+   //      [&](Tree<DataType>::reference node)
+   //   {
+   //      if (lastNodeVisited)
+   //      {
+   //         lastNodeVisited->DetachFromTree();
+   //      }
+
+   //      lastNodeVisited = &node;
+   //   });
+   //}
 
    /**
    * @returns A std::shared_ptr to the head TreeNode.
@@ -1012,7 +1039,7 @@ public:
          }
       }
 
-      m_currentNode = (traversingNode != m_endingNode) ? traversingNode : nullptr;
+      m_currentNode = (traversingNode.get() != m_endingNode.get()) ? traversingNode : nullptr;
       return *this;
    }
 
@@ -1170,7 +1197,7 @@ public:
          traversingNode = traversingNode->GetParent();
       }
 
-      m_currentNode = (traversingNode != m_endingNode) ? traversingNode : nullptr;
+      m_currentNode = (traversingNode.get() != m_endingNode.get()) ? traversingNode : nullptr;
       return *this;
    }
 
@@ -1280,16 +1307,33 @@ public:
          return;
       }
 
-      auto traversingNode = m_currentNode;
-      if (traversingNode->HasChildren())
+      auto firstNode = m_currentNode;
+      if (firstNode->HasChildren())
       {
-         while (traversingNode->GetFirstChild())
+         while (firstNode->GetFirstChild())
          {
-            traversingNode = traversingNode->GetFirstChild();
+            firstNode = firstNode->GetFirstChild();
          }
       }
 
-      m_currentNode = traversingNode;
+      m_currentNode = firstNode;
+
+      auto lastNode = node;
+      if (lastNode->GetNextSibling())
+      {
+         lastNode = lastNode->GetNextSibling();
+
+         while (lastNode->HasChildren())
+         {
+            lastNode = lastNode->GetFirstChild();
+         }
+
+         m_endingNode = lastNode;
+      }
+      else
+      {
+         m_endingNode = nullptr;
+      }
    }
 
    /**
@@ -1338,7 +1382,7 @@ public:
          }
       }
 
-      m_currentNode = traversingNode;
+      m_currentNode = (traversingNode.get() != m_endingNode.get()) ? traversingNode : nullptr;
       return *this;
    }
 

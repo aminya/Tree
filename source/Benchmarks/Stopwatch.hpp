@@ -96,8 +96,10 @@ public:
    using LoggingFunction = std::function<void(std::uint64_t, const std::string&)>;
 
    /**
-   * @brief Stopwatch constructor that executes the code to be timed after starting the timer.
-   * Once the targed code has completed execution, the timing results and corresponding units
+   * @brief This Stopwatch constructor executes and times the code encapsulated within the
+   * std::function object.
+   *
+   * Once the std::function has completed execution, the timing results and corresponding units
    * will be passed to the specified callback function.
    *
    * @param[in] functionToTime  std::function encapsulating the code to be timed.
@@ -128,7 +130,7 @@ public:
    */
    Stopwatch(
       const std::function<void()>& functionToTime,
-      const char* message)
+      const char* const message)
    {
       Time(functionToTime);
 
