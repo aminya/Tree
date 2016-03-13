@@ -2,7 +2,9 @@
 #include <iostream>
 #include <string>
 
-#include "../Tree/Tree.hpp"
+//#include "../Tree/Tree.hpp"
+#include "../Tree/RawPointerTree.hpp"
+
 #include "Stopwatch.hpp"
 
 /**
@@ -40,7 +42,7 @@ namespace
    Tree<std::string> CreateLargeTree()
    {
       Tree<std::string> tree{ "Head" };
-      auto& currentNode = tree.GetHead();
+      auto* currentNode = tree.GetHead();
 
       AddChildrenToNode(*currentNode);
 
