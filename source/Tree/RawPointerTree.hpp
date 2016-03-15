@@ -76,7 +76,7 @@ inline bool operator!=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& 
 * sibling, and, of course, to the data it encapsulates.
 */
 template<typename DataType>
-class TreeNode// : public std::enable_shared_from_this<TreeNode<DataType>>
+class TreeNode
 {
 public:
    typedef DataType           value_type;
@@ -118,16 +118,19 @@ public:
    /**
    * @brief TreeNode performs a shallow copy-construction of the specified TreeNode.
    */
-   TreeNode(const TreeNode<DataType>& other) :
-      m_parent(other.m_parent),
-      m_firstChild(other.m_firstChild),
-      m_lastChild(other.m_lastChild),
-      m_previousSibling(other.m_previousSibling),
-      m_nextSibling(other.m_nextSibling),
+   TreeNode(TreeNode<DataType>& other) :
+      m_parent(nullptr),
+      m_firstChild(nullptr),
+      m_lastChild(nullptr),
+      m_previousSibling(nullptr),
+      m_nextSibling(nullptr),
       m_data(other.m_data),
-      m_childCount(other.m_childCount),
-      m_visited(other.m_visited)
+      m_childCount(0),
+      m_visited(false)
    {
+      // @todo Const &!
+
+      copy(other, *this);
    }
 
    /**
@@ -143,18 +146,9 @@ public:
    }
 
    /**
-   *
+   * @brief Exception-safe swap function.
    */
-   TreeNode<DataType>& operator=(TreeNode<DataType> other)
-   {
-      swap(*this, other);
-      return *this;
-   }
-
-   /**
-   *
-   */
-   friend void swap(TreeNode<DataType>& lhs, TreeNode<DataType>& rhs)
+   friend void swap(TreeNode<DataType>& lhs, TreeNode<DataType>& rhs) /* noexcept */
    {
       // Enable Argument Dependent Lookup (ADL):
       using std::swap;
@@ -297,7 +291,7 @@ public:
    */
    TreeNode<DataType>* AppendChild(DataType& data)
    {
-      const auto* newNode = new TreeNode<DataType>(data);
+      const auto* const newNode = new TreeNode<DataType>(data);
       return AppendChild(*newNode);
    }
 
@@ -306,7 +300,7 @@ public:
    */
    TreeNode<DataType>* AppendChild(const DataType& data)
    {
-      auto* newNode = new TreeNode<DataType>(data);
+      auto* const newNode = new TreeNode<DataType>(data);
       return AppendChild(*newNode);
    }
 
@@ -315,7 +309,7 @@ public:
    */
    TreeNode<DataType>* AppendChild(DataType&& data)
    {
-      auto* newNode = new TreeNode<DataType>(std::forward<DataType>(data));
+      auto* const newNode = new TreeNode<DataType>(std::forward<DataType>(data));
       return AppendChild(*newNode);
    }
 
@@ -593,6 +587,41 @@ private:
       return m_firstChild;
    }
 
+   /**
+   * @brief Helper function to assist on copy TreeNodes.
+   *
+   * @param[in] source              The TreeNode to copy information from.
+   * @param[out] sink               The TreeNode to place a copy of the information into.
+   */
+   void copy(TreeNode<DataType>& source, TreeNode<DataType>& sink)
+   {
+      sink.m_data = source.m_data;
+
+      if (source.HasChildren())
+      {
+         std::for_each(
+            Tree<DataType>::SiblingIterator(source.GetFirstChild()),
+            Tree<DataType>::SiblingIterator(),
+            [&](Tree<DataType>::const_reference node)
+         {
+            sink.AppendChild(node.GetData());
+         });
+
+         const auto end = Tree<DataType>::SiblingIterator();
+
+         auto sourceItr = Tree<DataType>::SiblingIterator(source.GetFirstChild());
+         auto sinkItr = Tree<DataType>::SiblingIterator(sink.GetFirstChild());
+
+         while (sourceItr != end)
+         {
+            copy(*sourceItr, *sinkItr);
+
+            sourceItr++;
+            sinkItr++;
+         }
+      }
+   }
+
    TreeNode<DataType>* m_parent;
    TreeNode<DataType>* m_firstChild;
    TreeNode<DataType>* m_lastChild;
@@ -646,26 +675,56 @@ public:
    }
 
    /**
+   * @brief Copy constructor.
+   */
+   Tree(const Tree<DataType>& other) :
+      m_head(new TreeNode<DataType>(*other.m_head))
+   {
+   }
+
+   /**
+   * @brief Assignment operator.
    *
+   * @todo Is this signature right?
+   */
+   Tree<DataType>& operator=(Tree<DataType> other)
+   {
+      swap(*this, other);
+      return *this;
+   }
+
+   /**
+   *
+   */
+   friend void swap(Tree<DataType>& lhs, Tree<DataType>& rhs)
+   {
+      // Enable Argument Dependent Lookup (ADL):
+      using std::swap;
+
+      swap(lhs.m_head, rhs.m_head);
+   }
+
+   /**
+   * @brief Destructor deletes all TreeNodes in the Tree.
    */
    ~Tree()
    {
-      //TreeNode<DataType>* lastNodeVisited = nullptr;
+      TreeNode<DataType>* lastNodeVisited = nullptr;
 
-      //std::for_each(
-      //   Tree<DataType>::PostOrderIterator(m_head),
-      //   Tree<DataType>::PostOrderIterator(),
-      //   [&](Tree<DataType>::reference node)
-      //{
-      //   if (lastNodeVisited)
-      //   {
-      //      delete lastNodeVisited;
-      //   }
+      std::for_each(
+         Tree<DataType>::PostOrderIterator(m_head),
+         Tree<DataType>::PostOrderIterator(),
+         [&](Tree<DataType>::reference node)
+      {
+         if (lastNodeVisited)
+         {
+            delete lastNodeVisited;
+         }
 
-      //   lastNodeVisited = &node;
-      //});
+         lastNodeVisited = &node;
+      });
 
-      //delete lastNodeVisited;
+      delete lastNodeVisited;
    }
 
    /**
@@ -704,31 +763,6 @@ public:
       }
 
       return depth;
-   }
-
-   /**
-   * @brief Print outputs the contents of the Tree starting and ending at the specified TreeNode,
-   * using a pre-order traversal.
-   *
-   * @param[in] node                The starting node.
-   * @param[in] printer             A function (or lambda) that returns the std::wstrig to be
-   *                                printed.
-   */
-   static void Print(
-      const TreeNode<DataType>& node,
-      std::function<std::wstring(const DataType&)>& printer)
-   {
-      assert(!"Test me!");
-
-      const int tabSize{ 2 };
-
-      std::for_each(beginPreOrder(node), endPreOrder(),
-         [&](const_reference currentNode)
-      {
-         const auto depth = Depth(currentNode);
-         const std::wstring padding{ (depth * tabSize), ' ' };
-         std::wcout << padding << printer(node.GetData()) << std::endl;
-      });
    }
 
    /**

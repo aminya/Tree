@@ -7,6 +7,7 @@
 #include "../Tree/RawPointerTree.hpp"
 
 #include <algorithm>
+#include <vector>
 
 SCENARIO("Adding nodes to the tree", "[treeConstruction]")
 {
@@ -54,7 +55,7 @@ SCENARIO("Adding nodes to the tree", "[treeConstruction]")
 
 TEST_CASE("TreeNode Construction and Assignment")
 {
-   const TreeNode<std::string> node{ "Bar" };
+   /*const*/ TreeNode<std::string> node{ "Bar" };
 
    SECTION("Default Construction")
    {
@@ -156,7 +157,7 @@ TEST_CASE("Node Counting")
 
 TEST_CASE("TreeNode::Iterators")
 {
-   const TreeNode<std::string> node{ "Test" };
+   /*const*/ TreeNode<std::string> node{ "Test" };
    const auto sharedNode = std::make_shared<TreeNode<std::string>>(node);
    const auto constItr = Tree<std::string>::PostOrderIterator(sharedNode.get());
 
@@ -569,6 +570,71 @@ TEST_CASE("Sorting")
 
       REQUIRE(sizeBeforeSort == sizeAfterSort);
       REQUIRE(sortingError == false);
+   }
+}
+
+TEST_CASE("TreeNode Copying")
+{
+   TreeNode<std::string> node{ "Node" };
+
+   const auto copy = node;
+
+   REQUIRE(node.GetData() == copy.GetData());
+}
+
+TEST_CASE("Tree Copying")
+{
+   Tree<std::string> tree{ "F" };
+   tree.GetHead()->AppendChild("B")->AppendChild("A");
+   tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
+   tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+
+   const auto copy = tree;
+
+   REQUIRE(tree.Size() == copy.Size());
+
+   SECTION("Pre-order Verification")
+   {
+      const std::vector<std::string> expectedTraversal =
+         { "F", "B", "A", "D", "C", "E", "G", "I", "H" };
+
+      int index = 0;
+
+      bool traversalError = false;
+      for (auto itr = copy.beginPreOrder(); itr != copy.endPreOrder(); ++itr)
+      {
+         const auto& data = itr->GetData();
+         if (data != expectedTraversal[index++])
+         {
+            traversalError = true;
+            break;
+         }
+      }
+
+      REQUIRE(traversalError == false);
+      REQUIRE(index == expectedTraversal.size());
+   }
+   SECTION("Post-order Verification")
+   {
+      const std::vector<std::string> expectedTraversal =
+         { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
+
+      int index = 0;
+
+      bool traversalError = false;
+      for (auto itr = copy.begin(); itr != copy.end(); ++itr)
+      {
+         const auto& data = itr->GetData();
+         if (data != expectedTraversal[index++])
+         {
+            traversalError = true;
+            break;
+         }
+      }
+
+      REQUIRE(traversalError == false);
+      REQUIRE(index == expectedTraversal.size());
    }
 }
 

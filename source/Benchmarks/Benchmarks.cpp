@@ -12,7 +12,7 @@
 * =======================
 *
 * If functions like TreeNode::GetParent(), -::GetFirstChild(), -::GetLastChild(),
-* -::GetNextSibling(), and -::GetNextSibling() don't return const references,
+* -::GetNextSibling(), and -::GetPreviousSibling() don't return const references,
 * and instead, return copies of the std::shared_ptrs then a simple post-order traversal
 * over 16^5 + 1 nodes goes from taking 46ms to 71ms!
 *
@@ -90,7 +90,7 @@ int main()
    std::cout << "Size of Tree: " << sizeOfTree << " nodes!" << std::endl;
 
    NEW_LINE;
-   const auto preOrderTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
+   auto preOrderTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
    {
       std::for_each(tree.beginPreOrder(), tree.endPreOrder(),
          [](Tree<std::string>::const_reference)
@@ -99,12 +99,14 @@ int main()
       });
    }).GetElapsedTime();
 
+   preOrderTraversalTime = std::max(preOrderTraversalTime, std::uint64_t{ 1 });
+
    std::cout << "Pre-Order Traversal: " << std::endl;
    std::cout << "\tEntire Tree:\t" << preOrderTraversalTime << " ms" << std::endl;
    std::cout << "\tNodes per MS:\t" << sizeOfTree / preOrderTraversalTime << std::endl;
 
    NEW_LINE;
-   const auto postOrderTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
+   auto postOrderTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
    {
       std::for_each(std::begin(tree), std::end(tree),
          [](Tree<std::string>::const_reference)
@@ -113,12 +115,14 @@ int main()
       });
    }).GetElapsedTime();
 
+   postOrderTraversalTime = std::max(postOrderTraversalTime, std::uint64_t{ 1 });
+
    std::cout << "Post-Order Traversal: " << std::endl;
    std::cout << "\tEntire Tree:\t" << postOrderTraversalTime << " ms" << std::endl;
    std::cout << "\tNodes per MS:\t" << sizeOfTree / postOrderTraversalTime << std::endl;
 
    NEW_LINE;
-   const auto leafTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
+   auto leafTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
    {
       std::for_each(tree.beginLeaf(), tree.endLeaf(),
          [](Tree<std::string>::const_reference)
@@ -126,6 +130,8 @@ int main()
          return true;
       });
    }).GetElapsedTime();
+
+   leafTraversalTime = std::max(leafTraversalTime, std::uint64_t{ 1 });
 
    std::cout << "Leaf Traversal: " << std::endl;
    std::cout << "\tEntire Tree:\t" << leafTraversalTime << " ms" << std::endl;
