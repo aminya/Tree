@@ -597,28 +597,27 @@ private:
    {
       sink.m_data = source.m_data;
 
-      if (source.HasChildren())
+      if (!source.HasChildren())
       {
-         std::for_each(
-            Tree<DataType>::SiblingIterator(source.GetFirstChild()),
-            Tree<DataType>::SiblingIterator(),
-            [&](Tree<DataType>::const_reference node)
-         {
-            sink.AppendChild(node.GetData());
-         });
+         return;
+      }
 
-         const auto end = Tree<DataType>::SiblingIterator();
+      std::for_each(
+         Tree<DataType>::SiblingIterator(source.GetFirstChild()),
+         Tree<DataType>::SiblingIterator(),
+         [&](Tree<DataType>::const_reference node)
+      {
+         sink.AppendChild(node.GetData());
+      });
 
-         auto sourceItr = Tree<DataType>::SiblingIterator(source.GetFirstChild());
-         auto sinkItr = Tree<DataType>::SiblingIterator(sink.GetFirstChild());
+      const auto end = Tree<DataType>::SiblingIterator();
 
-         while (sourceItr != end)
-         {
-            copy(*sourceItr, *sinkItr);
+      auto sourceItr = Tree<DataType>::SiblingIterator(source.GetFirstChild());
+      auto sinkItr = Tree<DataType>::SiblingIterator(sink.GetFirstChild());
 
-            sourceItr++;
-            sinkItr++;
-         }
+      while (sourceItr != end)
+      {
+         copy(*sourceItr++, *sinkItr++);
       }
    }
 
