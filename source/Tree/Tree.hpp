@@ -1,9 +1,7 @@
 #pragma once
-#pragma once
 
 #include <cassert>
 #include <functional>
-#include <iostream>
 #include <iterator>
 
 template<typename DataType> class Tree;
@@ -116,7 +114,10 @@ public:
    }
 
    /**
-   * @brief TreeNode performs a shallow copy-construction of the specified TreeNode.
+   * @brief TreeNode performs a copy-construction of the specified TreeNode.
+   *
+   * The nodes in the TreeNode are deep-copied, while the data contained in the tree is
+   * shallow-copied.
    */
    TreeNode(const TreeNode<DataType>& other) :
       m_parent(nullptr),
@@ -132,10 +133,33 @@ public:
    }
 
    /**
-   *
+   * @brief Destroys the TreeNode and all TreeNodes under it.
    */
    ~TreeNode()
    {
+      if (m_childCount == 0)
+      {
+         m_parent = nullptr;
+         m_firstChild = nullptr;
+         m_lastChild = nullptr;
+         m_previousSibling = nullptr;
+         m_nextSibling = nullptr;
+
+         return;
+      }
+
+      assert(m_firstChild && m_lastChild);
+
+      TreeNode<DataType>* childNode = m_firstChild;
+      TreeNode<DataType>* nextNode = nullptr;
+
+      while (childNode != nullptr)
+      {
+         nextNode = childNode->m_nextSibling;
+         delete childNode;
+         childNode = nextNode;
+      }
+
       m_parent = nullptr;
       m_firstChild = nullptr;
       m_lastChild = nullptr;
@@ -190,7 +214,7 @@ public:
    /**
    * @returns True if the node has been marked as visited.
    */
-   bool GetVisited() const
+   bool HasNodeBeenVisited() const
    {
       return m_visited;
    }
@@ -204,7 +228,9 @@ public:
    */
    TreeNode<DataType>* PrependChild(const TreeNode<DataType>& child)
    {
-      child->m_parent = this;
+      assert(!"Test me!");
+
+      child.m_parent = this;
 
       if (!m_firstChild)
       {
@@ -213,7 +239,7 @@ public:
 
       assert(m_firstChild);
 
-      m_firstChild->m_previousSibling = child;
+      m_firstChild->m_previousSibling = &child;
       m_firstChild->m_previousSibling->m_nextSibling = m_firstChild;
       m_firstChild = m_firstChild->m_previousSibling;
 
@@ -700,26 +726,12 @@ public:
    }
 
    /**
-   * @brief Destructor deletes all TreeNodes in the Tree.
+   * @brief Deletes the head TreeNode, which, in turn, will trigger a deletion of every
+   * TreeNode in the Tree.
    */
    ~Tree()
    {
-      TreeNode<DataType>* lastNodeVisited = nullptr;
-
-      std::for_each(
-         Tree<DataType>::PostOrderIterator(m_head),
-         Tree<DataType>::PostOrderIterator(),
-         [&](Tree<DataType>::reference node)
-      {
-         if (lastNodeVisited)
-         {
-            delete lastNodeVisited;
-         }
-
-         lastNodeVisited = &node;
-      });
-
-      delete lastNodeVisited;
+      delete m_head;
    }
 
    /**
@@ -863,8 +875,6 @@ template<typename DataType>
 class Tree<DataType>::Iterator
 {
 public:
-   friend class Tree<DataType>;
-
    // Typedefs needed for STL compliance:
    typedef DataType                             value_type;
    typedef DataType*                            pointer;
@@ -1011,9 +1021,12 @@ public:
    explicit PreOrderIterator(const TreeNode<DataType>* node) :
       Iterator(node)
    {
-      m_endingNode = (node && node->GetNextSibling())
-         ? node->GetNextSibling()
-         : nullptr;
+      if (!node)
+      {
+         return;
+      }
+
+      m_endingNode = node->GetNextSibling();
    }
 
    /**
@@ -1153,7 +1166,12 @@ public:
       Iterator(node),
       m_traversingUpTheTree(false)
    {
-      if (node && node->GetNextSibling())
+      if (!node)
+      {
+         return;
+      }
+
+      if (node->GetNextSibling())
       {
          auto* traversingNode = node->GetNextSibling();
          while (traversingNode->HasChildren())
@@ -1164,15 +1182,12 @@ public:
          m_endingNode = traversingNode;
       }
 
-      if (node)
+      while (node->GetFirstChild())
       {
-         while (node->GetFirstChild())
-         {
-            node = node->GetFirstChild();
-         }
-
-         m_currentNode = const_cast<TreeNode<DataType>*>(node);
+         node = node->GetFirstChild();
       }
+
+      m_currentNode = const_cast<TreeNode<DataType>*>(node);
    }
 
    /**
@@ -1312,37 +1327,31 @@ public:
    explicit LeafIterator(const TreeNode<DataType>* node) :
       Iterator(node)
    {
-      if (!m_currentNode)
+      if (!node)
       {
          return;
       }
 
-      auto* firstNode = m_currentNode;
-      if (firstNode->HasChildren())
+      if (node->HasChildren())
       {
+         auto* firstNode = node;
          while (firstNode->GetFirstChild())
          {
             firstNode = firstNode->GetFirstChild();
          }
+
+         m_currentNode = const_cast<TreeNode<DataType>*>(firstNode);
       }
 
-      m_currentNode = firstNode;
-
-      auto* lastNode = node;
-      if (lastNode->GetNextSibling())
+      if (node->GetNextSibling())
       {
-         lastNode = lastNode->GetNextSibling();
-
+         auto* lastNode = node->GetNextSibling();
          while (lastNode->HasChildren())
          {
             lastNode = lastNode->GetFirstChild();
          }
 
-         m_endingNode = const_cast<TreeNode<DataType>*>(lastNode);
-      }
-      else
-      {
-         m_endingNode = nullptr;
+         m_endingNode = lastNode;
       }
    }
 

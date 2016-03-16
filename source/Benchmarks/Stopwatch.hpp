@@ -140,7 +140,7 @@ public:
 
    /**
    * @brief This Stopwatch constructor will time the code encapsulated in the std::function object
-   * and then same the result to a member variable.
+   * and then save the result to a member variable.
    *
    * In order to retrieve the elapsed time, call GetElapsedTime().
    */
@@ -150,7 +150,7 @@ public:
    }
 
    /**
-   * @returns The elapsed time in units of type ChronoType.
+   * @returns The elapsed time in ChronoType units.
    */
    std::uint64_t GetElapsedTime()
    {
