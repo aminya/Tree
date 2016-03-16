@@ -2,8 +2,7 @@
 #include <iostream>
 #include <string>
 
-//#include "../Tree/Tree.hpp"
-#include "../Tree/RawPointerTree.hpp"
+#include "../Tree/Tree.hpp"
 
 #include "Stopwatch.hpp"
 

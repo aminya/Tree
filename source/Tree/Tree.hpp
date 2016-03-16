@@ -1,10 +1,10 @@
 #pragma once
+#pragma once
 
 #include <cassert>
 #include <functional>
 #include <iostream>
 #include <iterator>
-#include <memory>
 
 template<typename DataType> class Tree;
 template<typename DataType> class TreeNode;
@@ -30,7 +30,7 @@ inline bool operator<=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& 
 }
 
 /**
-* @returns True if the data encapsulated in the left-hand side TreeNode is greater than 
+* @returns True if the data encapsulated in the left-hand side TreeNode is greater than
 * the data encapsulated in the right-hand side TreeNode.
 */
 template<typename DataType>
@@ -76,7 +76,7 @@ inline bool operator!=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& 
 * sibling, and, of course, to the data it encapsulates.
 */
 template<typename DataType>
-class TreeNode : public std::enable_shared_from_this<TreeNode<DataType>>
+class TreeNode
 {
 public:
    typedef DataType           value_type;
@@ -119,41 +119,34 @@ public:
    * @brief TreeNode performs a shallow copy-construction of the specified TreeNode.
    */
    TreeNode(const TreeNode<DataType>& other) :
-      m_parent(other.m_parent),
-      m_firstChild(other.m_firstChild),
-      m_lastChild(other.m_lastChild),
-      m_previousSibling(other.m_previousSibling),
-      m_nextSibling(other.m_nextSibling),
+      m_parent(nullptr),
+      m_firstChild(nullptr),
+      m_lastChild(nullptr),
+      m_previousSibling(nullptr),
+      m_nextSibling(nullptr),
       m_data(other.m_data),
-      m_childCount(other.m_childCount),
-      m_visited(other.m_visited)
+      m_childCount(0),
+      m_visited(false)
    {
-   }
-
-   /**
-   * Since we not using std::weak_ptrs to keep track of sibling and parent links, the Tree
-   * is going to have cycles. These cycles will prevent TreeNode objects from being garbage
-   * collected when all other consumers have released their references. It is therefore
-   * important that we break these cycles whenever a TreeNode is deleted.
-   */
-   //~TreeNode()
-   //{
-   //   // @todo Figure out a clean way of cleaning up---no pun intended.
-   //}
-
-   /**
-   *
-   */
-   TreeNode<DataType>& operator=(TreeNode<DataType> other)
-   {
-      swap(*this, other);
-      return *this;
+      copy(other, *this);
    }
 
    /**
    *
    */
-   friend void swap(TreeNode<DataType>& lhs, TreeNode<DataType>& rhs)
+   ~TreeNode()
+   {
+      m_parent = nullptr;
+      m_firstChild = nullptr;
+      m_lastChild = nullptr;
+      m_previousSibling = nullptr;
+      m_nextSibling = nullptr;
+   }
+
+   /**
+   * @brief Exception-safe swap function.
+   */
+   friend void swap(TreeNode<DataType>& lhs, TreeNode<DataType>& rhs) /* noexcept */
    {
       // Enable Argument Dependent Lookup (ADL):
       using std::swap;
@@ -189,7 +182,7 @@ public:
    *
    * @param[in] visited             Whether the node should be marked as having been visited.
    */
-   inline void MarkVisited(const bool visited = true)
+   void MarkVisited(const bool visited = true)
    {
       m_visited = visited;
    }
@@ -197,7 +190,7 @@ public:
    /**
    * @returns True if the node has been marked as visited.
    */
-   inline bool GetVisited() const
+   bool GetVisited() const
    {
       return m_visited;
    }
@@ -209,9 +202,9 @@ public:
    *
    * @returns A std::shared_ptr to the newly appended child.
    */
-   std::shared_ptr<TreeNode<DataType>> PrependChild(const std::shared_ptr<TreeNode<DataType>>& child)
+   TreeNode<DataType>* PrependChild(const TreeNode<DataType>& child)
    {
-      child->m_parent = shared_from_this();
+      child->m_parent = this;
 
       if (!m_firstChild)
       {
@@ -236,28 +229,28 @@ public:
    *
    * @returns The newly prepended TreeNode.
    */
-   std::shared_ptr<TreeNode<DataType>> PrependChild(DataType& data)
+   TreeNode<DataType>* PrependChild(DataType& data)
    {
-      const auto newNode = std::make_shared<TreeNode<DataType>>(data);
-      return PrependChild(newNode);
+      const auto* newNode = new TreeNode<DataType>(data);
+      return PrependChild(*newNode);
    }
 
    /**
    * @overload
    */
-   std::shared_ptr<TreeNode<DataType>> PrependChild(const DataType& data)
+   TreeNode<DataType>* PrependChild(const DataType& data)
    {
-      auto newNode = std::make_shared<TreeNode<DataType>>(data);
-      return PrependChild(newNode);
+      const auto* newNode = new TreeNode<DataType>(data);
+      return PrependChild(*newNode);
    }
 
    /**
    * @overload
    */
-   std::shared_ptr<TreeNode<DataType>> PrependChild(DataType&& data)
+   TreeNode<DataType>* PrependChild(DataType&& data)
    {
-      const auto newNode = std::make_shared<TreeNode<DataType>>(std::forward<DataType>(data));
-      return PrependChild(newNode);
+      const auto* newNode = new TreeNode<DataType>(std::forward<DataType>(data));
+      return PrependChild(*newNode);
    }
 
    /**
@@ -267,9 +260,9 @@ public:
    *
    * @returns A std::shared_ptr to the newly appended child.
    */
-   std::shared_ptr<TreeNode<DataType>> AppendChild(const std::shared_ptr<TreeNode<DataType>>& child)
+   TreeNode<DataType>* AppendChild(TreeNode<DataType>& child)
    {
-      child->m_parent = shared_from_this();
+      child.m_parent = this;
 
       if (!m_lastChild)
       {
@@ -278,7 +271,7 @@ public:
 
       assert(m_lastChild);
 
-      m_lastChild->m_nextSibling = child;
+      m_lastChild->m_nextSibling = &child;
       m_lastChild->m_nextSibling->m_previousSibling = m_lastChild;
       m_lastChild = m_lastChild->m_nextSibling;
 
@@ -294,34 +287,34 @@ public:
    *
    * @returns The newly appended TreeNode.
    */
-   std::shared_ptr<TreeNode<DataType>> AppendChild(DataType& data)
+   TreeNode<DataType>* AppendChild(DataType& data)
    {
-      const auto newNode = std::make_shared<TreeNode<DataType>>(data);
-      return AppendChild(newNode);
+      const auto* const newNode = new TreeNode<DataType>(data);
+      return AppendChild(*newNode);
    }
 
    /**
    * @overload
    */
-   std::shared_ptr<TreeNode<DataType>> AppendChild(const DataType& data)
+   TreeNode<DataType>* AppendChild(const DataType& data)
    {
-      const auto newNode = std::make_shared<TreeNode<DataType>>(data);
-      return AppendChild(newNode);
+      auto* const newNode = new TreeNode<DataType>(data);
+      return AppendChild(*newNode);
    }
 
    /**
    * @overload
    */
-   std::shared_ptr<TreeNode<DataType>> AppendChild(DataType&& data)
+   TreeNode<DataType>* AppendChild(DataType&& data)
    {
-      const auto newNode = std::make_shared<TreeNode<DataType>>(std::forward<DataType>(data));
-      return AppendChild(newNode);
+      auto* const newNode = new TreeNode<DataType>(std::forward<DataType>(data));
+      return AppendChild(*newNode);
    }
 
    /**
    * @returns The underlying data stored in the TreeNode.
    */
-   inline DataType& GetData()
+   DataType& GetData()
    {
       return m_data;
    }
@@ -329,7 +322,7 @@ public:
    /**
    * @overload
    */
-   inline const DataType& GetData() const
+   const DataType& GetData() const
    {
       return m_data;
    }
@@ -337,7 +330,7 @@ public:
    /**
    * @returns A std::shared_ptr to the TreeNode's parent, if it exists; nullptr otherwise.
    */
-   inline const std::shared_ptr<TreeNode<DataType>>& GetParent() const
+   TreeNode<DataType>* const GetParent() const
    {
       return m_parent;
    }
@@ -345,7 +338,7 @@ public:
    /**
    * @returns A std::shared_ptr to the TreeNode's first child.
    */
-   inline const std::shared_ptr<TreeNode<DataType>>& GetFirstChild() const
+   TreeNode<DataType>* const GetFirstChild() const
    {
       return m_firstChild;
    }
@@ -353,7 +346,7 @@ public:
    /**
    * @returns A std::shared_ptr to the TreeNode's last child.
    */
-   inline const std::shared_ptr<TreeNode<DataType>>& GetLastChild() const
+   TreeNode<DataType>* const GetLastChild() const
    {
       return m_lastChild;
    }
@@ -361,7 +354,7 @@ public:
    /**
    * @returns A std::shared_ptr to the TreeNode's next sibling.
    */
-   inline const std::shared_ptr<TreeNode<DataType>>& GetNextSibling() const
+   TreeNode<DataType>* const GetNextSibling() const
    {
       return m_nextSibling;
    }
@@ -369,7 +362,7 @@ public:
    /**
    * @returns A std::shared_ptr to the TreeNode's previous sibling.
    */
-   inline const std::shared_ptr<TreeNode<DataType>>& GetPreviousSibling() const
+   TreeNode<DataType>* const GetPreviousSibling() const
    {
       return m_previousSibling;
    }
@@ -377,7 +370,7 @@ public:
    /**
    * @returns True if this node has direct descendants.
    */
-   inline bool HasChildren() const
+   bool HasChildren() const
    {
       return m_childCount > 0;
    }
@@ -387,7 +380,7 @@ public:
    *
    * @note This does not include grandchildren.
    */
-   inline unsigned int GetChildCount() const
+   unsigned int GetChildCount() const
    {
       return m_childCount;
    }
@@ -395,33 +388,14 @@ public:
    /**
    * @returns The total number of descendant nodes belonging to the node.
    */
-   inline size_t CountAllDescendants()
+   size_t CountAllDescendants()
    {
-      auto itr = Tree<DataType>::PostOrderIterator(shared_from_this());
+      const auto itr = Tree<DataType>::PostOrderIterator(this);
       const auto end = Tree<DataType>::PostOrderIterator();
       const auto nodeCount = std::count_if(itr, end,
-         [] (Tree<DataType>::const_reference) { return true; });
+         [](Tree<DataType>::const_reference) { return true; });
 
       return nodeCount - 1;
-   }
-
-   /**
-   * @brief DetachFromTree detaches the node from the Tree that it is in.
-   */
-   void DetachFromTree()
-   {
-      // @todo
-      // This is going to require a bit of work to sort out. The easiest thing
-      // to do would be to use std::weak_ptrs for all links from nodes to their 
-      // parents, and for all links between sibling nodes. Unfortunately, atomic
-      // references counting isn't super fast, and I would therefore expect
-      // traversal speeds to take a significant hit...
-
-      m_parent.reset();
-      m_firstChild.reset();
-      m_lastChild.reset();
-      m_previousSibling.reset();
-      m_nextSibling.reset();
    }
 
    /**
@@ -431,6 +405,11 @@ public:
    */
    void SortChildren(const std::function<bool(TreeNode<DataType>, TreeNode<DataType>)>& comparator)
    {
+      if (!m_firstChild)
+      {
+         return;
+      }
+
       MergeSort(m_firstChild, comparator);
    }
 
@@ -444,7 +423,7 @@ private:
    *                                is the lesser of the two.
    */
    void MergeSort(
-      std::shared_ptr<TreeNode<DataType>>& list,
+      TreeNode<DataType>*& list,
       const std::function<bool(TreeNode<DataType>, TreeNode<DataType>)>& comparator)
    {
       if (!list || !list->m_nextSibling)
@@ -452,9 +431,9 @@ private:
          return;
       }
 
-      std::shared_ptr<TreeNode<DataType>> head = list;
-      std::shared_ptr<TreeNode<DataType>> lhs = nullptr;
-      std::shared_ptr<TreeNode<DataType>> rhs = nullptr;
+      TreeNode<DataType>* head = list;
+      TreeNode<DataType>* lhs = nullptr;
+      TreeNode<DataType>* rhs = nullptr;
 
       DivideList(head, lhs, rhs);
 
@@ -475,17 +454,17 @@ private:
    * @param[out] rhs                The first TreeNode of the right hand side list.
    */
    void DivideList(
-      std::shared_ptr<TreeNode<DataType>> head,
-      std::shared_ptr<TreeNode<DataType>>& lhs,
-      std::shared_ptr<TreeNode<DataType>>& rhs)
+      TreeNode<DataType>* head,
+      TreeNode<DataType>*& lhs,
+      TreeNode<DataType>*& rhs)
    {
       if (!head || !head->m_nextSibling)
       {
          return;
       }
 
-      std::shared_ptr<TreeNode<DataType>> tortoise = head;
-      std::shared_ptr<TreeNode<DataType>> hare = head->m_nextSibling;
+      TreeNode<DataType>* tortoise = head;
+      TreeNode<DataType>* hare = head->m_nextSibling;
 
       while (hare)
       {
@@ -511,30 +490,30 @@ private:
    *
    * @returns The first node of the merged TreeNode list.
    */
-   std::shared_ptr<TreeNode<DataType>> MergeSortedHalves(
-      std::shared_ptr<TreeNode<DataType>>& lhs,
-      std::shared_ptr<TreeNode<DataType>>& rhs,
+   TreeNode<DataType>* MergeSortedHalves(
+      TreeNode<DataType>*& lhs,
+      TreeNode<DataType>*& rhs,
       const std::function<bool(TreeNode<DataType>, TreeNode<DataType>)>& comparator)
    {
-      std::shared_ptr<TreeNode<DataType>> result = nullptr;
-      if (comparator(*lhs.get(), *rhs.get()))
+      TreeNode<DataType>* result = nullptr;
+      if (comparator(*lhs, *rhs))
       {
-         result = std::shared_ptr<TreeNode<DataType>>(lhs);
+         result = lhs;
          lhs = lhs->m_nextSibling;
       }
       else
       {
-         result = std::shared_ptr<TreeNode<DataType>>(rhs);
+         result = rhs;
          rhs = rhs->m_nextSibling;
       }
 
-      std::shared_ptr<TreeNode<DataType>> tail = result;
+      TreeNode<DataType>* tail = result;
 
       while (lhs && rhs)
       {
-         if (comparator(*lhs.get(), *rhs.get()))
+         if (comparator(*lhs, *rhs))
          {
-            tail->m_nextSibling = std::shared_ptr<TreeNode<DataType>>(lhs);
+            tail->m_nextSibling = lhs;
             tail = tail->m_nextSibling;
 
             lhs = lhs->m_nextSibling;
@@ -546,7 +525,7 @@ private:
          }
          else
          {
-            tail->m_nextSibling = std::shared_ptr<TreeNode<DataType>>(rhs);
+            tail->m_nextSibling = rhs;
             tail = tail->m_nextSibling;
 
             rhs = rhs->m_nextSibling;
@@ -560,7 +539,7 @@ private:
 
       while (lhs)
       {
-         tail->m_nextSibling = std::shared_ptr<TreeNode<DataType>>(lhs);
+         tail->m_nextSibling = lhs;
          tail = tail->m_nextSibling;
 
          lhs = lhs->m_nextSibling;
@@ -573,7 +552,7 @@ private:
 
       while (rhs)
       {
-         tail->m_nextSibling = std::shared_ptr<TreeNode<DataType>>(rhs);
+         tail->m_nextSibling = rhs;
          tail = tail->m_nextSibling;
 
          rhs = rhs->m_nextSibling;
@@ -594,11 +573,11 @@ private:
    *
    * @returns The newly added node.
    */
-   std::shared_ptr<TreeNode<DataType>> AddFirstChild(const std::shared_ptr<TreeNode<DataType>>& child)
+   TreeNode<DataType>* AddFirstChild(TreeNode<DataType>& child)
    {
       assert(m_childCount == 0);
 
-      m_firstChild = child;
+      m_firstChild = &child;
       m_lastChild = m_firstChild;
 
       m_childCount++;
@@ -606,11 +585,43 @@ private:
       return m_firstChild;
    }
 
-   std::shared_ptr<TreeNode<DataType>> m_parent;
-   std::shared_ptr<TreeNode<DataType>> m_firstChild;
-   std::shared_ptr<TreeNode<DataType>> m_lastChild;
-   std::shared_ptr<TreeNode<DataType>> m_previousSibling;
-   std::shared_ptr<TreeNode<DataType>> m_nextSibling;
+   /**
+   * @brief Helper function to assist on copy TreeNodes.
+   *
+   * @param[in] source              The TreeNode to copy information from.
+   * @param[out] sink               The TreeNode to place a copy of the information into.
+   */
+   void copy(const TreeNode<DataType>& source, TreeNode<DataType>& sink)
+   {
+      if (!source.HasChildren())
+      {
+         return;
+      }
+
+      std::for_each(
+         Tree<DataType>::SiblingIterator(source.GetFirstChild()),
+         Tree<DataType>::SiblingIterator(),
+         [&](Tree<DataType>::const_reference node)
+      {
+         sink.AppendChild(node.GetData());
+      });
+
+      const auto end = Tree<DataType>::SiblingIterator();
+
+      auto sourceItr = Tree<DataType>::SiblingIterator(source.GetFirstChild());
+      auto sinkItr = Tree<DataType>::SiblingIterator(sink.GetFirstChild());
+
+      while (sourceItr != end)
+      {
+         copy(*sourceItr++, *sinkItr++);
+      }
+   }
+
+   TreeNode<DataType>* m_parent;
+   TreeNode<DataType>* m_firstChild;
+   TreeNode<DataType>* m_lastChild;
+   TreeNode<DataType>* m_previousSibling;
+   TreeNode<DataType>* m_nextSibling;
 
    DataType m_data;
 
@@ -628,6 +639,8 @@ template<typename DataType>
 class Tree
 {
 public:
+   friend class TreeNode<DataType>;
+
    class Iterator;
    class PreOrderIterator;
    class PostOrderIterator;
@@ -657,40 +670,62 @@ public:
    }
 
    /**
-   * @brief Tree copy-constructs a copy of the specified Tree.
+   * @brief Copy constructor.
    */
    Tree(const Tree<DataType>& other) :
-      m_head(other.m_head)
+      m_head(new TreeNode<DataType>(*other.m_head))
    {
    }
 
-   //**
-   //*
-   //*/
-   //~Tree()
-   //{
-   //   //std::cout << "Destroying Tree..." << std::endl;
+   /**
+   * @brief Assignment operator.
+   *
+   * @todo Is this signature right?
+   */
+   Tree<DataType>& operator=(Tree<DataType> other)
+   {
+      swap(*this, other);
+      return *this;
+   }
 
-   //   TreeNode<DataType>* lastNodeVisited = nullptr;
+   /**
+   *
+   */
+   friend void swap(Tree<DataType>& lhs, Tree<DataType>& rhs)
+   {
+      // Enable Argument Dependent Lookup (ADL):
+      using std::swap;
 
-   //   std::for_each(
-   //      Tree<DataType>::PostOrderIterator(m_head),
-   //      Tree<DataType>::PostOrderIterator(),
-   //      [&](Tree<DataType>::reference node)
-   //   {
-   //      if (lastNodeVisited)
-   //      {
-   //         lastNodeVisited->DetachFromTree();
-   //      }
+      swap(lhs.m_head, rhs.m_head);
+   }
 
-   //      lastNodeVisited = &node;
-   //   });
-   //}
+   /**
+   * @brief Destructor deletes all TreeNodes in the Tree.
+   */
+   ~Tree()
+   {
+      TreeNode<DataType>* lastNodeVisited = nullptr;
+
+      std::for_each(
+         Tree<DataType>::PostOrderIterator(m_head),
+         Tree<DataType>::PostOrderIterator(),
+         [&](Tree<DataType>::reference node)
+      {
+         if (lastNodeVisited)
+         {
+            delete lastNodeVisited;
+         }
+
+         lastNodeVisited = &node;
+      });
+
+      delete lastNodeVisited;
+   }
 
    /**
    * @returns A std::shared_ptr to the head TreeNode.
    */
-   std::shared_ptr<TreeNode<DataType>> GetHead() const
+   TreeNode<DataType>* GetHead() const
    {
       return m_head;
    }
@@ -705,7 +740,7 @@ public:
    size_t Size() const
    {
       return std::count_if(std::begin(*this), std::end(*this),
-         [] (const_reference) { return true; });
+         [](const_reference) { return true; });
    }
 
    /**
@@ -719,35 +754,10 @@ public:
       while (nodePtr->GetParent())
       {
          ++depth;
-         nodePtr = nodePtr->GetParent().get();
+         nodePtr = nodePtr->GetParent();
       }
 
       return depth;
-   }
-
-   /**
-   * @brief Print outputs the contents of the Tree starting and ending at the specified TreeNode,
-   * using a pre-order traversal.
-   *
-   * @param[in] node                The starting node.
-   * @param[in] printer             A function (or lambda) that returns the std::wstrig to be
-   *                                printed.
-   */
-   static void Print(
-      const std::shared_ptr<TreeNode<DataType>>& node,
-      std::function<std::wstring (const DataType&)>& printer)
-   {
-      assert(!"Test me!");
-
-      const int tabSize{ 2 };
-
-      std::for_each(beginPreOrder(node), endPreOrder(),
-         [&] (const_reference currentNode)
-      {
-         const auto depth = Depth(currentNode);
-         const std::wstring padding{ (depth * tabSize), ' ' };
-         std::wcout << padding << printer(node.GetData()) << std::endl;
-      });
    }
 
    /**
@@ -757,7 +767,7 @@ public:
    *
    * @returns A sibling iterator that advances over the siblings of the node.
    */
-   typename Tree::SiblingIterator beginSibling(const std::shared_ptr<TreeNode<DataType>> node) const
+   typename Tree::SiblingIterator beginSibling(const TreeNode<DataType>& node) const
    {
       assert(!"Test me!");
 
@@ -770,10 +780,10 @@ public:
    * over.
    *
    * @param[in] node                Any node that is a sibling of the target range.
-   * 
+   *
    * @returns A sibling iterator pointing past the last sibling.
    */
-   typename Tree::SiblingIterator endSibling(const std::shared_ptr<TreeNode<DataType>> node) const
+   typename Tree::SiblingIterator endSibling(const TreeNode<DataType>& node) const
    {
       assert(!"Test me!");
 
@@ -840,7 +850,7 @@ public:
    }
 
 private:
-   std::shared_ptr<TreeNode<DataType>> m_head;
+   TreeNode<DataType>* m_head;
 };
 
 /**
@@ -894,7 +904,7 @@ public:
    */
    TreeNode<DataType>* const operator&()
    {
-      return m_currentNode.get();
+      return m_currentNode;
    }
 
    /**
@@ -902,7 +912,7 @@ public:
    */
    const TreeNode<DataType>* const operator&() const
    {
-      return m_currentNode.get();
+      return m_currentNode;
    }
 
    /**
@@ -910,7 +920,7 @@ public:
    */
    TreeNode<DataType>* const operator->()
    {
-      return m_currentNode.get();
+      return m_currentNode;
    }
 
    /**
@@ -918,7 +928,7 @@ public:
    */
    const TreeNode<DataType>* const operator->() const
    {
-      return m_currentNode.get();
+      return m_currentNode;
    }
 
    /**
@@ -948,7 +958,7 @@ protected:
       m_endingNode(nullptr)
    {
    }
-   
+
    /**
    * Copy constructor.
    */
@@ -959,16 +969,16 @@ protected:
    {
    }
 
-   explicit Iterator(std::shared_ptr<TreeNode<DataType>> node) :
-      m_currentNode(node),
-      m_startingNode(node),
+   explicit Iterator(const TreeNode<DataType>* node) :
+      m_currentNode(const_cast<TreeNode<DataType>*>(node)),
+      m_startingNode(const_cast<TreeNode<DataType>*>(node)),
       m_endingNode(nullptr)
    {
    }
 
-   std::shared_ptr<TreeNode<DataType>> m_currentNode;
-   std::shared_ptr<TreeNode<DataType>> m_startingNode;
-   std::shared_ptr<TreeNode<DataType>> m_endingNode;
+   TreeNode<DataType>* m_currentNode;
+   TreeNode<DataType>* m_startingNode;
+   TreeNode<DataType>* m_endingNode;
 };
 
 /**
@@ -998,7 +1008,7 @@ public:
    /**
    * Constructs an iterator that starts and ends at the specified node.
    */
-   explicit PreOrderIterator(std::shared_ptr<TreeNode<DataType>> node) :
+   explicit PreOrderIterator(const TreeNode<DataType>* node) :
       Iterator(node)
    {
       m_endingNode = (node && node->GetNextSibling())
@@ -1012,7 +1022,7 @@ public:
    typename Tree::PreOrderIterator& operator++()
    {
       assert(m_currentNode);
-      auto traversingNode = m_currentNode;
+      auto* traversingNode = m_currentNode;
 
       if (traversingNode->HasChildren())
       {
@@ -1039,7 +1049,7 @@ public:
          }
       }
 
-      m_currentNode = (traversingNode.get() != m_endingNode.get()) ? traversingNode : nullptr;
+      m_currentNode = (traversingNode != m_endingNode) ? traversingNode : nullptr;
       return *this;
    }
 
@@ -1061,7 +1071,7 @@ public:
    {
       assert(!"Test me!");
 
-      auto traversingNode = m_currentNode;
+      auto* traversingNode = m_currentNode;
 
       if (!traversingNode)
       {
@@ -1139,13 +1149,13 @@ public:
    /**
    * Constructs an iterator that starts and ends at the specified node.
    */
-   explicit PostOrderIterator(std::shared_ptr<TreeNode<DataType>> node) :
+   explicit PostOrderIterator(const TreeNode<DataType>* node) :
       Iterator(node),
       m_traversingUpTheTree(false)
    {
       if (node && node->GetNextSibling())
       {
-         auto traversingNode = node->GetNextSibling();
+         auto* traversingNode = node->GetNextSibling();
          while (traversingNode->HasChildren())
          {
             traversingNode = traversingNode->GetFirstChild();
@@ -1161,7 +1171,7 @@ public:
             node = node->GetFirstChild();
          }
 
-         m_currentNode = node;
+         m_currentNode = const_cast<TreeNode<DataType>*>(node);
       }
    }
 
@@ -1171,7 +1181,7 @@ public:
    typename Tree::PostOrderIterator& operator++()
    {
       assert(m_currentNode);
-      auto traversingNode = m_currentNode;
+      auto* traversingNode = m_currentNode;
 
       if (traversingNode->HasChildren() && !m_traversingUpTheTree)
       {
@@ -1197,7 +1207,7 @@ public:
          traversingNode = traversingNode->GetParent();
       }
 
-      m_currentNode = (traversingNode.get() != m_endingNode.get()) ? traversingNode : nullptr;
+      m_currentNode = (traversingNode != m_endingNode) ? traversingNode : nullptr;
       return *this;
    }
 
@@ -1219,7 +1229,7 @@ public:
    {
       assert(!"Test me!");
 
-      auto traversingNode = m_currentNode;
+      auto* traversingNode = m_currentNode;
 
       // When the iterator is at the end(), then the next position should be the head:
       if (!traversingNode)
@@ -1299,7 +1309,7 @@ public:
    /**
    * Constructs an iterator that starts at the specified node and iterates to the end.
    */
-   explicit LeafIterator(std::shared_ptr<TreeNode<DataType>> node) :
+   explicit LeafIterator(const TreeNode<DataType>* node) :
       Iterator(node)
    {
       if (!m_currentNode)
@@ -1307,7 +1317,7 @@ public:
          return;
       }
 
-      auto firstNode = m_currentNode;
+      auto* firstNode = m_currentNode;
       if (firstNode->HasChildren())
       {
          while (firstNode->GetFirstChild())
@@ -1318,7 +1328,7 @@ public:
 
       m_currentNode = firstNode;
 
-      auto lastNode = node;
+      auto* lastNode = node;
       if (lastNode->GetNextSibling())
       {
          lastNode = lastNode->GetNextSibling();
@@ -1328,7 +1338,7 @@ public:
             lastNode = lastNode->GetFirstChild();
          }
 
-         m_endingNode = lastNode;
+         m_endingNode = const_cast<TreeNode<DataType>*>(lastNode);
       }
       else
       {
@@ -1342,7 +1352,7 @@ public:
    typename Tree::LeafIterator& operator++()
    {
       assert(m_currentNode);
-      auto traversingNode = m_currentNode;
+      auto* traversingNode = m_currentNode;
 
       if (traversingNode->HasChildren())
       {
@@ -1382,7 +1392,7 @@ public:
          }
       }
 
-      m_currentNode = (traversingNode.get() != m_endingNode.get()) ? traversingNode : nullptr;
+      m_currentNode = (traversingNode != m_endingNode) ? traversingNode : nullptr;
       return *this;
    }
 
@@ -1405,7 +1415,7 @@ public:
       assert(!"Test me!");
 
       assert(m_currentNode);
-      auto traversingNode = m_currentNode;
+      auto* traversingNode = m_currentNode;
 
       if (!traversingNode)
       {
@@ -1496,7 +1506,7 @@ public:
    /**
    * Constructs an iterator that starts at the specified node and iterates to the end.
    */
-   explicit SiblingIterator(std::shared_ptr<TreeNode<DataType>> node) :
+   explicit SiblingIterator(const TreeNode<DataType>* node) :
       Iterator(node)
    {
    }
@@ -1567,5 +1577,5 @@ public:
    }
 
 private:
-   std::shared_ptr<TreeNode<DataType>> m_parent;
+   TreeNode<DataType>* m_parent;
 };

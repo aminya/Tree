@@ -18,8 +18,5 @@
     <ClInclude Include="Tree.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RawPointerTree.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
