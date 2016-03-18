@@ -8,50 +8,6 @@
 #include <algorithm>
 #include <vector>
 
-SCENARIO("Adding nodes to the tree", "[treeConstruction]")
-{
-   GIVEN("a tree with only a head node")
-   {
-      Tree<std::string> tree{ "Head" };
-
-      REQUIRE(tree.GetHead() != nullptr);
-      REQUIRE(tree.GetHead()->GetData() == "Head");
-      REQUIRE(tree.GetHead()->CountAllDescendants() == 0);
-
-      WHEN("a single child node is added to the head node")
-      {
-         const std::string firstChildLabel{ "First Child" };
-         tree.GetHead()->AppendChild(firstChildLabel);
-
-         THEN("that child is reachable from the head node")
-         {
-            REQUIRE(tree.GetHead()->GetChildCount() == 1);
-            REQUIRE(tree.GetHead()->GetFirstChild() != nullptr);
-            REQUIRE(tree.GetHead()->GetLastChild() != nullptr);
-            REQUIRE(tree.GetHead()->GetFirstChild() == tree.GetHead()->GetLastChild());
-            REQUIRE(tree.GetHead()->GetFirstChild()->GetData() == firstChildLabel);
-         }
-
-         WHEN("a sibling is added to the head node's only child")
-         {
-            const std::string secondChildLabel{ "Second Child" };
-            tree.GetHead()->AppendChild(secondChildLabel);
-
-            THEN("both the first child and second child are properly reachable")
-            {
-               REQUIRE(tree.GetHead()->GetChildCount() == 2);
-               REQUIRE(tree.GetHead()->GetFirstChild() != nullptr);
-               REQUIRE(tree.GetHead()->GetLastChild() != nullptr);
-               REQUIRE(tree.GetHead()->GetFirstChild() != tree.GetHead()->GetLastChild());
-               REQUIRE(tree.GetHead()->GetFirstChild()->GetData() == firstChildLabel);
-               REQUIRE(tree.GetHead()->GetLastChild()->GetData() == secondChildLabel);
-               REQUIRE(tree.GetHead()->GetFirstChild()->GetNextSibling() == tree.GetHead()->GetLastChild());
-            }
-         }
-      }
-   }
-}
-
 TEST_CASE("TreeNode Construction and Assignment")
 {
    const TreeNode<std::string> node{ "Bar" };
@@ -129,6 +85,57 @@ TEST_CASE("TreeNode Alterations")
       std::transform(std::begin(data), std::end(data), std::begin(data), ::toupper);
 
       REQUIRE(node.GetData() == "BAR");
+   }
+}
+
+TEST_CASE("Prepending and Appending TreeNodes")
+{
+   Tree<int> tree{ 10 };
+
+   const auto IsEachNodeValueLargerThanTheLast = [&]
+   {
+      int lastValue = -1;
+
+      return std::all_of(std::begin(tree), std::end(tree),
+         [&](Tree<int>::const_reference node)
+      {
+         return node.GetData() > lastValue;
+      });
+   };
+
+   SECTION("Prepending Nodes")
+   {
+      tree.GetHead()->AppendChild(1);
+      tree.GetHead()->AppendChild(2);
+      tree.GetHead()->AppendChild(3);
+      tree.GetHead()->AppendChild(4);
+      tree.GetHead()->AppendChild(5);
+      tree.GetHead()->AppendChild(6);
+      tree.GetHead()->AppendChild(7);
+      tree.GetHead()->AppendChild(8);
+      tree.GetHead()->AppendChild(9);
+
+      const bool correctlyPrepended = IsEachNodeValueLargerThanTheLast();
+
+      REQUIRE(correctlyPrepended);
+      REQUIRE(tree.GetHead()->CountAllDescendants() == 9);
+   }
+   SECTION("Appending Nodes")
+   {
+      tree.GetHead()->PrependChild(9);
+      tree.GetHead()->PrependChild(8);
+      tree.GetHead()->PrependChild(7);
+      tree.GetHead()->PrependChild(6);
+      tree.GetHead()->PrependChild(5);
+      tree.GetHead()->PrependChild(4);
+      tree.GetHead()->PrependChild(3);
+      tree.GetHead()->PrependChild(2);
+      tree.GetHead()->PrependChild(1);
+
+      const bool correctlyAppended = IsEachNodeValueLargerThanTheLast();
+
+      REQUIRE(correctlyAppended);
+      REQUIRE(tree.GetHead()->CountAllDescendants() == 9);
    }
 }
 
@@ -677,5 +684,49 @@ TEST_CASE("Tree and TreeNode Destruction")
       }
 
       REQUIRE(CONSTRUCTION_COUNT == DESTRUCTION_COUNT);
+   }
+}
+
+SCENARIO("Adding nodes to the tree")
+{
+   GIVEN("a tree with only a head node")
+   {
+      Tree<std::string> tree{ "Head" };
+
+      REQUIRE(tree.GetHead() != nullptr);
+      REQUIRE(tree.GetHead()->GetData() == "Head");
+      REQUIRE(tree.GetHead()->CountAllDescendants() == 0);
+
+      WHEN("a single child node is added to the head node")
+      {
+         const std::string firstChildLabel{ "First Child" };
+         tree.GetHead()->AppendChild(firstChildLabel);
+
+         THEN("that child is reachable from the head node")
+         {
+            REQUIRE(tree.GetHead()->GetChildCount() == 1);
+            REQUIRE(tree.GetHead()->GetFirstChild() != nullptr);
+            REQUIRE(tree.GetHead()->GetLastChild() != nullptr);
+            REQUIRE(tree.GetHead()->GetFirstChild() == tree.GetHead()->GetLastChild());
+            REQUIRE(tree.GetHead()->GetFirstChild()->GetData() == firstChildLabel);
+         }
+
+         WHEN("a sibling is added to the head node's only child")
+         {
+            const std::string secondChildLabel{ "Second Child" };
+            tree.GetHead()->AppendChild(secondChildLabel);
+
+            THEN("both the first child and second child are properly reachable")
+            {
+               REQUIRE(tree.GetHead()->GetChildCount() == 2);
+               REQUIRE(tree.GetHead()->GetFirstChild() != nullptr);
+               REQUIRE(tree.GetHead()->GetLastChild() != nullptr);
+               REQUIRE(tree.GetHead()->GetFirstChild() != tree.GetHead()->GetLastChild());
+               REQUIRE(tree.GetHead()->GetFirstChild()->GetData() == firstChildLabel);
+               REQUIRE(tree.GetHead()->GetLastChild()->GetData() == secondChildLabel);
+               REQUIRE(tree.GetHead()->GetFirstChild()->GetNextSibling() == tree.GetHead()->GetLastChild());
+            }
+         }
+      }
    }
 }
