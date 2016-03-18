@@ -18,8 +18,8 @@ inline bool operator<(const TreeNode<DataType>& lhs, const TreeNode<DataType>& r
 }
 
 /**
-* @returns True if the data encapsulated in the left-hand side TreeNode is less than or equal to
-* the data encapsulated in the right-hand side TreeNode.
+* @returns True if the data encapsulated in the left-hand side TreeNode is less than 
+* or equal to the data encapsulated in the right-hand side TreeNode.
 */
 template<typename DataType>
 inline bool operator<=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
@@ -173,9 +173,9 @@ public:
    }
 
    /**
-   * @brief Exception-safe swap function.
+   * @brief Swaps all member variables of the left-hand side with that of the right-hand side.
    */
-   friend void swap(TreeNode<DataType>& lhs, TreeNode<DataType>& rhs) /* noexcept */
+   friend void swap(TreeNode<DataType>& lhs, TreeNode<DataType>& rhs)
    {
       // Enable Argument Dependent Lookup (ADL):
       using std::swap;
@@ -252,7 +252,8 @@ public:
    }
 
    /**
-   * @brief PrependChild will construct and prepend a new TreeNode as the first child of the TreeNode.
+   * @brief PrependChild will construct and prepend a new TreeNode as the first child of the
+   * TreeNode.
    *
    * @param[in] data                The underlying data to be stored in the new TreeNode.
    *
@@ -692,8 +693,6 @@ public:
 
    /**
    * @brief Assignment operator.
-   *
-   * @todo Is this signature right?
    */
    Tree<DataType>& operator=(Tree<DataType> other)
    {
@@ -702,7 +701,7 @@ public:
    }
 
    /**
-   *
+   * @brief Swaps all member variables of the left-hand side with that of the right-hand side.
    */
    friend void swap(Tree<DataType>& lhs, Tree<DataType>& rhs)
    {
@@ -739,7 +738,10 @@ public:
    size_t Size() const
    {
       return std::count_if(std::begin(*this), std::end(*this),
-         [](const_reference) { return true; });
+         [](const_reference) 
+      {
+         return true;
+      });
    }
 
    /**
@@ -822,8 +824,8 @@ private:
 /**
 * @brief The Iterator class
 *
-* This is the base iterator class that all other iterators (sibling, post-, pre-, in-order)
-* will derive from.
+* This is the base iterator class that all other iterators (sibling, leaf, post-, pre-, and 
+* in-order) will derive from. This class can only instantiated by derived types.
 */
 template<typename DataType>
 class Tree<DataType>::Iterator
@@ -896,7 +898,8 @@ public:
    }
 
    /**
-   * @returns True if the Iterator points to the same node as the other Iterator.
+   * @returns True if the Iterator points to the same node as the other Iterator,
+   * and false otherwise.
    */
    bool operator==(const Iterator& other) const
    {
@@ -904,7 +907,8 @@ public:
    }
 
    /**
-   * @returns True if the Iterator points to the same node as the other Iterator.
+   * @returns True if the Iterator points to the same node as the other Iterator,
+   * and false otherwise.
    */
    bool operator!=(const Iterator& other) const
    {
@@ -912,7 +916,6 @@ public:
    }
 
 protected:
-
    /**
    * Default constructor.
    */
@@ -933,6 +936,9 @@ protected:
    {
    }
 
+   /**
+   * Constructs a Iterator started at the specified node.
+   */
    explicit Iterator(const TreeNode<DataType>* node) :
       m_currentNode(const_cast<TreeNode<DataType>*>(node)),
       m_startingNode(const_cast<TreeNode<DataType>*>(node)),
@@ -958,15 +964,6 @@ public:
    explicit PreOrderIterator() :
       Iterator()
    {
-   }
-
-   /**
-   * Copy constructor.
-   */
-   explicit PreOrderIterator(const Iterator& other) :
-      Iterator(other)
-   {
-      assert(!"Test me!");
    }
 
    /**
@@ -1049,16 +1046,6 @@ public:
    }
 
    /**
-   * Copy constructor.
-   */
-   explicit PostOrderIterator(const Iterator& other) :
-      Iterator(other),
-      m_traversingUpTheTree(false)
-   {
-      assert(!"Test me!");
-   }
-
-   /**
    * Constructs an iterator that starts and ends at the specified node.
    */
    explicit PostOrderIterator(const TreeNode<DataType>* node) :
@@ -1086,6 +1073,7 @@ public:
          node = node->GetFirstChild();
       }
 
+      assert(node);
       m_currentNode = const_cast<TreeNode<DataType>*>(node);
    }
 
@@ -1153,15 +1141,6 @@ public:
    explicit LeafIterator() :
       Iterator()
    {
-   }
-
-   /**
-   * Copy constructor.
-   */
-   explicit LeafIterator(const Iterator& other) :
-      Iterator(other)
-   {
-      assert(!"Test me!");
    }
 
    /**
@@ -1273,15 +1252,6 @@ public:
    explicit SiblingIterator() :
       Iterator()
    {
-   }
-
-   /**
-   * Copy constructor.
-   */
-   explicit SiblingIterator(const Iterator& other) :
-      Iterator(other)
-   {
-      assert(!"Test me!");
    }
 
    /**
