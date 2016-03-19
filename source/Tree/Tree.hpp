@@ -129,7 +129,7 @@ public:
       m_childCount(0),
       m_visited(false)
    {
-      copy(other, *this);
+      Copy(other, *this);
    }
 
    /**
@@ -137,10 +137,7 @@ public:
    */
    ~TreeNode()
    {
-      if (m_parent)
-      {
-         m_parent->m_childCount--;
-      }
+      DetachFromTree();
 
       if (m_childCount == 0)
       {
@@ -170,6 +167,14 @@ public:
       m_lastChild = nullptr;
       m_previousSibling = nullptr;
       m_nextSibling = nullptr;
+   }
+
+   /**
+   *
+   */
+   void DeleteFromTree()
+   {
+      delete this;
    }
 
    /**
@@ -522,6 +527,8 @@ private:
          rhs = rhs->m_nextSibling;
       }
 
+      result->m_previousSibling = nullptr;
+
       TreeNode<DataType>* tail = result;
 
       while (lhs && rhs)
@@ -601,12 +608,13 @@ private:
    }
 
    /**
-   * @brief Helper function to assist on copy TreeNodes.
+   * @brief Helper function to recursively copy the specified |source| TreeNode and all its
+   * descendants.
    *
    * @param[in] source              The TreeNode to copy information from.
    * @param[out] sink               The TreeNode to place a copy of the information into.
    */
-   void copy(const TreeNode<DataType>& source, TreeNode<DataType>& sink)
+   void Copy(const TreeNode<DataType>& source, TreeNode<DataType>& sink)
    {
       if (!source.HasChildren())
       {
@@ -627,7 +635,55 @@ private:
       const auto end = Tree<DataType>::SiblingIterator();
       while (sourceItr != end)
       {
-         copy(*sourceItr++, *sinkItr++);
+         Copy(*sourceItr++, *sinkItr++);
+      }
+   }
+
+   /**
+   * @brief Removes the TreeNode from the tree structure, updating all surrounding links
+   * as appropriate.
+   *
+   * @note This function does not actually delete the node.
+   */
+   void DetachFromTree()
+   {
+      if (!m_parent)
+      {
+         return;
+      }
+
+      auto* previousSibling = m_previousSibling;
+
+      if (m_parent->m_firstChild == m_parent->m_lastChild)
+      {
+         m_parent->m_firstChild = nullptr;
+         m_parent->m_lastChild = nullptr;
+      }
+      else if (m_parent->m_firstChild == this)
+      {
+         assert(m_parent->m_firstChild->m_nextSibling);
+         m_parent->m_firstChild = m_parent->m_firstChild->m_nextSibling;
+      }
+      else if (m_parent->m_lastChild == this)
+      {
+         assert(m_parent->m_lastChild->m_previousSibling);
+         m_parent->m_lastChild = m_parent->m_lastChild->m_previousSibling;
+      }
+
+      m_parent->m_childCount--;
+
+      if (m_previousSibling && m_nextSibling)
+      {
+         m_previousSibling->m_nextSibling = m_nextSibling;
+         m_nextSibling->m_previousSibling = m_previousSibling;
+      }
+      else if (m_previousSibling)
+      {
+         m_previousSibling->m_nextSibling = nullptr;
+      }
+      else if (m_nextSibling)
+      {
+         m_nextSibling->m_previousSibling = nullptr;
       }
    }
 
