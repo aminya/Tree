@@ -8,8 +8,6 @@
 #include <algorithm>
 #include <vector>
 
-//#if 0
-
 TEST_CASE("TreeNode Construction and Assignment")
 {
    const TreeNode<std::string> node{ "Bar" };
@@ -581,7 +579,6 @@ TEST_CASE("Sorting")
       REQUIRE(sortingError == false);
    }
 }
-//#endif
 
 TEST_CASE("TreeNode Copying")
 {
@@ -647,8 +644,6 @@ TEST_CASE("Tree Copying")
       REQUIRE(index == expectedTraversal.size());
    }
 }
-
-//#endif
 
 unsigned int CONSTRUCTION_COUNT = 0;
 unsigned int DESTRUCTION_COUNT = 0;

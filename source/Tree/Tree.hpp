@@ -652,8 +652,6 @@ private:
          return;
       }
 
-      auto* previousSibling = m_previousSibling;
-
       if (m_parent->m_firstChild == m_parent->m_lastChild)
       {
          m_parent->m_firstChild = nullptr;
@@ -670,8 +668,6 @@ private:
          m_parent->m_lastChild = m_parent->m_lastChild->m_previousSibling;
       }
 
-      m_parent->m_childCount--;
-
       if (m_previousSibling && m_nextSibling)
       {
          m_previousSibling->m_nextSibling = m_nextSibling;
@@ -685,6 +681,8 @@ private:
       {
          m_nextSibling->m_previousSibling = nullptr;
       }
+
+      m_parent->m_childCount--;
    }
 
    TreeNode<DataType>* m_parent;
