@@ -79,7 +79,7 @@ struct TypeName<std::chrono::hours>
 /**
 * @brief The Stopwatch class will wrap the function to be timed in a timing block, and then, based
 * on which constructor was called, pass the resulting timing information to either std::cout or a
-* user-defined function upon destruction of the class.
+* user-defined function upon completion of the targeted function.
 *
 * @tparam ChronoType               One of the following std::chrono time representations:
 *                                     @li std::chrono::nanoseconds

@@ -688,7 +688,7 @@ TEST_CASE("Tree and TreeNode Destruction")
    }
 }
 
-SCENARIO("Selectively Delecting Nodes")
+TEST_CASE("Selectively Delecting Nodes")
 {
    const auto VerifyTraversal =
       [](const Tree<VerboseNode>& tree, const std::vector<std::string>& expected) -> bool
@@ -933,9 +933,96 @@ SCENARIO("Selectively Delecting Nodes")
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
    }
+   SECTION("Deleting a Node by Calling DeleteFromTree()")
+   {
+      CONSTRUCTION_COUNT = 0;
+      size_t treeSize = 0;
+
+      {
+         Tree<VerboseNode> tree{ "F" };
+         tree.GetHead()->AppendChild("B")->AppendChild("A");
+         tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+         tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
+         tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+
+         treeSize = tree.Size();
+
+         // Reset the destruction count, so that we don't accidentally count any destructor calls
+         // that took place during the construction of the tree.
+         DESTRUCTION_COUNT = 0;
+
+         auto* targetNode = tree.GetHead()->GetFirstChild()->GetLastChild();
+         REQUIRE(targetNode != nullptr);
+         REQUIRE(targetNode->GetData().m_data == "D");
+         REQUIRE(targetNode->GetPreviousSibling() != nullptr);
+         REQUIRE(targetNode->GetNextSibling() == nullptr);
+         REQUIRE(targetNode->GetFirstChild() != nullptr);
+         REQUIRE(targetNode->GetFirstChild() != targetNode->GetLastChild());
+
+         const auto parentOfTarget = targetNode->GetParent();
+         const auto parentsChildCount = parentOfTarget->GetChildCount();
+
+         targetNode->DeleteFromTree();
+
+         REQUIRE(DESTRUCTION_COUNT == 3);
+         REQUIRE(parentOfTarget->GetChildCount() == parentsChildCount - 1);
+         REQUIRE(tree.Size() == treeSize - DESTRUCTION_COUNT);
+
+         const std::vector<std::string> expectedTraversal =
+         { "A", "B", "H", "I", "G", "F" };
+
+         const bool errorFree = VerifyTraversal(tree, expectedTraversal);
+         REQUIRE(errorFree == true);
+      }
+
+      REQUIRE(DESTRUCTION_COUNT == treeSize);
+   }
+   SECTION("Deleting Multiple Nodes from Tree")
+   {
+      CONSTRUCTION_COUNT = 0;
+      size_t treeSize = 0;
+
+      {
+         Tree<VerboseNode> tree{ "F" };
+         tree.GetHead()->AppendChild("B")->AppendChild("Delete Me");
+         tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("Delete Me");
+         tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("Delete Me");
+         tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("Delete Me");
+
+         treeSize = tree.Size();
+
+         // Reset the destruction count, so that we don't accidentally count any destructor calls
+         // that took place during the construction of the tree.
+         DESTRUCTION_COUNT = 0;
+
+         std::vector<TreeNode<VerboseNode>*> toBeDeleted;
+
+         for (auto&& node : tree)
+         {
+            if (node.GetData().m_data == "Delete Me")
+            {
+               toBeDeleted.emplace_back(&node);
+            }
+         }
+
+         const size_t numberOfNodesToDelete = toBeDeleted.size();
+
+         for (auto* node : toBeDeleted)
+         {
+            node->DeleteFromTree();
+         }
+
+         const std::vector<std::string> expectedTraversal = { "D", "B", "I", "G", "F" };
+         const bool errorFree = VerifyTraversal(tree, expectedTraversal);
+         REQUIRE(errorFree == true);
+         REQUIRE(DESTRUCTION_COUNT == numberOfNodesToDelete);
+      }
+
+      REQUIRE(DESTRUCTION_COUNT == treeSize);
+   }
 }
 
-SCENARIO("Adding nodes to the tree")
+SCENARIO("Adding Nodes to the Tree")
 {
    GIVEN("a tree with only a head node")
    {
