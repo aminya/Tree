@@ -38,7 +38,7 @@ std::for_each(tree.beginPreOrder(), tree.endPreOrder(),
 
 Performing an iteration over the leaf nodes is very similar; just call `beginLeaf()` and `endLeaf()` on the `Tree<DataType>` object.
 
-In some cases, you may not want to iterate over the whole tree, and so the following technique can be used to iterate over a subtree:
+In some cases, you may not want to iterate over the whole tree, but only over a portion of the larger tree. In that case, the following technique can be used to iterate over a subtree:
 
 ```
 const TreeNode<std::string>* someNode = FetchSomeRandomNode();
@@ -52,6 +52,6 @@ std::for_each(
 });
 ```
 
-Notice that the `tree` instance of the `Tree<DataType>` object isn't needed here; that is, you can construct any iterator from any `TreeNode<DataType>` object.
+Notice that the `tree` instance of the `Tree<DataType>` object isn't needed here; that is, you can construct any iterator from any `TreeNode<DataType>` object without going through an instance of `Tree<DataType>`.
 
 For more examples, check out the benchmarks and the unit tests.
