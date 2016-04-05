@@ -618,10 +618,10 @@ private:
          sink.AppendChild(node.GetData());
       });
 
-      auto sourceItr = Tree<DataType>::SiblingIterator(source.GetFirstChild());
-      auto sinkItr = Tree<DataType>::SiblingIterator(sink.GetFirstChild());
+      auto sourceItr = Tree<DataType>::SiblingIterator{ source.GetFirstChild() };
+      auto sinkItr = Tree<DataType>::SiblingIterator{ sink.GetFirstChild() };
 
-      const auto end = Tree<DataType>::SiblingIterator();
+      const auto end = Tree<DataType>::SiblingIterator{ };
       while (sourceItr != end)
       {
          Copy(*sourceItr++, *sinkItr++);
@@ -752,7 +752,7 @@ public:
    * @brief Swaps all member variables of the left-hand side with that of the right-hand side.
    */
    friend void swap(Tree<DataType>& lhs, Tree<DataType>& rhs)
-      noexcept(noexcept(swap(DataType(), DataType())))
+      noexcept(noexcept(swap(DataType{ }, DataType{ })))
    {
       // Enable Argument Dependent Lookup (ADL):
       using std::swap;
@@ -894,7 +894,7 @@ public:
    */
    explicit operator bool() const noexcept
    {
-      const auto isValid = m_currentNode != nullptr;
+      const auto isValid = (m_currentNode != nullptr);
       return isValid;
    }
 
