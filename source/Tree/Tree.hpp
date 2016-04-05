@@ -284,7 +284,7 @@ public:
    */
    TreeNode<DataType>* PrependChild(DataType&& data)
    {
-      auto* const newNode = new TreeNode<DataType>(std::forward<DataType>(data));
+      auto* const newNode = new TreeNode<DataType>(std::move(data));
       return PrependChild(*newNode);
    }
 
@@ -333,7 +333,7 @@ public:
    */
    TreeNode<DataType>* AppendChild(DataType&& data)
    {
-      auto* const newNode = new TreeNode<DataType>(std::forward<DataType>(data));
+      auto* const newNode = new TreeNode<DataType>(std::move(data));
       return AppendChild(*newNode);
    }
 
