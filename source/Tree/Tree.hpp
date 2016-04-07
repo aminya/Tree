@@ -12,7 +12,7 @@ template<typename DataType> class TreeNode;
 * the data encapsulated in the right-hand side TreeNode.
 */
 template<typename DataType>
-inline bool operator<(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
+constexpr inline bool operator<(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
 {
    return lhs.GetData() < rhs.GetData();
 }
@@ -22,7 +22,7 @@ inline bool operator<(const TreeNode<DataType>& lhs, const TreeNode<DataType>& r
 * or equal to the data encapsulated in the right-hand side TreeNode.
 */
 template<typename DataType>
-inline bool operator<=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
+constexpr inline bool operator<=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
 {
    return !(lhs.GetData() > rhs.GetData());
 }
@@ -32,7 +32,7 @@ inline bool operator<=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& 
 * the data encapsulated in the right-hand side TreeNode.
 */
 template<typename DataType>
-inline bool operator>(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
+constexpr inline bool operator>(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
 {
    return rhs.GetData() < lhs.GetData();
 }
@@ -42,7 +42,7 @@ inline bool operator>(const TreeNode<DataType>& lhs, const TreeNode<DataType>& r
 * or equal to the data encapsulated in the right-hand side TreeNode.
 */
 template<typename DataType>
-inline bool operator>=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
+constexpr inline bool operator>=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
 {
    return !(lhs.GetData() < rhs.GetData());
 }
@@ -52,7 +52,7 @@ inline bool operator>=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& 
 * the data encapsulated in the right-hand side TreeNode.
 */
 template<typename DataType>
-inline bool operator==(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
+constexpr inline bool operator==(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
 {
    return lhs.GetData() == rhs.GetData();
 }
@@ -62,7 +62,7 @@ inline bool operator==(const TreeNode<DataType>& lhs, const TreeNode<DataType>& 
 * to the data encapsulated in the right-hand side TreeNode.
 */
 template<typename DataType>
-inline bool operator!=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
+constexpr inline bool operator!=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
 {
    return !(lhs.GetData() == rhs.GetData());
 }
@@ -85,16 +85,14 @@ public:
    * @brief TreeNode default constructs a new TreeNode. All outgoing links from this new node will
    * initialized to a nullptr.
    */
-   TreeNode()
-   {
-   }
+   constexpr TreeNode() noexcept = default;
 
    /**
    * @brief TreeNode constructs a new TreeNode encapsulating the specified data. All outgoing links
    * from the node will be initialized to nullptr.
    */
    TreeNode(DataType data) :
-      m_data(data)
+      m_data(std::move(data))
    {
    }
 
@@ -603,7 +601,7 @@ private:
    * @param[in] source              The TreeNode to copy information from.
    * @param[out] sink               The TreeNode to place a copy of the information into.
    */
-   void Copy(const TreeNode<DataType>& source, TreeNode<DataType>& sink)
+   void Copy(const TreeNode<DataType>& source, TreeNode<DataType>& sink) noexcept(false)
    {
       if (!source.HasChildren())
       {
@@ -742,7 +740,7 @@ public:
    /**
    * @brief Assignment operator.
    */
-   Tree<DataType>& operator=(Tree<DataType> other)
+   Tree<DataType>& operator=(Tree<DataType> other) noexcept(noexcept(swap(*this, other)))
    {
       swap(*this, other);
       return *this;
@@ -751,8 +749,8 @@ public:
    /**
    * @brief Swaps all member variables of the left-hand side with that of the right-hand side.
    */
-   friend void swap(Tree<DataType>& lhs, Tree<DataType>& rhs)
-      noexcept(noexcept(swap(DataType{ }, DataType{ })))
+   friend void swap(Tree<DataType>& lhs, Tree<DataType>& rhs) 
+      noexcept(noexcept(swap(lhs.m_head, rhs.m_head)))
    {
       // Enable Argument Dependent Lookup (ADL):
       using std::swap;
@@ -787,7 +785,7 @@ public:
    size_t Size() const
    {
       return std::count_if(std::begin(*this), std::end(*this),
-         [](const_reference)
+         [] (const auto&)
       {
          return true;
       });
@@ -968,9 +966,7 @@ protected:
    /**
    * Default constructor.
    */
-   explicit Iterator() noexcept
-   {
-   }
+   Iterator() noexcept = default;
 
    /**
    * Copy constructor.
@@ -1006,9 +1002,7 @@ public:
    /**
    * Default constructor.
    */
-   explicit PreOrderIterator() noexcept
-   {
-   }
+   PreOrderIterator() noexcept = default;
 
    /**
    * Constructs an iterator that starts and ends at the specified node.
@@ -1027,7 +1021,7 @@ public:
    /**
    * Prefix increment operator.
    */
-   typename Tree::PreOrderIterator& operator++()
+   typename Tree::PreOrderIterator& operator++() noexcept
    {
       assert(m_currentNode);
       auto* traversingNode = m_currentNode;
@@ -1064,7 +1058,7 @@ public:
    /**
    * Postfix increment operator.
    */
-   typename Tree::PreOrderIterator operator++(int)
+   typename Tree::PreOrderIterator operator++(int) noexcept
    {
       const auto result = *this;
       ++(*this);
@@ -1083,9 +1077,7 @@ public:
    /**
    * Default constructor.
    */
-   explicit PostOrderIterator() noexcept
-   {
-   }
+   PostOrderIterator() noexcept = default;
 
    /**
    * Constructs an iterator that starts and ends at the specified node.
@@ -1121,7 +1113,7 @@ public:
    /**
    * Prefix increment operator.
    */
-   typename Tree::PostOrderIterator& operator++()
+   typename Tree::PostOrderIterator& operator++() noexcept
    {
       assert(m_currentNode);
       auto* traversingNode = m_currentNode;
@@ -1157,7 +1149,7 @@ public:
    /**
    * Postfix increment operator.
    */
-   typename Tree::PostOrderIterator operator++(int)
+   typename Tree::PostOrderIterator operator++(int) noexcept
    {
       const auto result = *this;
       ++(*this);
@@ -1179,9 +1171,7 @@ public:
    /**
    * Default constructor.
    */
-   explicit LeafIterator() noexcept
-   {
-   }
+   LeafIterator() noexcept = default;
 
    /**
    * Constructs an iterator that starts at the specified node and iterates to the end.
@@ -1220,7 +1210,7 @@ public:
    /**
    * Prefix increment operator.
    */
-   typename Tree::LeafIterator& operator++()
+   typename Tree::LeafIterator& operator++() noexcept
    {
       assert(m_currentNode);
       auto* traversingNode = m_currentNode;
@@ -1270,7 +1260,7 @@ public:
    /**
    * Postfix increment operator.
    */
-   typename Tree::LeafIterator operator++(int)
+   typename Tree::LeafIterator operator++(int) noexcept
    {
       const auto result = *this;
       ++(*this);
@@ -1289,9 +1279,7 @@ public:
    /**
    * Default constructor.
    */
-   explicit SiblingIterator() noexcept
-   {
-   }
+   SiblingIterator() noexcept = default;
 
    /**
    * Constructs an iterator that starts at the specified node and iterates to the end.
@@ -1304,7 +1292,7 @@ public:
    /**
    * Prefix increment operator.
    */
-   typename Tree::SiblingIterator& operator++()
+   typename Tree::SiblingIterator& operator++() noexcept
    {
       if (m_currentNode)
       {
@@ -1317,7 +1305,7 @@ public:
    /**
    * Postfix increment operator.
    */
-   typename Tree::SiblingIterator operator++(int)
+   typename Tree::SiblingIterator operator++(int) noexcept
    {
       const auto result = *this;
       ++(*this);

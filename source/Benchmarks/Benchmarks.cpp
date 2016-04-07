@@ -50,9 +50,9 @@ namespace
       for (int i = 0; i < 4; i++)
       {
          std::for_each(
-            Tree<std::string>::LeafIterator(tree.GetHead()),
-            Tree<std::string>::LeafIterator(),
-            [&](Tree<std::string>::reference node)
+            Tree<std::string>::LeafIterator{ tree.GetHead() },
+            Tree<std::string>::LeafIterator{ },
+            [&] (auto& node)
          {
             assert(node.HasChildren() == false);
 
@@ -76,7 +76,7 @@ namespace
 
 int main()
 {
-   std::cout.imbue(std::locale(""));
+   std::cout.imbue(std::locale{ "" });
    std::cout << "Constructing a large tree..." << std::endl;
 
    Tree<std::string> tree;
@@ -92,7 +92,7 @@ int main()
    auto preOrderTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
    {
       std::for_each(tree.beginPreOrder(), tree.endPreOrder(),
-         [](Tree<std::string>::const_reference)
+         [] (const auto&)
       {
          return true;
       });
@@ -108,7 +108,7 @@ int main()
    auto postOrderTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
    {
       std::for_each(std::begin(tree), std::end(tree),
-         [](Tree<std::string>::const_reference)
+         [] (const auto&)
       {
          return true;
       });
@@ -124,7 +124,7 @@ int main()
    auto leafTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
    {
       std::for_each(tree.beginLeaf(), tree.endLeaf(),
-         [](Tree<std::string>::const_reference)
+         [] (const auto&)
       {
          return true;
       });
