@@ -10,6 +10,8 @@
 * Notes and Observations:
 * =======================
 *
+* The following observations were made when the Tree class still returned std::shared_ptrs:
+* 
 * If functions like TreeNode::GetParent(), -::GetFirstChild(), -::GetLastChild(),
 * -::GetNextSibling(), and -::GetPreviousSibling() don't return const references,
 * and instead, return copies of the std::shared_ptrs then a simple post-order traversal
