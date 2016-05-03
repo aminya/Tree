@@ -7,6 +7,9 @@ The project contained in this repository represents a Standard Library compatibl
 The following is an example of how one might construct a simple, binary tree:
 
 ```
+#include <Tree.hpp>
+//...
+
 Tree<std::string> tree{ "Head" };
 tree.GetHead()->AppendChild("Left Child");
 tree.GetHead()->AppendChild("Right Child");
