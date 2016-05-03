@@ -20,8 +20,8 @@ Iterating over the tree in a post-order fashion isn't very hard either. Continui
 std::for_each(std::begin(tree), std::end(tree),
 	[](Tree<std::string>::const_reference node)
 {
-	const auto& string = node.GetData();
-	// ...some more voodoo of your choosing
+	const auto& data = node.GetData();
+	std::cout << "Data: " << data << std::endl;
 });
 ```
 
@@ -31,8 +31,8 @@ The `Tree<DataType>` class defines the `begin()` and `end()` functions to return
 std::for_each(tree.beginPreOrder(), tree.endPreOrder(),
 	[](Tree<std::string>::const_reference node)
 {
-	const auto& string = node.GetData();
-	// ...whatever you'd like
+	const auto& data = node.GetData();
+	std::cout << "Data: " << data << std::endl;
 });
 ```
 
@@ -48,10 +48,11 @@ std::for_each(
    Tree<std::string>::LeafIterator(),
    [&](Tree<std::string>::const_reference node)
 {
-	// ...some more black magic
+	const auto& data = node.GetData();
+	std::cout << "Data: " << data << std::endl;
 });
 ```
 
-Notice that the `tree` instance of the `Tree<DataType>` object isn't needed here; that is, you can construct any iterator from any `TreeNode<DataType>` object without going through an instance of `Tree<DataType>`.
+In the above example, notice that you can construct any iterator from any `TreeNode<DataType>` object without having to go through an instance of `Tree<DataType>`.
 
 For more examples, check out the benchmarks and the unit tests.
