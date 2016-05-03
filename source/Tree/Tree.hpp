@@ -1,3 +1,27 @@
+/**
+* The MIT License (MIT)
+*
+* Copyright (c) 2016 Tim Severeijns
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*/
+
 #pragma once
 
 #include <cassert>
@@ -158,7 +182,7 @@ public:
    * @brief Swaps all member variables of the left-hand side with that of the right-hand side.
    */
    friend void swap(TreeNode<DataType>& lhs, TreeNode<DataType>& rhs)
-      noexcept(noexcept(swap(lhs, rhs)))
+      noexcept(noexcept(swap(lhs.m_data, rhs.m_data)))
    {
       // Enable Argument Dependent Lookup (ADL):
       using std::swap;
@@ -391,7 +415,7 @@ public:
    /**
    * @returns The total number of descendant nodes belonging to the node.
    */
-   size_t CountAllDescendants()
+   size_t CountAllDescendants() noexcept
    {
       const auto nodeCount = std::count_if(
          Tree<DataType>::PostOrderIterator(this),
@@ -431,7 +455,8 @@ private:
    */
    void MergeSort(
       TreeNode<DataType>*& list,
-      const std::function<bool(const TreeNode<DataType>&, const TreeNode<DataType>&)>& comparator) noexcept
+      const std::function<bool(const TreeNode<DataType>&, const TreeNode<DataType>&)>& comparator)
+      noexcept(noexcept(comparator))
    {
       if (!list || !list->m_nextSibling)
       {
@@ -501,6 +526,7 @@ private:
       TreeNode<DataType>*& lhs,
       TreeNode<DataType>*& rhs,
       const std::function<bool(const TreeNode<DataType>&, const TreeNode<DataType>&)>& comparator)
+      noexcept(noexcept(comparator))
    {
       TreeNode<DataType>* result = nullptr;
       if (comparator(*lhs, *rhs))
@@ -601,7 +627,7 @@ private:
    * @param[in] source              The TreeNode to copy information from.
    * @param[out] sink               The TreeNode to place a copy of the information into.
    */
-   void Copy(const TreeNode<DataType>& source, TreeNode<DataType>& sink) noexcept(false)
+   void Copy(const TreeNode<DataType>& source, TreeNode<DataType>& sink)
    {
       if (!source.HasChildren())
       {
@@ -782,7 +808,7 @@ public:
    *
    * @returns The total number of nodes in the Tree (both leaf and non-leaf).
    */
-   size_t Size() const
+   size_t Size() const noexcept
    {
       return std::count_if(std::begin(*this), std::end(*this),
          [] (const auto&)
