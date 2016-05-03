@@ -220,7 +220,7 @@ public:
    *
    * @param[in] child               The new TreeNode to set as the first child of the TreeNode.
    *
-   * @returns A std::shared_ptr to the newly appended child.
+   * @returns A pointer to the newly appended child.
    */
    TreeNode<DataType>* PrependChild(TreeNode<DataType>& child) noexcept
    {
@@ -270,7 +270,7 @@ public:
    *
    * @param[in] child               The new TreeNode to set as the last child of the TreeNode.
    *
-   * @returns A std::shared_ptr to the newly appended child.
+   * @returns A pointer to the newly appended child.
    */
    TreeNode<DataType>* AppendChild(TreeNode<DataType>& child) noexcept
    {
@@ -331,7 +331,7 @@ public:
    }
 
    /**
-   * @returns A std::shared_ptr to the TreeNode's parent, if it exists; nullptr otherwise.
+   * @returns A pointer to the TreeNode's parent, if it exists; nullptr otherwise.
    */
    constexpr TreeNode<DataType>* const GetParent() const noexcept
    {
@@ -339,7 +339,7 @@ public:
    }
 
    /**
-   * @returns A std::shared_ptr to the TreeNode's first child.
+   * @returns A pointer to the TreeNode's first child.
    */
    constexpr TreeNode<DataType>* const GetFirstChild() const noexcept
    {
@@ -347,7 +347,7 @@ public:
    }
 
    /**
-   * @returns A std::shared_ptr to the TreeNode's last child.
+   * @returns A pointer to the TreeNode's last child.
    */
    constexpr TreeNode<DataType>* const GetLastChild() const noexcept
    {
@@ -355,7 +355,7 @@ public:
    }
 
    /**
-   * @returns A std::shared_ptr to the TreeNode's next sibling.
+   * @returns A pointer to the TreeNode's next sibling.
    */
    constexpr TreeNode<DataType>* const GetNextSibling() const noexcept
    {
@@ -363,7 +363,7 @@ public:
    }
 
    /**
-   * @returns A std::shared_ptr to the TreeNode's previous sibling.
+   * @returns A pointer to the TreeNode's previous sibling.
    */
    constexpr TreeNode<DataType>* const GetPreviousSibling() const noexcept
    {
@@ -768,7 +768,7 @@ public:
    }
 
    /**
-   * @returns A std::shared_ptr to the head TreeNode.
+   * @returns A pointer to the head TreeNode.
    */
    TreeNode<DataType>* GetHead() const noexcept
    {
