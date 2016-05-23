@@ -802,11 +802,12 @@ public:
    }
 
    /**
-   * @brief Computes the size of nodes in the Tree.
+   * @brief Computes the number of nodes in the Tree.
    *
-   * @complexity Linear in the size of the sub-tree.
+   * @complexity Linear in the size of the Tree.
    *
-   * @returns The total number of nodes in the Tree (both leaf and non-leaf).
+   * @returns The total number of nodes in the Tree. This includes leaf and non-leaf nodes,
+   * in addition to the root node.
    */
    size_t Size() const noexcept
    {
