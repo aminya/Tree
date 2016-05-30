@@ -109,3 +109,8 @@ In order to guarantee unique node names, the address of each node in memory is u
 ```
 $>dot -Tpng C:\PathToFile\TreeGraph.dot -O
 ```
+
+And all this leaves us with the following image:
+
+![Graphviz Example]
+(https://github.com/TimSevereijns/Tree/blob/master/screenshots/TreeGraph.png)
