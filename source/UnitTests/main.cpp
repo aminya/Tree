@@ -322,6 +322,95 @@ TEST_CASE("Partial Tree Iteration")
    }
 }
 
+TEST_CASE("Partial Tree Iteration Corner Cases")
+{
+   Tree<std::string> tree{ "F" };
+   tree.GetHead()->AppendChild("B")->AppendChild("A");
+   tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
+   tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+
+   SECTION("Pre-Order Iteration")
+   {
+      const std::vector<std::string> expectedTraversal =
+      { "D", "C", "E" };
+
+      int index = 0;
+
+      bool traversalError = false;
+
+      auto* startingNode = tree.GetHead()->GetFirstChild()->GetLastChild();
+
+      auto itr = Tree<std::string>::PreOrderIterator{ startingNode };
+      const auto end = Tree<std::string>::PreOrderIterator{ };
+      for (; itr != end; itr++) ///< Using the post-fix operator for more test coverage.
+      {
+         const auto& data = itr->GetData();
+         if (data != expectedTraversal[index++])
+         {
+            traversalError = true;
+            break;
+         }
+      }
+
+      REQUIRE(traversalError == false);
+      REQUIRE(index == expectedTraversal.size());
+   }
+   SECTION("Post-Order Iteration")
+   {
+      const std::vector<std::string> expectedTraversal =
+      { "C", "E", "D" };
+
+      int index = 0;
+
+      bool traversalError = false;
+
+      auto* startingNode = tree.GetHead()->GetFirstChild()->GetLastChild();
+
+      auto itr = Tree<std::string>::PostOrderIterator{ startingNode };
+      const auto end = Tree<std::string>::PostOrderIterator{ };
+      for (; itr != end; itr++) ///< Using the post-fix operator for more test coverage.
+      {
+         const auto& data = itr->GetData();
+         if (data != expectedTraversal[index++])
+         {
+            traversalError = true;
+            break;
+         }
+      }
+
+      REQUIRE(traversalError == false);
+      REQUIRE(index == expectedTraversal.size());
+   }
+   SECTION("Leaf Iteration")
+   {
+      const std::vector<std::string> expectedTraversal =
+      { "C", "E" };
+
+      int index = 0;
+
+      bool traversalError = false;
+
+      auto* startingNode = tree.GetHead()->GetFirstChild()->GetLastChild();
+
+      auto itr = Tree<std::string>::LeafIterator{ startingNode };
+      const auto end = Tree<std::string>::LeafIterator{};
+      for (; itr != end; itr++) ///< Using the post-fix operator for more test coverage.
+      {
+         const auto& data = itr->GetData();
+         if (data != expectedTraversal[index++])
+         {
+            traversalError = true;
+            break;
+         }
+      }
+
+      REQUIRE(traversalError == false);
+      REQUIRE(index == expectedTraversal.size());
+   }
+
+}
+
 TEST_CASE("STL Typedef Compliance")
 {
    Tree<std::string> tree{ "F" };

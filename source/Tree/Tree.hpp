@@ -742,7 +742,7 @@ public:
    * @brief Default constructor.
    */
    Tree() :
-      m_head(new TreeNode<DataType>{ })
+      m_head{ new TreeNode<DataType>{ } }
    {
    }
 
@@ -751,7 +751,7 @@ public:
    * TreeNode.
    */
    Tree(DataType data) :
-      m_head(new TreeNode<DataType>{ data })
+      m_head{ new TreeNode<DataType>{ data } }
    {
    }
 
@@ -759,7 +759,7 @@ public:
    * @brief Copy constructor.
    */
    Tree(const Tree<DataType>& other) :
-      m_head(new TreeNode<DataType>{ *other.m_head })
+      m_head{ new TreeNode<DataType>{ *other.m_head } }
    {
    }
 
@@ -999,9 +999,9 @@ protected:
    * Copy constructor.
    */
    explicit Iterator(const Iterator& other) noexcept :
-      m_currentNode(other.m_currentNode),
-      m_startingNode(other.m_startingNode),
-      m_endingNode(other.m_endingNode)
+      m_currentNode{ other.m_currentNode },
+      m_startingNode{ other.m_startingNode },
+      m_endingNode{ other.m_endingNode }
    {
    }
 
@@ -1009,14 +1009,15 @@ protected:
    * Constructs a Iterator started at the specified node.
    */
    explicit Iterator(const TreeNode<DataType>* node) noexcept :
-      m_currentNode(const_cast<TreeNode<DataType>*>(node)),
-      m_startingNode(const_cast<TreeNode<DataType>*>(node))
+      m_currentNode{ const_cast<TreeNode<DataType>*>(node) },
+      m_startingNode{ const_cast<TreeNode<DataType>*>(node) }
    {
    }
 
    TreeNode<DataType>* m_currentNode{ nullptr };
-   TreeNode<DataType>* m_startingNode{ nullptr };
-   TreeNode<DataType>* m_endingNode{ nullptr };
+
+   const TreeNode<DataType>* m_startingNode{ nullptr };
+   const TreeNode<DataType>* m_endingNode{ nullptr };
 };
 
 /**
@@ -1035,14 +1036,34 @@ public:
    * Constructs an iterator that starts and ends at the specified node.
    */
    explicit PreOrderIterator(const TreeNode<DataType>* node) noexcept :
-      Iterator(node)
+      Iterator{ node }
    {
       if (!node)
       {
          return;
       }
 
-      m_endingNode = node->GetNextSibling();
+      if (node->GetNextSibling())
+      {
+         m_endingNode = node->GetNextSibling();
+      }
+      else
+      {
+         m_endingNode = node;
+         while (m_endingNode->GetParent() && !m_endingNode->GetParent()->GetNextSibling())
+         {
+            m_endingNode = m_endingNode->GetParent();
+         }
+
+         if (m_endingNode->GetParent())
+         {
+            m_endingNode = m_endingNode->GetParent()->GetNextSibling();
+         }
+         else
+         {
+            m_endingNode = nullptr;
+         }
+      }
    }
 
    /**
@@ -1110,12 +1131,25 @@ public:
    * Constructs an iterator that starts and ends at the specified node.
    */
    explicit PostOrderIterator(const TreeNode<DataType>* node) noexcept :
-      Iterator(node)
+      Iterator{ node }
    {
       if (!node)
       {
          return;
       }
+
+      // Compute and set the starting node:
+
+      auto* traversingNode = node;
+      while (traversingNode->GetFirstChild())
+      {
+         traversingNode = traversingNode->GetFirstChild();
+      }
+
+      assert(traversingNode);
+      m_currentNode = const_cast<TreeNode<DataType>*>(traversingNode);
+
+      // Commpute and set the ending node:
 
       if (node->GetNextSibling())
       {
@@ -1127,14 +1161,10 @@ public:
 
          m_endingNode = traversingNode;
       }
-
-      while (node->GetFirstChild())
+      else
       {
-         node = node->GetFirstChild();
+         m_endingNode = node->GetParent();
       }
-
-      assert(node);
-      m_currentNode = const_cast<TreeNode<DataType>*>(node);
    }
 
    /**
@@ -1204,12 +1234,14 @@ public:
    * Constructs an iterator that starts at the specified node and iterates to the end.
    */
    explicit LeafIterator(const TreeNode<DataType>* node) noexcept :
-      Iterator(node)
+      Iterator{ node }
    {
       if (!node)
       {
          return;
       }
+
+      // Compute and set the starting node:
 
       if (node->HasChildren())
       {
@@ -1222,6 +1254,8 @@ public:
          m_currentNode = const_cast<TreeNode<DataType>*>(firstNode);
       }
 
+      // Compute and set the ending node:
+
       if (node->GetNextSibling())
       {
          auto* lastNode = node->GetNextSibling();
@@ -1231,6 +1265,27 @@ public:
          }
 
          m_endingNode = lastNode;
+      }
+      else
+      {
+         m_endingNode = node;
+         while (m_endingNode->GetParent() && !m_endingNode->GetParent()->GetNextSibling())
+         {
+            m_endingNode = m_endingNode->GetParent();
+         }
+
+         if (m_endingNode->GetParent())
+         {
+            m_endingNode = m_endingNode->GetParent()->GetNextSibling();
+            while (m_endingNode->HasChildren())
+            {
+               m_endingNode = m_endingNode->GetFirstChild();
+            }
+         }
+         else
+         {
+            m_endingNode = nullptr;
+         }
       }
    }
 
@@ -1312,7 +1367,7 @@ public:
    * Constructs an iterator that starts at the specified node and iterates to the end.
    */
    explicit SiblingIterator(const TreeNode<DataType>* node) noexcept :
-      Iterator(node)
+      Iterator{ node }
    {
    }
 

@@ -83,4 +83,4 @@ namespace TreeUtilities
 
       outputFile << graphStream.rdbuf();
    }
-};
+}
