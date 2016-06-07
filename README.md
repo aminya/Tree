@@ -56,13 +56,13 @@ std::for_each(
 });
 ```
 
-In the above example, notice that you can construct any iterator from any `TreeNode<DataType>` object without having to go through an instance of `Tree<DataType>`.
+In the above example, notice that you can construct any iterator from any `TreeNode<DataType>` object without having to go through an instance of `Tree<DataType>`. Also that while the example above uses a `LeafIterator`, the use of any of the other iterator types is also perfectly valid.
 
 For more examples, check out the benchmarks and the unit tests.
 
 # Graphviz Support
 
-Using the `TreeUtilities.hpp` header, you can now also generate DOT files for use with Graphviz. This means that you can now quickly and easily visualize the structure of the tree. In order to generate a DOT file, simply pass the Tree object to be visualized to `DotGenerator::OutputToFile(...)`, along with the desired output path and filename. For example:
+Using the `TreeUtilities.hpp` header, you can now also generate DOT files for use with Graphviz. This means that you can now quickly and easily visualize the structure of the tree. In order to generate a DOT file, simply pass the Tree object to be visualized to `TreeUtilities::OutputToDotFile(...)`, along with the desired output path and filename. For example:
 
 ```C++
 Tree<std::string> tree{ "F" };
