@@ -6,7 +6,7 @@ The project contained in this repository represents a Standard Library compatibl
 
 The following is an example of how one might construct a simple, binary tree:
 
-```
+```C++
 #include <Tree.hpp>
 //...
 
@@ -19,7 +19,7 @@ tree.GetHead()->GetFirstChild()->AppendChild("Second Grandchild of Left Child");
 
 Iterating over the tree in a post-order fashion isn't very hard either. Continuing with the `Tree<std::string>` constructed above, and using a `std::for_each` to perform some unspecified task, one might write the following to iterate over the tree:
 
-```
+```C++
 std::for_each(std::begin(tree), std::end(tree),
 	[] (Tree<std::string>::const_reference node)
 {
@@ -30,7 +30,7 @@ std::for_each(std::begin(tree), std::end(tree),
 
 The `Tree<DataType>` class defines the `begin()` and `end()` functions to return a `Tree<DataType>::PostOrderIterator`. If, instead, you'd like to iterate over the tree in a pre-order fashion, the following should fit the bill:
 
-```
+```C++
 std::for_each(tree.beginPreOrder(), tree.endPreOrder(),
 	[] (Tree<std::string>::const_reference node)
 {
@@ -43,7 +43,7 @@ Performing an iteration over the leaf nodes is very similar; just call `beginLea
 
 In some cases, you may not want to iterate over the whole tree, but only over a portion of the larger tree. In that case, the following technique can be used to iterate over a subtree:
 
-```
+```C++
 const TreeNode<std::string>* someNode = FetchSomeRandomNode();
 
 std::for_each(
@@ -64,7 +64,7 @@ For more examples, check out the benchmarks and the unit tests.
 
 Using the `TreeUtilities.hpp` header, you can now also generate DOT files for use with Graphviz. This means that you can now quickly and easily visualize the structure of the tree. In order to generate a DOT file, simply pass the Tree object to be visualized to `DotGenerator::OutputToFile(...)`, along with the desired output path and filename. For example:
 
-```
+```C++
 Tree<std::string> tree{ "F" };
 tree.GetHead()->AppendChild("B")->AppendChild("A");
 tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
