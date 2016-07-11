@@ -56,7 +56,7 @@ std::for_each(
 });
 ```
 
-In the above example, notice that you can construct any iterator from any `TreeNode<DataType>` object without having to go through an instance of `Tree<DataType>`. Also that while the example above uses a `LeafIterator`, the use of any of the other iterator types is also perfectly valid.
+In the above example, notice that you can construct any iterator from any `TreeNode<DataType>` object without having to go through an instance of `Tree<DataType>`. Also note that while the example above uses a `LeafIterator`, the use of any of the other iterator types is also perfectly valid.
 
 For more examples, check out the benchmarks and the unit tests.
 
