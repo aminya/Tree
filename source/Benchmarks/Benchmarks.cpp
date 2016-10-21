@@ -15,7 +15,7 @@
 *
 * If functions like TreeNode::GetParent(), -::GetFirstChild(), -::GetLastChild(),
 * -::GetNextSibling(), and -::GetPreviousSibling() don't return const references,
-* and instead, return copies of the std::shared_ptrs then a simple post-order traversal
+* and instead, return copies of the std::shared_ptrs, then a simple post-order traversal
 * over 16^5 + 1 nodes goes from taking 46ms to 71ms!
 *
 * When using an STD algorithm, like std::for_each(...), capturing the parameter by
@@ -31,7 +31,7 @@ namespace
 
    void AddChildrenToNode(TreeNode<std::string>& node)
    {
-      const int NUMBER_OF_CHILDREN = 16;
+      constexpr int NUMBER_OF_CHILDREN = 16;
       for (int i = 0; i < NUMBER_OF_CHILDREN; i++)
       {
          node.AppendChild(std::to_string(NODE_NUMBER++));
@@ -92,10 +92,11 @@ int main()
    std::cout << "Size of Tree: " << sizeOfTree << " nodes!" << std::endl;
 
    NEW_LINE;
+
    auto preOrderTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
    {
       std::for_each(tree.beginPreOrder(), tree.endPreOrder(),
-         [] (const auto&)
+         [] (const auto&) noexcept
       {
          return true;
       });
@@ -108,10 +109,11 @@ int main()
    std::cout << "\tNodes per MS:\t" << sizeOfTree / preOrderTraversalTime << std::endl;
 
    NEW_LINE;
+
    auto postOrderTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
    {
       std::for_each(std::begin(tree), std::end(tree),
-         [] (const auto&)
+         [] (const auto&) noexcept
       {
          return true;
       });
@@ -124,10 +126,11 @@ int main()
    std::cout << "\tNodes per MS:\t" << sizeOfTree / postOrderTraversalTime << std::endl;
 
    NEW_LINE;
+
    auto leafTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
    {
       std::for_each(tree.beginLeaf(), tree.endLeaf(),
-         [] (const auto&)
+         [] (const auto&) noexcept
       {
          return true;
       });
@@ -140,5 +143,6 @@ int main()
    std::cout << "\tNodes per MS:\t" << sizeOfTree / leafTraversalTime << std::endl;
 
    NEW_LINE;
+
    return 0;
 }
