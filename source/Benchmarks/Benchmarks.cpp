@@ -100,9 +100,9 @@ int main()
       {
          return true;
       });
-   }).GetElapsedTime();
+   }).GetElapsedTime().count();
 
-   preOrderTraversalTime = std::max(preOrderTraversalTime, std::uint64_t{ 1 });
+   preOrderTraversalTime = std::max(preOrderTraversalTime, std::int64_t{ 1 });
 
    std::cout << "Pre-Order Traversal: " << std::endl;
    std::cout << "\tEntire Tree:\t" << preOrderTraversalTime << " ms" << std::endl;
@@ -117,9 +117,9 @@ int main()
       {
          return true;
       });
-   }).GetElapsedTime();
+   }).GetElapsedTime().count();
 
-   postOrderTraversalTime = std::max(postOrderTraversalTime, std::uint64_t{ 1 });
+   postOrderTraversalTime = std::max(postOrderTraversalTime, std::int64_t{ 1 });
 
    std::cout << "Post-Order Traversal: " << std::endl;
    std::cout << "\tEntire Tree:\t" << postOrderTraversalTime << " ms" << std::endl;
@@ -134,9 +134,9 @@ int main()
       {
          return true;
       });
-   }).GetElapsedTime();
+   }).GetElapsedTime().count();
 
-   leafTraversalTime = std::max(leafTraversalTime, std::uint64_t{ 1 });
+   leafTraversalTime = std::max(leafTraversalTime, std::int64_t{ 1 });
 
    std::cout << "Leaf Traversal: " << std::endl;
    std::cout << "\tEntire Tree:\t" << leafTraversalTime << " ms" << std::endl;

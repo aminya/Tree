@@ -176,7 +176,7 @@ public:
    /**
    * @brief Assignment operator.
    */
-   TreeNode<DataType>& operator=(TreeNode<DataType> other) 
+   TreeNode<DataType>& operator=(TreeNode<DataType> other)
       noexcept(noexcept(swap(*this, other)))
    {
       swap(*this, other);
@@ -425,7 +425,7 @@ public:
       const auto nodeCount = std::count_if(
          Tree<DataType>::PostOrderIterator(this),
          Tree<DataType>::PostOrderIterator(),
-         [] (const auto&) noexcept
+         [](const auto&) noexcept
       {
          return true;
       });
@@ -436,7 +436,8 @@ public:
    /**
    * @brief SortChildren performs a merge sort of the direct descendants nodes.
    *
-   * @param[in] comparator          The function to be used as the basis for the sorting comparison.
+   * @param[in] comparator          A callable type to be used as the basis for the sorting
+   *                                comparison.
    */
    void SortChildren(
       const std::function<bool(const TreeNode<DataType>&, const TreeNode<DataType>&)>& comparator)
@@ -459,9 +460,10 @@ private:
    * @param[in] comparator          The comparator function to be called to figure out which node
    *                                is the lesser of the two.
    */
+   template<typename ComparatorType>
    void MergeSort(
       TreeNode<DataType>*& list,
-      const std::function<bool(const TreeNode<DataType>&, const TreeNode<DataType>&)>& comparator)
+      const ComparatorType& comparator)
       noexcept(noexcept(comparator))
    {
       if (!list || !list->m_nextSibling)
@@ -528,10 +530,11 @@ private:
    *
    * @returns The first node of the merged TreeNode list.
    */
+   template<typename ComparatorType>
    TreeNode<DataType>* MergeSortedHalves(
       TreeNode<DataType>*& lhs,
       TreeNode<DataType>*& rhs,
-      const std::function<bool(const TreeNode<DataType>&, const TreeNode<DataType>&)>& comparator)
+      const ComparatorType& comparator)
       noexcept(noexcept(comparator))
    {
       TreeNode<DataType>* result = nullptr;
