@@ -26,7 +26,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <functional>
 #include <iterator>
 #include <type_traits>
 
@@ -437,10 +436,14 @@ public:
    * @brief SortChildren performs a merge sort of the direct descendants nodes.
    *
    * @param[in] comparator          A callable type to be used as the basis for the sorting
-   *                                comparison.
+   *                                comparison. This type should be equivalent to:
+   *                                   bool comparator(
+   *                                      const TreeNode<DataType>& lhs,
+   *                                      const TreeNode<DataType>& rhs);
    */
+   template<typename ComparatorType>
    void SortChildren(
-      const std::function<bool(const TreeNode<DataType>&, const TreeNode<DataType>&)>& comparator)
+      const ComparatorType& comparator)
       noexcept(noexcept(comparator))
    {
       if (!m_firstChild)
