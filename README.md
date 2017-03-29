@@ -21,10 +21,9 @@ Iterating over the tree in a post-order fashion isn't very hard either. Continui
 
 ```C++
 std::for_each(std::begin(tree), std::end(tree),
-	[] (Tree<std::string>::const_reference node)
+   [] (Tree<std::string>::const_reference node)
 {
-	const auto& data = node.GetData();
-	std::cout << "Data: " << data << std::endl;
+   std::cout << "Data: " << node.GetData() << "\n";
 });
 ```
 
@@ -32,10 +31,9 @@ The `Tree<DataType>` class defines the `begin()` and `end()` functions to return
 
 ```C++
 std::for_each(tree.beginPreOrder(), tree.endPreOrder(),
-	[] (Tree<std::string>::const_reference node)
+   [] (const auto& node)
 {
-	const auto& data = node.GetData();
-	std::cout << "Data: " << data << std::endl;
+   std::cout << "Data: " << node.GetData() << "\n";
 });
 ```
 
@@ -51,8 +49,7 @@ std::for_each(
    Tree<std::string>::LeafIterator{ },
    [&] (Tree<std::string>::const_reference node)
 {
-	const auto& data = node.GetData();
-	std::cout << "Data: " << data << std::endl;
+   std::cout << "Data: " << node.GetData() << "\n";
 });
 ```
 
@@ -112,5 +109,4 @@ $>dot -Tpng C:\PathToFile\TreeGraph.dot -O
 
 And all this leaves us with the following image:
 
-![Graphviz Example]
-(https://github.com/TimSevereijns/Tree/blob/master/screenshots/TreeGraph.png)
+![Graphviz Example](https://github.com/TimSevereijns/Tree/blob/master/screenshots/TreeGraph.png)
