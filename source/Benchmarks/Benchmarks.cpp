@@ -4,6 +4,7 @@
 
 #include "../Tree/Tree.hpp"
 
+#include "DriveScanner.h"
 #include "Stopwatch.hpp"
 
 /**
@@ -80,69 +81,92 @@ namespace
 int main()
 {
    std::cout.imbue(std::locale{ "" });
-   std::cout << "Constructing a large tree..." << std::endl;
+   std::cout << "Scanning Drive to Create a Large Tree...\n" << std::endl;
 
-   Tree<std::string> tree;
-   Stopwatch<std::chrono::milliseconds>([&]
-   {
-      tree = CreateLargeTree();
-   }, "Contructed a large tree in ");
+   DriveScanner scanner{ std::experimental::filesystem::path{ "C:\\Windows" } };
+   scanner.Start();
 
-   const auto sizeOfTree = tree.Size();
-   std::cout << "Size of Tree: " << sizeOfTree << " nodes!" << std::endl;
-
-   NEW_LINE;
-
+   std::uintmax_t treeSize{ 0 };
    auto preOrderTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
    {
-      std::for_each(tree.beginPreOrder(), tree.endPreOrder(),
-         [] (const auto&) noexcept
-      {
-         return true;
-      });
-   }).GetElapsedTime().count();
+      treeSize = std::count_if(scanner.m_theTree->beginPreOrder(), scanner.m_theTree->endPreOrder(),
+         [] (const auto&) noexcept { return true; });
+   }).GetElapsedTime();
 
-   preOrderTraversalTime = std::max(preOrderTraversalTime, std::int64_t{ 1 });
-
-   std::cout << "Pre-Order Traversal: " << std::endl;
-   std::cout << "\tEntire Tree:\t" << preOrderTraversalTime << " ms" << std::endl;
-   std::cout << "\tNodes per MS:\t" << sizeOfTree / preOrderTraversalTime << std::endl;
-
-   NEW_LINE;
-
-   auto postOrderTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
-   {
-      std::for_each(std::begin(tree), std::end(tree),
-         [] (const auto&) noexcept
-      {
-         return true;
-      });
-   }).GetElapsedTime().count();
-
-   postOrderTraversalTime = std::max(postOrderTraversalTime, std::int64_t{ 1 });
-
-   std::cout << "Post-Order Traversal: " << std::endl;
-   std::cout << "\tEntire Tree:\t" << postOrderTraversalTime << " ms" << std::endl;
-   std::cout << "\tNodes per MS:\t" << sizeOfTree / postOrderTraversalTime << std::endl;
-
-   NEW_LINE;
-
-   auto leafTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
-   {
-      std::for_each(tree.beginLeaf(), tree.endLeaf(),
-         [] (const auto&) noexcept
-      {
-         return true;
-      });
-   }).GetElapsedTime().count();
-
-   leafTraversalTime = std::max(leafTraversalTime, std::int64_t{ 1 });
-
-   std::cout << "Leaf Traversal: " << std::endl;
-   std::cout << "\tEntire Tree:\t" << leafTraversalTime << " ms" << std::endl;
-   std::cout << "\tNodes per MS:\t" << sizeOfTree / leafTraversalTime << std::endl;
-
-   NEW_LINE;
+   std::cout
+      << "Traversed " << treeSize << " nodes in "
+      << preOrderTraversalTime.count() << " milliseconds (or "
+      << treeSize / preOrderTraversalTime.count() << "/ms)" << std::endl;
 
    return 0;
 }
+
+//int main()
+//{
+//   std::cout.imbue(std::locale{ "" });
+//   std::cout << "Constructing a large tree..." << std::endl;
+//
+//   Tree<std::string> tree;
+//   Stopwatch<std::chrono::milliseconds>([&]
+//   {
+//      tree = CreateLargeTree();
+//   }, "Contructed a large tree in ");
+//
+//   const auto sizeOfTree = tree.Size();
+//   std::cout << "Size of Tree: " << sizeOfTree << " nodes!" << std::endl;
+//
+//   NEW_LINE;
+//
+//   auto preOrderTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
+//   {
+//      std::for_each(tree.beginPreOrder(), tree.endPreOrder(),
+//         [] (const auto&) noexcept
+//      {
+//         return true;
+//      });
+//   }).GetElapsedTime().count();
+//
+//   preOrderTraversalTime = std::max(preOrderTraversalTime, std::int64_t{ 1 });
+//
+//   std::cout << "Pre-Order Traversal: " << std::endl;
+//   std::cout << "\tEntire Tree:\t" << preOrderTraversalTime << " ms" << std::endl;
+//   std::cout << "\tNodes per MS:\t" << sizeOfTree / preOrderTraversalTime << std::endl;
+//
+//   NEW_LINE;
+//
+//   auto postOrderTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
+//   {
+//      std::for_each(std::begin(tree), std::end(tree),
+//         [] (const auto&) noexcept
+//      {
+//         return true;
+//      });
+//   }).GetElapsedTime().count();
+//
+//   postOrderTraversalTime = std::max(postOrderTraversalTime, std::int64_t{ 1 });
+//
+//   std::cout << "Post-Order Traversal: " << std::endl;
+//   std::cout << "\tEntire Tree:\t" << postOrderTraversalTime << " ms" << std::endl;
+//   std::cout << "\tNodes per MS:\t" << sizeOfTree / postOrderTraversalTime << std::endl;
+//
+//   NEW_LINE;
+//
+//   auto leafTraversalTime = Stopwatch<std::chrono::milliseconds>([&]
+//   {
+//      std::for_each(tree.beginLeaf(), tree.endLeaf(),
+//         [] (const auto&) noexcept
+//      {
+//         return true;
+//      });
+//   }).GetElapsedTime().count();
+//
+//   leafTraversalTime = std::max(leafTraversalTime, std::int64_t{ 1 });
+//
+//   std::cout << "Leaf Traversal: " << std::endl;
+//   std::cout << "\tEntire Tree:\t" << leafTraversalTime << " ms" << std::endl;
+//   std::cout << "\tNodes per MS:\t" << sizeOfTree / leafTraversalTime << std::endl;
+//
+//   NEW_LINE;
+//
+//   return 0;
+//}

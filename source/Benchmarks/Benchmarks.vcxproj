@@ -109,7 +109,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
@@ -143,10 +143,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DriveScanner.h" />
+    <ClInclude Include="FileInfo.hpp" />
+    <ClInclude Include="IgnoreUnused.hpp" />
     <ClInclude Include="Stopwatch.hpp" />
+    <ClInclude Include="ThreadSafeQueue.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Benchmarks.cpp" />
+    <ClCompile Include="DriveScanner.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

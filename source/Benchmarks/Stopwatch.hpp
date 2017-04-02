@@ -27,16 +27,17 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
+#include <iostream>
 #include <string>
 #include <typeinfo>
 
-namespace
+namespace StopwatchInternals
 {
    template<typename Type>
    struct TypeName
    {
       // Evaluated at runtime:
-      static const decltype(typeid(Type).name()) value;
+      static decltype(typeid(Type).name()) value;
    };
 
    template<typename Type>
@@ -118,7 +119,7 @@ public:
 
       if (callback)
       {
-         callback(m_elapsedTime, std::move(TypeName<ChronoType>::value));
+         callback(m_elapsedTime, std::move(StopwatchInternals::TypeName<ChronoType>::value));
       }
    }
 
@@ -147,7 +148,7 @@ public:
          << message
          << m_elapsedTime.count()
          << " "
-         << TypeName<ChronoType>::value
+         << StopwatchInternals::TypeName<ChronoType>::value
          << "."
          << std::endl;
    }
@@ -168,9 +169,17 @@ public:
    /**
    * @returns The elapsed time in ChronoType units.
    */
-   ChronoType GetElapsedTime()
+   ChronoType GetElapsedTime() const
    {
       return m_elapsedTime;
+   }
+
+   /**
+   * @returns A character array containing the chrono resolution name.
+   */
+   constexpr auto GetUnitsAsCharacterArray() const
+   {
+      return StopwatchInternals::TypeName<ChronoType>::value;
    }
 
 private:
