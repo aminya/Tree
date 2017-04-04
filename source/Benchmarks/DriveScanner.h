@@ -84,7 +84,7 @@ private:
    /**
    * @brief Helper function to facilitate exception-free iteration over a directory.
    *
-   * @param[in] itr             Reference to the iterator to iterate over.
+   * @param[in] itr             Reference to the directory to iterate over.
    * @param[in] treeNode        The TreeNode to append the contents of the directory to.
    */
    void IterateOverDirectoryAndScan(

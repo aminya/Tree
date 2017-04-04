@@ -35,13 +35,13 @@ namespace TreeUtilities
       std::stringstream graphStream;
 
       graphStream
-         << "digraph {" << std::endl
-         << "   rankdir = TB;" << std::endl
-         << "   edge [arrowsize=0.4, fontsize=10]" << std::endl;
+         << "digraph {\n"
+         << "   rankdir = TB;\n"
+         << "   edge [arrowsize=0.4, fontsize=10]\n";
 
       const TreeNode<NodeType>* head = tree.GetHead();
 
-      graphStream << std::endl << "   // Node Declarations:" << std::endl;
+      graphStream << "\n" << "   // Node Declarations:\n";
 
       std::for_each(
          Tree<NodeType>::PreOrderIterator{ head },
@@ -51,10 +51,10 @@ namespace TreeUtilities
          const auto nodeLabel = std::to_string(reinterpret_cast<size_t>(&node));
          const auto& data = node.GetData();
 
-         graphStream << "   " << nodeLabel << " [label = \"" << data << "\"]" << std::endl;
+         graphStream << "   " << nodeLabel << " [label = \"" << data << "\"]\n";
       });
 
-      graphStream << std::endl << "   // Edge Declarations:" << std::endl;
+      graphStream << "\n" << "   // Edge Declarations:\n";
 
       std::for_each(
          Tree<NodeType>::PreOrderIterator{ head },
@@ -67,13 +67,13 @@ namespace TreeUtilities
             return;
          }
 
-         const auto parentLabel = std::to_string(reinterpret_cast<size_t>(parent));
-         const auto childLabel =  std::to_string(reinterpret_cast<size_t>(&node));
+         const auto parentLabel = std::to_string(reinterpret_cast<std::size_t>(parent));
+         const auto childLabel =  std::to_string(reinterpret_cast<std::size_t>(&node));
 
-         graphStream << "   " << parentLabel << " -> " << childLabel << std::endl;
+         graphStream << "   " << parentLabel << " -> " << childLabel << "\n";
       });
 
-      graphStream << "}";
+      graphStream << "}" << std::flush;
 
       std::ofstream outputFile
       {

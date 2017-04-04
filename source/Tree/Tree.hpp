@@ -729,7 +729,7 @@ private:
 };
 
 /**
-* The Tree class declares a basic n-ary tree, built on top of templatized TreeNode nodes.
+* The Tree class declares a basic tree, built on top of templatized TreeNode nodes.
 *
 * Each tree consists of a simple head TreeNode and nothing else.
 */
@@ -1037,7 +1037,7 @@ protected:
 * @brief The PreOrderIterator class
 */
 template<typename DataType>
-class Tree<DataType>::PreOrderIterator : public Tree<DataType>::Iterator
+class Tree<DataType>::PreOrderIterator final : public Tree<DataType>::Iterator
 {
 public:
    /**
@@ -1132,7 +1132,7 @@ public:
 * @brief The PostOrderIterator class
 */
 template<typename DataType>
-class Tree<DataType>::PostOrderIterator : public Tree<DataType>::Iterator
+class Tree<DataType>::PostOrderIterator final : public Tree<DataType>::Iterator
 {
 public:
    /**
@@ -1235,7 +1235,7 @@ private:
 * @brief The LeafIterator class
 */
 template<typename DataType>
-class Tree<DataType>::LeafIterator : public Tree<DataType>::Iterator
+class Tree<DataType>::LeafIterator final : public Tree<DataType>::Iterator
 {
 public:
    /**
@@ -1368,7 +1368,7 @@ public:
 * @brief The SiblingIterator class
 */
 template<typename DataType>
-class Tree<DataType>::SiblingIterator : public Tree<DataType>::Iterator
+class Tree<DataType>::SiblingIterator final : public Tree<DataType>::Iterator
 {
 public:
    /**
