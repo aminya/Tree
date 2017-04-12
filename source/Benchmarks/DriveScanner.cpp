@@ -88,7 +88,7 @@ namespace
    */
    void PruneEmptyFilesAndDirectories(Tree<FileInfo>& tree)
    {
-      std::vector<TreeNode<FileInfo>*> toBeDeleted;
+      std::vector<Tree<FileInfo>::Node*> toBeDeleted;
 
       for (auto&& node : tree)
       {
@@ -118,7 +118,7 @@ namespace
    {
       for (auto&& node : tree)
       {
-         TreeNode<FileInfo>* parent = node.GetParent();
+         Tree<FileInfo>::Node* parent = node.GetParent();
          if (!parent)
          {
             return;
@@ -175,7 +175,7 @@ namespace
 
          NodeAndPath nodeAndPath
          {
-            std::make_unique<TreeNode<FileInfo>>(std::move(fileInfo)),
+            std::make_unique<Tree<FileInfo>::Node>(std::move(fileInfo)),
             std::move(path)
          };
 
@@ -214,7 +214,7 @@ namespace
             break;
          }
 
-         fileTree.GetHead()->AppendChild(*nodeAndPath.node);
+         //fileTree.GetHead()->AppendChild(*nodeAndPath.node);
          nodeAndPath.node.release();
       }
    }
@@ -241,12 +241,12 @@ std::shared_ptr<Tree<FileInfo>> DriveScanner::CreateTreeAndRootNode()
       FileType::DIRECTORY
    };
 
-   return std::make_shared<Tree<FileInfo>>(Tree<FileInfo>(fileInfo));
+   return std::make_shared<Tree<FileInfo>>(fileInfo);
 }
 
 void DriveScanner::ProcessFile(
    const std::experimental::filesystem::path& path,
-   TreeNode<FileInfo>& treeNode) noexcept
+   Tree<FileInfo>::Node& treeNode) noexcept
 {
    std::uintmax_t fileSize = ComputeFileSize(path);
 
@@ -263,12 +263,12 @@ void DriveScanner::ProcessFile(
       FileType::REGULAR
    };
 
-   treeNode.AppendChild(fileInfo);
+   //treeNode.AppendChild(fileInfo);
 }
 
 void DriveScanner::ProcessDirectory(
    const std::experimental::filesystem::path& path,
-   TreeNode<FileInfo>& treeNode) noexcept
+   Tree<FileInfo>::Node& treeNode) noexcept
 {
    bool isRegularFile = false;
    try
@@ -313,7 +313,7 @@ void DriveScanner::ProcessDirectory(
          FileType::DIRECTORY
       };
 
-      treeNode.AppendChild(directoryInfo);
+      //treeNode.AppendChild(directoryInfo);
 
       auto itr = std::experimental::filesystem::directory_iterator{ path };
       IterateOverDirectoryAndScan(itr, *treeNode.GetLastChild());
@@ -322,7 +322,7 @@ void DriveScanner::ProcessDirectory(
 
 void DriveScanner::IterateOverDirectoryAndScan(
    std::experimental::filesystem::directory_iterator& itr,
-   TreeNode<FileInfo>& treeNode) noexcept
+   Tree<FileInfo>::Node& treeNode) noexcept
 {
    const auto end = std::experimental::filesystem::directory_iterator{};
    while (itr != end)
@@ -390,7 +390,7 @@ void DriveScanner::Start()
 
       std::vector<std::thread> scanningThreads;
 
-      const auto numberOfThreads = std::min(std::thread::hardware_concurrency(), 4u);
+      const auto numberOfThreads = (std::min)(std::thread::hardware_concurrency(), 4u);
 
       for (auto i{ 0u }; i < numberOfThreads; ++i)
       {
