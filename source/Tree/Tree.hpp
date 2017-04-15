@@ -65,7 +65,7 @@ public:
 
    /**
    * @brief Tree constructs a new Tree with the provided data encapsulated in a new
-   * TreeNode.
+   * Node.
    */
    Tree(DataType data)
    {
@@ -88,7 +88,7 @@ public:
    Tree<DataType>& operator=(Tree<DataType> other) = delete;
 
    /**
-   * @returns A pointer to the head TreeNode.
+   * @returns A pointer to the head Node.
    */
    inline std::shared_ptr<Node> GetHead() const noexcept
    {
@@ -228,7 +228,7 @@ public:
    }
 
    /**
-   * @returns The zero-indexed depth of the TreeNode in its Tree.
+   * @returns The zero-indexed depth of the Node in its Tree.
    */
    static auto Depth(Node& node) noexcept
    {
@@ -245,7 +245,7 @@ public:
    }
 
    /**
-   * @returns A pre-order iterator that will iterate over all TreeNodes in the tree.
+   * @returns A pre-order iterator that will iterate over all Nodes in the tree.
    */
    typename Tree::PreOrderIterator beginPreOrder() const noexcept
    {
@@ -275,7 +275,7 @@ public:
    }
 
    /**
-   * @return A LeafIterator that points past the last leaf TreeNode in the Tree.
+   * @return A LeafIterator that points past the last leaf Node in the Tree.
    */
    typename Tree::LeafIterator endLeaf() const noexcept
    {
@@ -367,11 +367,11 @@ private:
    }
 
    /**
-   * @brief DivideList is a helper function that will divide the specified TreeNode list in two.
+   * @brief DivideList is a helper function that will divide the specified Node list in two.
    *
-   * @param[in] head                The head of the TreeNode list to be divided in two.
-   * @param[out] lhs                The first TreeNode of the left hand side list.
-   * @param[out] rhs                The first TreeNode of the right hand side list.
+   * @param[in] head                The head of the Node list to be divided in two.
+   * @param[out] lhs                The first Node of the left hand side list.
+   * @param[out] rhs                The first Node of the right hand side list.
    */
    void DivideList(
       std::shared_ptr<Node> head,
@@ -408,7 +408,7 @@ private:
    * @param[in] lhs                 The first node of the sorted left half.
    * @param[in] rhs                 The first node of the sorted right half.
    *
-   * @returns The first node of the merged TreeNode list.
+   * @returns The first node of the merged Node list.
    */
    template<typename ComparatorType>
    std::shared_ptr<Node> MergeSortedHalves(
@@ -503,13 +503,13 @@ public:
    using const_reference = const DataType&;
 
    /**
-   * @brief TreeNode default constructs a new TreeNode. All outgoing links from this new node will
+   * @brief Node default constructs a new Node. All outgoing links from this new node will
    * initialized to a nullptr.
    */
    constexpr Node() noexcept = default;
 
    /**
-   * @brief TreeNode constructs a new TreeNode encapsulating the specified data. All outgoing links
+   * @brief Node constructs a new Node encapsulating the specified data. All outgoing links
    * from the node will be initialized to nullptr.
    */
    Node(DataType data) noexcept(std::is_nothrow_move_constructible_v<DataType>) :
@@ -532,15 +532,12 @@ public:
    Node& operator=(Node other) = delete;
 
    /**
-   * @brief Removes the TreeNode from the tree structure, updating all surrounding links
+   * @brief Removes the Node from the tree structure, updating all surrounding links
    * as appropriate.
    *
    * @note This function does not actually delete the node.
-   *
-   * @returns A pointer to the detached TreeNode. This returned TreeNode can safely be deleted
-   * once detached.
    */
-   Node* DetachFromTree() noexcept
+   void DetachFromTree() noexcept
    {
       if (m_previousSibling && m_nextSibling)
       {
@@ -560,7 +557,7 @@ public:
       {
          m_previousSibling = nullptr;
          m_nextSibling = nullptr;
-         return this;
+         return;
       }
 
       if (m_parent->m_firstChild == m_parent->m_lastChild)
@@ -584,11 +581,11 @@ public:
 
       m_parent->m_childCount--;
 
-      return this;
+      return;
    }
 
    /**
-   * @brief Destroys the TreeNode and all TreeNodes under it.
+   * @brief Destroys the Node and all Nodes under it.
    */
    ~Node()
    {
@@ -687,7 +684,7 @@ public:
    }
 
    /**
-   * @brief Detaches and then deletes the TreeNode from the Tree it's part of.
+   * @brief Detaches and then deletes the Node from the Tree it's part of.
    */
    inline void DeleteFromTree() noexcept
    {
@@ -801,8 +798,8 @@ public:
    }
    
    /**
-   * @returns True if the data encapsulated in the left-hand side TreeNode is less than
-   * the data encapsulated in the right-hand side TreeNode.
+   * @returns True if the data encapsulated in the left-hand side Node is less than
+   * the data encapsulated in the right-hand side Node.
    */
    friend bool operator<(const Node& lhs, const Node& rhs)
    {
@@ -810,8 +807,8 @@ public:
    }
 
    /**
-   * @returns True if the data encapsulated in the left-hand side TreeNode is less than
-   * or equal to the data encapsulated in the right-hand side TreeNode.
+   * @returns True if the data encapsulated in the left-hand side Node is less than
+   * or equal to the data encapsulated in the right-hand side Node.
    */
    friend bool operator<=(const Node& lhs, const Node& rhs)
    {
@@ -819,8 +816,8 @@ public:
    }
 
    /**
-   * @returns True if the data encapsulated in the left-hand side TreeNode is greater than
-   * the data encapsulated in the right-hand side TreeNode.
+   * @returns True if the data encapsulated in the left-hand side Node is greater than
+   * the data encapsulated in the right-hand side Node.
    */
    friend bool operator>(const Node& lhs, const Node& rhs)
    {
@@ -828,8 +825,8 @@ public:
    }
 
    /**
-   * @returns True if the data encapsulated in the left-hand side TreeNode is greater than
-   * or equal to the data encapsulated in the right-hand side TreeNode.
+   * @returns True if the data encapsulated in the left-hand side Node is greater than
+   * or equal to the data encapsulated in the right-hand side Node.
    */
    friend bool operator>=(const Node& lhs, const Node& rhs)
    {
@@ -837,8 +834,8 @@ public:
    }
 
    /**
-   * @returns True if the data encapsulated in the left-hand side TreeNode is equal to
-   * the data encapsulated in the right-hand side TreeNode.
+   * @returns True if the data encapsulated in the left-hand side Node is equal to
+   * the data encapsulated in the right-hand side Node.
    */
    friend bool operator==(const Node& lhs, const Node& rhs)
    {
@@ -846,8 +843,8 @@ public:
    }
 
    /**
-   * @returns True if the data encapsulated in the left-hand side TreeNode is not equal
-   * to the data encapsulated in the right-hand side TreeNode.
+   * @returns True if the data encapsulated in the left-hand side Node is not equal
+   * to the data encapsulated in the right-hand side Node.
    */
    friend bool operator!=(const Node& lhs, const Node& rhs)
    {
@@ -891,7 +888,7 @@ public:
    typedef std::forward_iterator_tag            iterator_category;
 
    /**
-   * @returns True if the Tree::Iterator points to a valid TreeNode; false otherwise.
+   * @returns True if the Tree::Iterator points to a valid Node; false otherwise.
    */
    explicit operator bool() const noexcept
    {
@@ -900,7 +897,7 @@ public:
    }
 
    /**
-   * @returns The TreeNode pointed to by the Tree::Iterator.
+   * @returns The Node pointed to by the Tree::Iterator.
    */
    inline Node& operator*() noexcept
    {
@@ -916,7 +913,7 @@ public:
    }
 
    /**
-   * @returns A pointer to the TreeNode.
+   * @returns A pointer to the Node.
    */
    inline Node* const operator&() noexcept
    {
@@ -932,7 +929,7 @@ public:
    }
 
    /**
-   * @returns A pointer to the TreeNode pointed to by the Tree:Iterator.
+   * @returns A pointer to the Node pointed to by the Tree:Iterator.
    */
    inline Node* const operator->() noexcept
    {
@@ -1181,6 +1178,7 @@ public:
    }
 
 private:
+
    bool m_traversingUpTheTree{ false };
 };
 

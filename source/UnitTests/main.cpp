@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <vector>
 
-TEST_CASE("TreeNode Construction and Assignment")
+TEST_CASE("Node Construction and Assignment")
 {
    const Tree<std::string>::Node node{ "Bar" };
 
@@ -27,7 +27,7 @@ TEST_CASE("TreeNode Construction and Assignment")
    }
 }
 
-TEST_CASE("TreeNode Comparison Operations")
+TEST_CASE("Node Comparison Operations")
 {
    const Tree<int>::Node ten{ 10 };
    const Tree<int>::Node twenty{ 20 };
@@ -65,7 +65,7 @@ TEST_CASE("TreeNode Comparison Operations")
    }
 }
 
-TEST_CASE("TreeNode Alterations")
+TEST_CASE("Node Alterations")
 {
    Tree<std::string>::Node node{ "Bar" };
    REQUIRE(node.GetData() == "Bar");
@@ -79,7 +79,7 @@ TEST_CASE("TreeNode Alterations")
    }
 }
 
-TEST_CASE("Prepending and Appending TreeNodes")
+TEST_CASE("Prepending and Appending Nodes")
 {
    Tree<int> tree{ 10 };
 
@@ -176,7 +176,7 @@ TEST_CASE("Node Metadata")
    //}
 }
 
-TEST_CASE("TreeNode::Iterators")
+TEST_CASE("Node::Iterators")
 {
    const auto sharedNode = std::make_shared<Tree<std::string>::Node>("Test");
    const auto constItr = Tree<std::string>::PostOrderIterator{ *sharedNode };
@@ -463,7 +463,7 @@ TEST_CASE("STL Typedef Compliance")
    SECTION("Standard Algorithms and Parameter Passing by reference")
    {
       const size_t count = std::count_if(std::begin(tree), std::end(tree),
-         [] (Tree<std::string>::reference node)
+         [] (Tree<std::string>::reference node) noexcept
       {
          return (node.GetData() == "C");
       });
@@ -474,7 +474,7 @@ TEST_CASE("STL Typedef Compliance")
    SECTION("Standard Algorithms and Parameter Passing by const_reference")
    {
       const size_t count = std::count_if(std::begin(tree), std::end(tree),
-         [] (Tree<std::string>::const_reference node)
+         [] (Tree<std::string>::const_reference node) noexcept
       {
          return (node.GetData() == "D");
       });
@@ -550,7 +550,7 @@ TEST_CASE("Leaf Iterator")
 
       std::vector<std::string> output;
       std::transform(tree.beginLeaf(), tree.endLeaf(), std::back_inserter(output),
-         [](Tree<std::string>::const_reference node)
+         [](Tree<std::string>::const_reference node) noexcept
       {
          return node.GetData();
       });
@@ -616,7 +616,7 @@ TEST_CASE("Sorting")
       tree.AppendChild("H", head);
 
       const auto comparator =
-         [](Tree<std::string>::const_reference lhs, Tree<std::string>::const_reference rhs)
+         [](Tree<std::string>::const_reference lhs, Tree<std::string>::const_reference rhs) noexcept
       {
          return (lhs < rhs);
       };
@@ -631,7 +631,7 @@ TEST_CASE("Sorting")
       bool traversalError = false;
 
       auto itr = Tree<std::string>::LeafIterator(*tree.GetHead());
-      const auto end = Tree<std::string>::LeafIterator();
+      const auto end = Tree<std::string>::LeafIterator{ };
       for (; itr != end; itr++)  ///< Using the post-fix operator for more test coverage.
       {
          const auto& data = itr->GetData();
@@ -666,10 +666,10 @@ TEST_CASE("Sorting")
 
       // Sort:
       std::for_each(std::begin(tree), std::end(tree),
-         [&](auto& node)
+         [&](auto& node) noexcept
       {
          tree.SortChildren(node,
-            [] (auto& lhs, auto& rhs)
+            [] (auto& lhs, auto& rhs) noexcept
          {
             return lhs < rhs;
          });
@@ -682,7 +682,7 @@ TEST_CASE("Sorting")
 
       // Verify:
       std::for_each(std::begin(tree), std::end(tree),
-         [&](Tree<int>::const_reference node)
+         [&](Tree<int>::const_reference node) noexcept
       {
          if (!node.HasChildren())
          {
@@ -709,7 +709,7 @@ TEST_CASE("Sorting")
 
 #if 0
 
-TEST_CASE("TreeNode Copying")
+TEST_CASE("Node Copying")
 {
    TreeNode<std::string> node{ "Node" };
 
@@ -804,11 +804,11 @@ struct VerboseNode
    std::string m_data;
 };
 
-TEST_CASE("Tree and TreeNode Destruction")
+TEST_CASE("Tree and Node Destruction")
 {
    SECTION("Node Destruction Count")
    {
-      CONSTRUCTION_COUNT = 0;
+      CONSTRUCTION_COUNT = 0u;
 
       {
          Tree<VerboseNode> tree{ "F" };
@@ -824,7 +824,34 @@ TEST_CASE("Tree and TreeNode Destruction")
 
          // Reset the destruction count, so that we don't accidentally count any destructor calls
          // that took place during the construction of the tree.
-         DESTRUCTION_COUNT = 0;
+         DESTRUCTION_COUNT = 0u;
+
+         REQUIRE(tree.Size() == CONSTRUCTION_COUNT);
+      }
+
+      REQUIRE(CONSTRUCTION_COUNT == DESTRUCTION_COUNT);
+   }
+
+   SECTION("Depth of One")
+   {
+      CONSTRUCTION_COUNT = 0u;
+
+      {
+         Tree<VerboseNode> tree{ "0" };
+         auto& head = *tree.GetHead();
+         tree.AppendChild("1", head);
+         tree.AppendChild("2", head);
+         tree.AppendChild("3", head);
+         tree.AppendChild("4", head);
+         tree.AppendChild("5", head);
+         tree.AppendChild("6", head);
+         tree.AppendChild("7", head);
+         tree.AppendChild("8", head);
+         tree.AppendChild("9", head);
+
+         // Reset the destruction count, so that we don't accidentally count any destructor calls
+         // that took place during the construction of the tree.
+         DESTRUCTION_COUNT = 0u;
 
          REQUIRE(tree.Size() == CONSTRUCTION_COUNT);
       }
@@ -836,7 +863,7 @@ TEST_CASE("Tree and TreeNode Destruction")
 TEST_CASE("Selectively Delecting Nodes")
 {
    const auto VerifyTraversal =
-      [](const Tree<VerboseNode>& tree, const std::vector<std::string>& expected)
+      [](const Tree<VerboseNode>& tree, const std::vector<std::string>& expected) noexcept
    {
       int index = 0;
 
@@ -856,10 +883,48 @@ TEST_CASE("Selectively Delecting Nodes")
       return !traversalError;
    };
 
+   SECTION("Removing One of Many Siblings")
+   {
+      CONSTRUCTION_COUNT = 0u;
+
+      {
+         Tree<VerboseNode> tree{ "0" };
+         auto& head = *tree.GetHead();
+         tree.AppendChild("1", head);
+         tree.AppendChild("2", head);
+         tree.AppendChild("3", head);
+         tree.AppendChild("4", head);
+         tree.AppendChild("5", head);
+         tree.AppendChild("6", head);
+         tree.AppendChild("7", head);
+         tree.AppendChild("8", head);
+         tree.AppendChild("9", head);
+
+         // Reset the destruction count, so that we don't accidentally count any destructor calls
+         // that took place during the construction of the tree.
+         DESTRUCTION_COUNT = 0u;
+
+         auto targetNode = tree.GetHead()->GetFirstChild()->GetNextSibling()->GetNextSibling();
+         REQUIRE(targetNode->GetData().m_data == "3");
+
+         targetNode->DetachFromTree();
+
+         const std::vector<std::string> expectedTraversal =
+            { "1", "2", "4", "5", "6", "7", "8", "9", "0" };
+
+         const bool errorFree = VerifyTraversal(tree, expectedTraversal);
+         REQUIRE(errorFree == true);
+
+         REQUIRE(tree.Size() == CONSTRUCTION_COUNT);
+      }
+
+      REQUIRE(CONSTRUCTION_COUNT == DESTRUCTION_COUNT);
+   }
+
    SECTION("Removing a Leaf Node Without Siblings")
    {
-      CONSTRUCTION_COUNT = 0;
-      size_t treeSize = 0;
+      CONSTRUCTION_COUNT = 0u;
+      std::size_t treeSize = 0u;
 
       {
          Tree<VerboseNode> tree{ "F" };
@@ -877,7 +942,7 @@ TEST_CASE("Selectively Delecting Nodes")
 
          // Reset the destruction count, so that we don't accidentally count any destructor calls
          // that took place during the construction of the tree.
-         DESTRUCTION_COUNT = 0;
+         DESTRUCTION_COUNT = 0u;
 
          auto targetNode = tree.GetHead()->GetLastChild()->GetLastChild()->GetFirstChild();
          REQUIRE(targetNode != nullptr);
@@ -923,8 +988,8 @@ TEST_CASE("Selectively Delecting Nodes")
 
    SECTION("Removing a Leaf Node with A Left Sibling")
    {
-      CONSTRUCTION_COUNT = 0;
-      size_t treeSize = 0;
+      CONSTRUCTION_COUNT = 0u;
+      std::size_t treeSize = 0u;
 
       {
          Tree<VerboseNode> tree{ "F" };
@@ -974,7 +1039,7 @@ TEST_CASE("Selectively Delecting Nodes")
          const auto& underlyingNodes = tree.GetNodesAsVector();
 
          auto itr = std::find_if(std::begin(underlyingNodes), std::end(underlyingNodes),
-            [](const auto& node)
+            [](const auto& node) noexcept
          {
             return node->GetData().m_data == "E";
          });
@@ -987,7 +1052,7 @@ TEST_CASE("Selectively Delecting Nodes")
          }
 
          itr = std::find_if(std::begin(underlyingNodes), std::end(underlyingNodes),
-            [](const auto& node)
+            [](const auto& node) noexcept
          {
             return node->GetData().m_data == "C";
          });
