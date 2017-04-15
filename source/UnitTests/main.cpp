@@ -780,8 +780,13 @@ TEST_CASE("Tree Copying")
    }
 }
 
-unsigned int CONSTRUCTION_COUNT = 0;
-unsigned int DESTRUCTION_COUNT = 0;
+#endif
+
+namespace
+{
+   auto CONSTRUCTION_COUNT{ 0u };
+   auto DESTRUCTION_COUNT{ 0u };
+}
 
 struct VerboseNode
 {
@@ -807,10 +812,15 @@ TEST_CASE("Tree and TreeNode Destruction")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         tree.GetHead()->AppendChild("B")->AppendChild("A");
-         tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
-         tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
-         tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+         auto& nodeF = *tree.GetHead();
+         auto& nodeB = tree.AppendChild("B", nodeF);
+         auto& nodeA = tree.AppendChild("A", nodeB);
+         auto& nodeD = tree.AppendChild("D", nodeB);
+         auto& nodeC = tree.AppendChild("C", nodeD);
+         auto& nodeE = tree.AppendChild("E", nodeD);
+         auto& nodeG = tree.AppendChild("G", nodeF);
+         auto& nodeI = tree.AppendChild("I", nodeG);
+         auto& nodeH = tree.AppendChild("H", nodeI);
 
          // Reset the destruction count, so that we don't accidentally count any destructor calls
          // that took place during the construction of the tree.
@@ -826,7 +836,7 @@ TEST_CASE("Tree and TreeNode Destruction")
 TEST_CASE("Selectively Delecting Nodes")
 {
    const auto VerifyTraversal =
-      [](const Tree<VerboseNode>& tree, const std::vector<std::string>& expected) -> bool
+      [](const Tree<VerboseNode>& tree, const std::vector<std::string>& expected)
    {
       int index = 0;
 
@@ -853,10 +863,15 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         tree.GetHead()->AppendChild("B")->AppendChild("A");
-         tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
-         tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
-         tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+         auto& nodeF = *tree.GetHead();
+         auto& nodeB = tree.AppendChild("B", nodeF);
+         auto& nodeA = tree.AppendChild("A", nodeB);
+         auto& nodeD = tree.AppendChild("D", nodeB);
+         auto& nodeC = tree.AppendChild("C", nodeD);
+         auto& nodeE = tree.AppendChild("E", nodeD);
+         auto& nodeG = tree.AppendChild("G", nodeF);
+         auto& nodeI = tree.AppendChild("I", nodeG);
+         auto& nodeH = tree.AppendChild("H", nodeI);
 
          treeSize = tree.Size();
 
@@ -864,7 +879,7 @@ TEST_CASE("Selectively Delecting Nodes")
          // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0;
 
-         const auto* targetNode = tree.GetHead()->GetLastChild()->GetLastChild()->GetFirstChild();
+         auto targetNode = tree.GetHead()->GetLastChild()->GetLastChild()->GetFirstChild();
          REQUIRE(targetNode != nullptr);
          REQUIRE(targetNode->GetData().m_data == "H");
          REQUIRE(targetNode->GetPreviousSibling() == nullptr);
@@ -875,11 +890,26 @@ TEST_CASE("Selectively Delecting Nodes")
          const auto parentOfTarget = targetNode->GetParent();
          const auto parentsChildCount = parentOfTarget->GetChildCount();
 
-         delete targetNode;
+         // Before removing the node from the tree, there should be 4 references to it:
+         //    * Once in the underlying vector.
+         //    * Once here as a local variable.
+         //    * Once as the child-node of "D"
+         //    * Once as the sibling-node of "C".
+         REQUIRE(targetNode.use_count() == 4);
 
-         REQUIRE(DESTRUCTION_COUNT == 1);
-         REQUIRE(parentOfTarget->GetChildCount() == parentsChildCount - DESTRUCTION_COUNT);
-         REQUIRE(tree.Size() == treeSize - DESTRUCTION_COUNT);
+         targetNode->DetachFromTree();
+
+         // After removing the node from the tree, there should be 2 references to it:
+         //    * Once in the underlying vector.
+         //    * Once here as a local variable.
+         REQUIRE(targetNode.use_count() == 2);
+
+         targetNode.~shared_ptr();
+
+         // After destroying the local copy, the only remaining copy should be the one in the
+         // underlying vector:
+         REQUIRE(tree.GetNodesAsVector().size() > 0);
+         REQUIRE(tree.GetNodesAsVector().back().use_count() == 1);
 
          const std::vector<std::string> expectedTraversal =
             { "A", "C", "E", "D", "B", "I", "G", "F" };
@@ -890,6 +920,7 @@ TEST_CASE("Selectively Delecting Nodes")
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
    }
+
    SECTION("Removing a Leaf Node with A Left Sibling")
    {
       CONSTRUCTION_COUNT = 0;
@@ -897,10 +928,15 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         tree.GetHead()->AppendChild("B")->AppendChild("A");
-         tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
-         tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
-         tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+         auto& nodeF = *tree.GetHead();
+         auto& nodeB = tree.AppendChild("B", nodeF);
+         auto& nodeA = tree.AppendChild("A", nodeB);
+         auto& nodeD = tree.AppendChild("D", nodeB);
+         auto& nodeC = tree.AppendChild("C", nodeD);
+         auto& nodeE = tree.AppendChild("E", nodeD);
+         auto& nodeG = tree.AppendChild("G", nodeF);
+         auto& nodeI = tree.AppendChild("I", nodeG);
+         auto& nodeH = tree.AppendChild("H", nodeI);
 
          treeSize = tree.Size();
 
@@ -908,7 +944,7 @@ TEST_CASE("Selectively Delecting Nodes")
          // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0;
 
-         const auto* targetNode = tree.GetHead()->GetFirstChild()->GetLastChild()->GetLastChild();
+         auto targetNode = tree.GetHead()->GetFirstChild()->GetLastChild()->GetLastChild();
          REQUIRE(targetNode != nullptr);
          REQUIRE(targetNode->GetData().m_data == "E");
          REQUIRE(targetNode->GetPreviousSibling() != nullptr);
@@ -919,14 +955,55 @@ TEST_CASE("Selectively Delecting Nodes")
          const auto parentOfTarget = targetNode->GetParent();
          const auto parentsChildCount = parentOfTarget->GetChildCount();
 
-         delete targetNode;
+         // Before removing the node from the tree, there should be 4 references to it:
+         //    * Once in the underlying vector.
+         //    * Once here as a local variable.
+         //    * Once as the child-node of "D"
+         //    * Once as the sibling-node of "C".
+         REQUIRE(targetNode.use_count() == 4);
 
-         REQUIRE(DESTRUCTION_COUNT == 1);
-         REQUIRE(parentOfTarget->GetChildCount() == parentsChildCount - DESTRUCTION_COUNT);
-         REQUIRE(tree.Size() == treeSize - DESTRUCTION_COUNT);
+         targetNode->DetachFromTree();
+
+         // After removing the node from the tree, there should be 2 references to it:
+         //    * Once in the underlying vector.
+         //    * Once here as a local variable.
+         REQUIRE(targetNode.use_count() == 2);
+
+         targetNode.~shared_ptr();
+
+         const auto& underlyingNodes = tree.GetNodesAsVector();
+
+         auto itr = std::find_if(std::begin(underlyingNodes), std::end(underlyingNodes),
+            [](const auto& node)
+         {
+            return node->GetData().m_data == "E";
+         });
+
+         if (itr != std::end(underlyingNodes))
+         {
+            // After removing the targeted node from the tree, it should have a reference count
+            // of 1, since it should only exist in the underlying vector:
+            REQUIRE(itr->use_count() == 1);
+         }
+
+         itr = std::find_if(std::begin(underlyingNodes), std::end(underlyingNodes),
+            [](const auto& node)
+         {
+            return node->GetData().m_data == "C";
+         });
+
+         if (itr != std::end(underlyingNodes))
+         {
+            // After removing the node "E" from the tree, there should only be 3 references
+            // to its sibling node "C":
+            //    * Once in the underlying vector.
+            //    * Once as the first child of "D"
+            //    * Once as the last child of "D"
+            REQUIRE(itr->use_count() == 3);
+         }
 
          const std::vector<std::string> expectedTraversal =
-         { "A", "C", "D", "B", "H", "I", "G", "F" };
+            { "A", "C", "D", "B", "H", "I", "G", "F" };
 
          const bool errorFree = VerifyTraversal(tree, expectedTraversal);
          REQUIRE(errorFree == true);
@@ -934,6 +1011,9 @@ TEST_CASE("Selectively Delecting Nodes")
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
    }
+
+#if 0
+
    SECTION("Removing a Leaf Node with A Right Sibling")
    {
       CONSTRUCTION_COUNT = 0;
@@ -941,10 +1021,15 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         tree.GetHead()->AppendChild("B")->AppendChild("A");
-         tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
-         tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
-         tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+         auto& nodeF = *tree.GetHead();
+         auto& nodeB = tree.AppendChild("B", nodeF);
+         auto& nodeA = tree.AppendChild("A", nodeB);
+         auto& nodeD = tree.AppendChild("D", nodeB);
+         auto& nodeC = tree.AppendChild("C", nodeD);
+         auto& nodeE = tree.AppendChild("E", nodeD);
+         auto& nodeG = tree.AppendChild("G", nodeF);
+         auto& nodeI = tree.AppendChild("I", nodeG);
+         auto& nodeH = tree.AppendChild("H", nodeI);
 
          treeSize = tree.Size();
 
@@ -978,6 +1063,7 @@ TEST_CASE("Selectively Delecting Nodes")
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
    }
+
    SECTION("Removing a Leaf Node with Both Left and Right Siblings")
    {
       CONSTRUCTION_COUNT = 0;
@@ -985,11 +1071,15 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         tree.GetHead()->AppendChild("B")->AppendChild("A");
-         tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
-         tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("X");
-         tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
-         tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+         auto& nodeF = *tree.GetHead();
+         auto& nodeB = tree.AppendChild("B", nodeF);
+         auto& nodeA = tree.AppendChild("A", nodeB);
+         auto& nodeD = tree.AppendChild("D", nodeB);
+         auto& nodeC = tree.AppendChild("C", nodeD);
+         auto& nodeE = tree.AppendChild("E", nodeD);
+         auto& nodeG = tree.AppendChild("G", nodeF);
+         auto& nodeI = tree.AppendChild("I", nodeG);
+         auto& nodeH = tree.AppendChild("H", nodeI);
 
          treeSize = tree.Size();
 
@@ -1024,6 +1114,7 @@ TEST_CASE("Selectively Delecting Nodes")
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
    }
+
    SECTION("Removing a Node With a Left Sibling and Two Children")
    {
       CONSTRUCTION_COUNT = 0;
@@ -1031,10 +1122,15 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         tree.GetHead()->AppendChild("B")->AppendChild("A");
-         tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
-         tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
-         tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+         auto& nodeF = *tree.GetHead();
+         auto& nodeB = tree.AppendChild("B", nodeF);
+         auto& nodeA = tree.AppendChild("A", nodeB);
+         auto& nodeD = tree.AppendChild("D", nodeB);
+         auto& nodeC = tree.AppendChild("C", nodeD);
+         auto& nodeE = tree.AppendChild("E", nodeD);
+         auto& nodeG = tree.AppendChild("G", nodeF);
+         auto& nodeI = tree.AppendChild("I", nodeG);
+         auto& nodeH = tree.AppendChild("H", nodeI);
 
          treeSize = tree.Size();
 
@@ -1068,6 +1164,7 @@ TEST_CASE("Selectively Delecting Nodes")
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
    }
+
    SECTION("Deleting a Node by Calling DeleteFromTree()")
    {
       CONSTRUCTION_COUNT = 0;
@@ -1075,10 +1172,15 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         tree.GetHead()->AppendChild("B")->AppendChild("A");
-         tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
-         tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
-         tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+         auto& nodeF = *tree.GetHead();
+         auto& nodeB = tree.AppendChild("B", nodeF);
+         auto& nodeA = tree.AppendChild("A", nodeB);
+         auto& nodeD = tree.AppendChild("D", nodeB);
+         auto& nodeC = tree.AppendChild("C", nodeD);
+         auto& nodeE = tree.AppendChild("E", nodeD);
+         auto& nodeG = tree.AppendChild("G", nodeF);
+         auto& nodeI = tree.AppendChild("I", nodeG);
+         auto& nodeH = tree.AppendChild("H", nodeI);
 
          treeSize = tree.Size();
 
@@ -1112,6 +1214,7 @@ TEST_CASE("Selectively Delecting Nodes")
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
    }
+
    SECTION("Deleting Multiple Nodes from Tree")
    {
       CONSTRUCTION_COUNT = 0;
@@ -1119,10 +1222,15 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         tree.GetHead()->AppendChild("B")->AppendChild("Delete Me");
-         tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("Delete Me");
-         tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("Delete Me");
-         tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("Delete Me");
+         auto& nodeF = *tree.GetHead();
+         auto& nodeB = tree.AppendChild("B", nodeF);
+         auto& nodeA = tree.AppendChild("Delete Me", nodeB);
+         auto& nodeD = tree.AppendChild("D", nodeB);
+         auto& nodeC = tree.AppendChild("Delete Me", nodeD);
+         auto& nodeE = tree.AppendChild("Delete Me", nodeD);
+         auto& nodeG = tree.AppendChild("G", nodeF);
+         auto& nodeI = tree.AppendChild("I", nodeG);
+         auto& nodeH = tree.AppendChild("Delete Me", nodeI);
 
          treeSize = tree.Size();
 
@@ -1130,7 +1238,7 @@ TEST_CASE("Selectively Delecting Nodes")
          // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0;
 
-         std::vector<TreeNode<VerboseNode>*> toBeDeleted;
+         std::vector<Tree<VerboseNode>::Node*> toBeDeleted;
 
          for (auto&& node : tree)
          {
@@ -1155,50 +1263,6 @@ TEST_CASE("Selectively Delecting Nodes")
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
    }
-}
-
-SCENARIO("Adding Nodes to the Tree")
-{
-   GIVEN("a tree with only a head node")
-   {
-      Tree<std::string> tree{ "Head" };
-
-      REQUIRE(tree.GetHead() != nullptr);
-      REQUIRE(tree.GetHead()->GetData() == "Head");
-      REQUIRE(tree.GetHead()->CountAllDescendants() == 0);
-
-      WHEN("a single child node is added to the head node")
-      {
-         const std::string firstChildLabel{ "First Child" };
-         tree.GetHead()->AppendChild(firstChildLabel);
-
-         THEN("that child is reachable from the head node")
-         {
-            REQUIRE(tree.GetHead()->GetChildCount() == 1);
-            REQUIRE(tree.GetHead()->GetFirstChild() != nullptr);
-            REQUIRE(tree.GetHead()->GetLastChild() != nullptr);
-            REQUIRE(tree.GetHead()->GetFirstChild() == tree.GetHead()->GetLastChild());
-            REQUIRE(tree.GetHead()->GetFirstChild()->GetData() == firstChildLabel);
-         }
-
-         WHEN("a sibling is added to the head node's only child")
-         {
-            const std::string secondChildLabel{ "Second Child" };
-            tree.GetHead()->AppendChild(secondChildLabel);
-
-            THEN("both the first child and second child are properly reachable")
-            {
-               REQUIRE(tree.GetHead()->GetChildCount() == 2);
-               REQUIRE(tree.GetHead()->GetFirstChild() != nullptr);
-               REQUIRE(tree.GetHead()->GetLastChild() != nullptr);
-               REQUIRE(tree.GetHead()->GetFirstChild() != tree.GetHead()->GetLastChild());
-               REQUIRE(tree.GetHead()->GetFirstChild()->GetData() == firstChildLabel);
-               REQUIRE(tree.GetHead()->GetLastChild()->GetData() == secondChildLabel);
-               REQUIRE(tree.GetHead()->GetFirstChild()->GetNextSibling() == tree.GetHead()->GetLastChild());
-            }
-         }
-      }
-   }
-}
-
 #endif
+
+}

@@ -288,7 +288,7 @@ public:
    */
    typename Tree::SiblingIterator beginSibling(const Node& node) const noexcept
    {
-      const auto iterator = Tree<DataType>::SiblingIterator{ &node };
+      const auto iterator = Tree<DataType>::SiblingIterator{ node };
       return iterator;
    }
 
@@ -299,6 +299,14 @@ public:
    {
       const auto iterator = Tree<DataType>::SiblingIterator{ };
       return iterator;
+   }
+
+   /**
+   *
+   */
+   auto& GetNodesAsVector() const noexcept
+   {
+      return m_nodes;
    }
 
    /**
@@ -524,40 +532,139 @@ public:
    Node& operator=(Node other) = delete;
 
    /**
+   * @brief Removes the TreeNode from the tree structure, updating all surrounding links
+   * as appropriate.
+   *
+   * @note This function does not actually delete the node.
+   *
+   * @returns A pointer to the detached TreeNode. This returned TreeNode can safely be deleted
+   * once detached.
+   */
+   Node* DetachFromTree() noexcept
+   {
+      if (m_previousSibling && m_nextSibling)
+      {
+         m_previousSibling->m_nextSibling = m_nextSibling;
+         m_nextSibling->m_previousSibling = m_previousSibling;
+      }
+      else if (m_previousSibling)
+      {
+         m_previousSibling->m_nextSibling = nullptr;
+      }
+      else if (m_nextSibling)
+      {
+         m_nextSibling->m_previousSibling = nullptr;
+      }
+
+      if (!m_parent)
+      {
+         m_previousSibling = nullptr;
+         m_nextSibling = nullptr;
+         return this;
+      }
+
+      if (m_parent->m_firstChild == m_parent->m_lastChild)
+      {
+         m_parent->m_firstChild = nullptr;
+         m_parent->m_lastChild = nullptr;
+      }
+      else if (m_parent->m_firstChild.get() == this)
+      {
+         assert(m_parent->m_firstChild->m_nextSibling);
+         m_parent->m_firstChild = m_parent->m_firstChild->m_nextSibling;
+      }
+      else if (m_parent->m_lastChild.get() == this)
+      {
+         assert(m_parent->m_lastChild->m_previousSibling);
+         m_parent->m_lastChild = m_parent->m_lastChild->m_previousSibling;
+      }
+
+      m_previousSibling = nullptr;
+      m_nextSibling = nullptr;
+
+      m_parent->m_childCount--;
+
+      return this;
+   }
+
+   /**
    * @brief Destroys the TreeNode and all TreeNodes under it.
    */
    ~Node()
    {
-      //DetachFromTree();
+      if (m_childCount == 0)
+      {
+         return;
+      }
 
-      //if (m_childCount == 0)
-      //{
-      //   m_parent = nullptr;
-      //   m_firstChild = nullptr;
-      //   m_lastChild = nullptr;
-      //   m_previousSibling = nullptr;
-      //   m_nextSibling = nullptr;
+      // Find the first node to delete:
 
-      //   return;
-      //}
+      auto* victim = this;
+      while (victim->GetFirstChild())
+      {
+         victim = victim->GetFirstChild().get();
+      }
 
-      //assert(m_firstChild && m_lastChild);
+      assert(victim);
 
-      //Node* childNode = m_firstChild;
-      //Node* nextNode = nullptr;
+      // Find the node immediately following the last node to delete:
 
-      //while (childNode != nullptr)
-      //{
-      //   nextNode = childNode->m_nextSibling;
-      //   delete childNode;
-      //   childNode = nextNode;
-      //}
+      decltype(victim) lastVictim = nullptr;
+      if (victim->GetNextSibling())
+      {
+         auto* lastVictim = victim->GetNextSibling().get();
+         while (lastVictim->HasChildren())
+         {
+            lastVictim = lastVictim->GetFirstChild().get();
+         }
+      }
+      else
+      {
+         lastVictim = victim->GetParent();
+      }
 
-      m_parent = nullptr;
-      m_firstChild = nullptr;
-      m_lastChild = nullptr;
-      m_previousSibling = nullptr;
-      m_nextSibling = nullptr;
+      // Perform deletions:
+
+      bool traversingUpTheTree = false;
+
+      const auto AdvanceToNext = [&](auto* node)
+      {
+         if (node->HasChildren() && !traversingUpTheTree)
+         {
+            while (node->GetFirstChild())
+            {
+               node = node->GetFirstChild().get();
+            }
+         }
+         else if (node->GetNextSibling())
+         {
+            traversingUpTheTree = false;
+
+            node = node->GetNextSibling().get();
+            while (node->HasChildren())
+            {
+               node = node->GetFirstChild().get();
+            }
+         }
+         else
+         {
+            traversingUpTheTree = true;
+
+            node = node->GetParent();
+         }
+
+         return node;
+      };
+
+      auto* nextVictim = AdvanceToNext(victim);
+      victim->DetachFromTree();
+
+      while (nextVictim != lastVictim)
+      {
+         victim = nextVictim;
+         nextVictim = AdvanceToNext(victim);
+         victim->DetachFromTree();
+      }
    }
 
    /**
@@ -877,9 +984,9 @@ protected:
    /**
    * Constructs a Iterator started at the specified node.
    */
-   explicit Iterator(const Node* node) noexcept :
-      m_currentNode{ const_cast<Node*>(node) },
-      m_startingNode{ const_cast<Node*>(node) }
+   explicit Iterator(const Node& node) noexcept :
+      m_currentNode{ const_cast<Node*>(&node) },
+      m_startingNode{ const_cast<Node*>(&node) }
    {
    }
 
@@ -905,7 +1012,7 @@ public:
    * Constructs an iterator that starts and ends at the specified node.
    */
    explicit PreOrderIterator(const Node& node) noexcept :
-      Iterator{ &node }
+      Iterator{ node }
    {
       if (node.GetNextSibling())
       {
@@ -995,7 +1102,7 @@ public:
    * Constructs an iterator that starts and ends at the specified node.
    */
    explicit PostOrderIterator(const Node& node) noexcept :
-      Iterator{ &node }
+      Iterator{ node }
    {
       // Compute and set the starting node:
 
@@ -1093,7 +1200,7 @@ public:
    * Constructs an iterator that starts at the specified node and iterates to the end.
    */
    explicit LeafIterator(const Node& node) noexcept :
-      Iterator{ &node }
+      Iterator{ node }
    {
       // Compute and set the starting node:
 
@@ -1221,7 +1328,7 @@ public:
    * Constructs an iterator that starts at the specified node and iterates to the end.
    */
    explicit SiblingIterator(const Node& node) noexcept :
-      Iterator{ &node }
+      Iterator{ node }
    {
    }
 
