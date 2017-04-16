@@ -170,10 +170,11 @@ TEST_CASE("Node Metadata")
       REQUIRE(tree.Depth(nodeH) == 3);
    }
 
-   //SECTION("Descendent Count")
-   //{
-   //   REQUIRE(tree.GetHead()->GetFirstChild()->CountAllDescendants() == 4);
-   //}
+   SECTION("Sub-Tree Size")
+   {
+      const auto& firstChild = tree.GetHead()->GetFirstChild();
+      REQUIRE(tree.Size(firstChild) == 5);
+   }
 }
 
 TEST_CASE("Node::Iterators")
@@ -645,6 +646,7 @@ TEST_CASE("Sorting")
       REQUIRE(traversalError == false);
       REQUIRE(index == expectedTraversal.size());
    }
+
    SECTION("An Entire Tree")
    {
       Tree<int> tree{ 999 };
@@ -757,6 +759,7 @@ TEST_CASE("Tree Copying")
       REQUIRE(traversalError == false);
       REQUIRE(index == expectedTraversal.size());
    }
+
    SECTION("Post-order Verification")
    {
       const std::vector<std::string> expectedTraversal =
@@ -904,10 +907,10 @@ TEST_CASE("Selectively Delecting Nodes")
          // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0u;
 
-         auto targetNode = tree.GetHead()->GetFirstChild()->GetNextSibling()->GetNextSibling();
-         REQUIRE(targetNode->GetData().m_data == "3");
+         auto doomedNode = tree.GetHead()->GetFirstChild()->GetNextSibling()->GetNextSibling();
+         REQUIRE(doomedNode->GetData().m_data == "3");
 
-         targetNode->DetachFromTree();
+         tree.Detach(doomedNode);
 
          const std::vector<std::string> expectedTraversal =
             { "1", "2", "4", "5", "6", "7", "8", "9", "0" };
@@ -944,37 +947,38 @@ TEST_CASE("Selectively Delecting Nodes")
          // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0u;
 
-         auto targetNode = tree.GetHead()->GetLastChild()->GetLastChild()->GetFirstChild();
-         REQUIRE(targetNode != nullptr);
-         REQUIRE(targetNode->GetData().m_data == "H");
-         REQUIRE(targetNode->GetPreviousSibling() == nullptr);
-         REQUIRE(targetNode->GetNextSibling() == nullptr);
-         REQUIRE(targetNode->GetFirstChild() == nullptr);
-         REQUIRE(targetNode->GetLastChild() == nullptr);
+         auto doomedNode = tree.GetHead()->GetLastChild()->GetLastChild()->GetFirstChild();
+         REQUIRE(doomedNode != nullptr);
+         REQUIRE(doomedNode->GetData().m_data == "H");
+         REQUIRE(doomedNode->GetPreviousSibling() == nullptr);
+         REQUIRE(doomedNode->GetNextSibling() == nullptr);
+         REQUIRE(doomedNode->GetFirstChild() == nullptr);
+         REQUIRE(doomedNode->GetLastChild() == nullptr);
 
-         const auto parentOfTarget = targetNode->GetParent();
-         const auto parentsChildCount = parentOfTarget->GetChildCount();
+         const auto parentOfTarget = doomedNode->GetParent();
+         const auto parentsChildCount = doomedNode->GetChildCount();
 
          // Before removing the node from the tree, there should be 4 references to it:
          //    * Once in the underlying vector.
          //    * Once here as a local variable.
          //    * Once as the child-node of "D"
          //    * Once as the sibling-node of "C".
-         REQUIRE(targetNode.use_count() == 4);
+         REQUIRE(doomedNode.use_count() == 4);
 
-         targetNode->DetachFromTree();
+         tree.Detach(doomedNode);
 
          // After removing the node from the tree, there should be 2 references to it:
          //    * Once in the underlying vector.
          //    * Once here as a local variable.
-         REQUIRE(targetNode.use_count() == 2);
+         REQUIRE(doomedNode.use_count() == 2);
 
-         targetNode.~shared_ptr();
+         doomedNode.~shared_ptr();
 
          // After destroying the local copy, the only remaining copy should be the one in the
          // underlying vector:
-         REQUIRE(tree.GetNodesAsVector().size() > 0);
-         REQUIRE(tree.GetNodesAsVector().back().use_count() == 1);
+         const auto& underlyingVector = tree.GetNodesAsVector();
+         REQUIRE(underlyingVector.size() > 0);
+         REQUIRE(underlyingVector.back().use_count() == 1);
 
          const std::vector<std::string> expectedTraversal =
             { "A", "C", "E", "D", "B", "I", "G", "F" };
@@ -1009,15 +1013,15 @@ TEST_CASE("Selectively Delecting Nodes")
          // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0;
 
-         auto targetNode = tree.GetHead()->GetFirstChild()->GetLastChild()->GetLastChild();
-         REQUIRE(targetNode != nullptr);
-         REQUIRE(targetNode->GetData().m_data == "E");
-         REQUIRE(targetNode->GetPreviousSibling() != nullptr);
-         REQUIRE(targetNode->GetNextSibling() == nullptr);
-         REQUIRE(targetNode->GetFirstChild() == nullptr);
-         REQUIRE(targetNode->GetLastChild() == nullptr);
+         auto doomedNode = tree.GetHead()->GetFirstChild()->GetLastChild()->GetLastChild();
+         REQUIRE(doomedNode != nullptr);
+         REQUIRE(doomedNode->GetData().m_data == "E");
+         REQUIRE(doomedNode->GetPreviousSibling() != nullptr);
+         REQUIRE(doomedNode->GetNextSibling() == nullptr);
+         REQUIRE(doomedNode->GetFirstChild() == nullptr);
+         REQUIRE(doomedNode->GetLastChild() == nullptr);
 
-         const auto parentOfTarget = targetNode->GetParent();
+         const auto parentOfTarget = doomedNode->GetParent();
          const auto parentsChildCount = parentOfTarget->GetChildCount();
 
          // Before removing the node from the tree, there should be 4 references to it:
@@ -1025,39 +1029,39 @@ TEST_CASE("Selectively Delecting Nodes")
          //    * Once here as a local variable.
          //    * Once as the child-node of "D"
          //    * Once as the sibling-node of "C".
-         REQUIRE(targetNode.use_count() == 4);
+         REQUIRE(doomedNode.use_count() == 4);
 
-         targetNode->DetachFromTree();
+         tree.Detach(doomedNode);
 
          // After removing the node from the tree, there should be 2 references to it:
          //    * Once in the underlying vector.
          //    * Once here as a local variable.
-         REQUIRE(targetNode.use_count() == 2);
+         REQUIRE(doomedNode.use_count() == 2);
 
-         targetNode.~shared_ptr();
+         doomedNode.~shared_ptr();
 
-         const auto& underlyingNodes = tree.GetNodesAsVector();
+         const auto& underlyingVector = tree.GetNodesAsVector();
 
-         auto itr = std::find_if(std::begin(underlyingNodes), std::end(underlyingNodes),
+         auto itr = std::find_if(std::begin(underlyingVector), std::end(underlyingVector),
             [](const auto& node) noexcept
          {
             return node->GetData().m_data == "E";
          });
 
-         if (itr != std::end(underlyingNodes))
+         if (itr != std::end(underlyingVector))
          {
             // After removing the targeted node from the tree, it should have a reference count
             // of 1, since it should only exist in the underlying vector:
             REQUIRE(itr->use_count() == 1);
          }
 
-         itr = std::find_if(std::begin(underlyingNodes), std::end(underlyingNodes),
+         itr = std::find_if(std::begin(underlyingVector), std::end(underlyingVector),
             [](const auto& node) noexcept
          {
             return node->GetData().m_data == "C";
          });
 
-         if (itr != std::end(underlyingNodes))
+         if (itr != std::end(underlyingVector))
          {
             // After removing the node "E" from the tree, there should only be 3 references
             // to its sibling node "C":

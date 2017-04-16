@@ -49,7 +49,6 @@ public:
    class SiblingIterator;
 
    // Typedefs needed for STL compliance:
-   // @todo These should refer to the underlying DataType, and not the Node.
    using value_type = Node;
    using reference = Node&;
    using const_reference = const Node&;
@@ -97,12 +96,35 @@ public:
    }
 
    /**
+   * @brief Computes the size of either the whole Tree, or a portion thereof.
+   *
+   * @param[in] node                The node at which to start counting. If this parameter is not
+   *                                provided, then the size of the entire tree is returned.
+   *
    * @returns The total number of nodes in the Tree. This includes leaf and non-leaf nodes,
    * in addition to the root node.
    */
-   auto Size() const noexcept
+   auto Size(std::shared_ptr<Node> node = nullptr) const noexcept
    {
-      return m_nodes.size();
+      if (!node)
+      {
+         return m_nodes.size();
+      }
+
+      if (m_nodes.size() == 0)
+      {
+         return std::size_t{ 0 };
+      }
+
+      const std::size_t descendantCount = std::count_if(
+         PostOrderIterator{ *node },
+         PostOrderIterator{ },
+         [](const auto&) noexcept
+      {
+         return true;
+      });
+
+      return descendantCount;
    }
 
    /**
@@ -205,6 +227,24 @@ public:
       Node& successor)
    {
       // @todo
+   }
+
+   /**
+   * @brief Detaches the given node from the tree.
+   *
+   * If nothing else references the detached node, the node will be freed.
+   */
+   void Detach(std::shared_ptr<Node>& node)
+   {
+      node->DetachFromTree();
+
+      // If no one else is referencing the node, then the reference in the std::vector should be
+      // the only reference that's left. If that's the case, we can reclaim a bit of memory:
+      if (node.use_count() == 1)
+      {
+         // @todo Add test coverage...
+         node.reset();
+      }
    }
 
    /**
@@ -532,65 +572,15 @@ public:
    Node& operator=(Node other) = delete;
 
    /**
-   * @brief Removes the Node from the tree structure, updating all surrounding links
-   * as appropriate.
-   *
-   * @note This function does not actually delete the node.
-   */
-   void DetachFromTree() noexcept
-   {
-      if (m_previousSibling && m_nextSibling)
-      {
-         m_previousSibling->m_nextSibling = m_nextSibling;
-         m_nextSibling->m_previousSibling = m_previousSibling;
-      }
-      else if (m_previousSibling)
-      {
-         m_previousSibling->m_nextSibling = nullptr;
-      }
-      else if (m_nextSibling)
-      {
-         m_nextSibling->m_previousSibling = nullptr;
-      }
-
-      if (!m_parent)
-      {
-         m_previousSibling = nullptr;
-         m_nextSibling = nullptr;
-         return;
-      }
-
-      if (m_parent->m_firstChild == m_parent->m_lastChild)
-      {
-         m_parent->m_firstChild = nullptr;
-         m_parent->m_lastChild = nullptr;
-      }
-      else if (m_parent->m_firstChild.get() == this)
-      {
-         assert(m_parent->m_firstChild->m_nextSibling);
-         m_parent->m_firstChild = m_parent->m_firstChild->m_nextSibling;
-      }
-      else if (m_parent->m_lastChild.get() == this)
-      {
-         assert(m_parent->m_lastChild->m_previousSibling);
-         m_parent->m_lastChild = m_parent->m_lastChild->m_previousSibling;
-      }
-
-      m_previousSibling = nullptr;
-      m_nextSibling = nullptr;
-
-      m_parent->m_childCount--;
-
-      return;
-   }
-
-   /**
    * @brief Destroys the Node and all Nodes under it.
    */
    ~Node()
    {
       if (m_childCount == 0)
       {
+         // @todo Even if a node does not have children, it may still have siblings. The links to
+         // these siblings needs to be broken in order to ensure the proper freeing of these nodes.
+
          return;
       }
 
@@ -853,11 +843,70 @@ public:
 
 private:
 
+   /**
+   * @brief Removes the Node from the tree structure, updating all surrounding links
+   * as appropriate.
+   *
+   * @note This function does not actually delete the node.
+   */
+   void DetachFromTree() noexcept
+   {
+      if (m_previousSibling && m_nextSibling)
+      {
+         m_previousSibling->m_nextSibling = m_nextSibling;
+         m_nextSibling->m_previousSibling = m_previousSibling;
+      }
+      else if (m_previousSibling)
+      {
+         m_previousSibling->m_nextSibling = nullptr;
+      }
+      else if (m_nextSibling)
+      {
+         m_nextSibling->m_previousSibling = nullptr;
+      }
+
+      if (!m_parent)
+      {
+         m_previousSibling = nullptr;
+         m_nextSibling = nullptr;
+         return;
+      }
+
+      if (m_parent->m_firstChild == m_parent->m_lastChild)
+      {
+         m_parent->m_firstChild = nullptr;
+         m_parent->m_lastChild = nullptr;
+      }
+      else if (m_parent->m_firstChild.get() == this)
+      {
+         assert(m_parent->m_firstChild->m_nextSibling);
+         m_parent->m_firstChild = m_parent->m_firstChild->m_nextSibling;
+      }
+      else if (m_parent->m_lastChild.get() == this)
+      {
+         assert(m_parent->m_lastChild->m_previousSibling);
+         m_parent->m_lastChild = m_parent->m_lastChild->m_previousSibling;
+      }
+
+      m_previousSibling = nullptr;
+      m_nextSibling = nullptr;
+
+      m_parent->m_childCount--;
+
+      return;
+   }
+
    // @note Parents should not be a std::shared_ptr<Node>, because we don't want to create cycles.
    Node* m_parent{ nullptr };
 
    std::shared_ptr<Node> m_firstChild{ nullptr };
    std::shared_ptr<Node> m_lastChild{ nullptr };
+
+   // @todo Having adjacent siblings pointing at one another creates an obvious cycle. While this
+   // cycle is properly broken when nodes are detached from the tree, this is likely not to be the
+   // case if the underlying vector of nodes goes out of scope when an exception is throw. This
+   // should ideally not be cyclic, or ~Node() should handle the breaking of this cycle when it is
+   // invoked.
    std::shared_ptr<Node> m_previousSibling{ nullptr };
    std::shared_ptr<Node> m_nextSibling{ nullptr };
 
@@ -865,6 +914,7 @@ private:
 
    std::size_t m_childCount{ 0 };
 
+   // @todo Add supporting infrastructure for this variable:
    bool m_visited{ false };
 };
 
@@ -879,13 +929,13 @@ class Tree<DataType>::Iterator
 {
 public:
    // Typedefs needed for STL compliance:
-   typedef DataType                             value_type;
-   typedef DataType*                            pointer;
-   typedef DataType&                            reference;
-   typedef const DataType&                      const_reference;
-   typedef std::size_t                          size_type;
-   typedef std::ptrdiff_t                       difference_type;
-   typedef std::forward_iterator_tag            iterator_category;
+   using value_type = DataType;
+   using pointer = DataType*;
+   using reference = DataType&;
+   using const_reference = const DataType&;
+   using size_type = std::size_t;
+   using difference_type = std::ptrdiff_t;
+   using iterator_category = std::forward_iterator_tag;
 
    /**
    * @returns True if the Tree::Iterator points to a valid Node; false otherwise.
