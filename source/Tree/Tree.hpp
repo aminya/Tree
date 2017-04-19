@@ -39,7 +39,33 @@
 template<typename DataType>
 class Tree
 {
+private:
+
+   struct StateAndIndex
+   {
+      bool state;
+      std::size_t index;
+   };
+
+   struct Metadata
+   {
+      std::size_t index;
+      std::size_t childCount;
+
+      StateAndIndex parent;
+      StateAndIndex nextSibling;
+      StateAndIndex previousSibling;
+      StateAndIndex firstChild;
+      StateAndIndex lastChild;
+   };
+
+   constexpr static StateAndIndex UNINITIALIZED{ false, 0 };
+
+   static_assert(std::is_trivial_v<Metadata>,"Metadata is not trivial copyable and trivially defaulted!");
+   static_assert(std::is_trivially_destructible_v<Metadata>, "Metadata is not trivial destructible!");
+
 public:
+
    class Node;
 
    class Iterator;
@@ -58,8 +84,11 @@ public:
    */
    Tree()
    {
-      m_nodes.reserve(128);
-      m_nodes.emplace_back(std::make_shared<Node>());
+      m_data.reserve(128);
+      m_data.emplace_back(DataType{ });
+
+      m_metadata.reserve(128);
+      m_metadata.emplace_back(Metadata{ });
    }
 
    /**
@@ -68,8 +97,11 @@ public:
    */
    Tree(DataType data)
    {
-      m_nodes.reserve(128);
-      m_nodes.emplace_back(std::make_shared<Node>(std::move(data)));
+      m_data.reserve(128);
+      m_data.emplace_back(std::move(data));
+
+      m_metadata.reserve(128);
+      m_metadata.emplace_back(Metadata{ });
    }
 
    /**
@@ -89,10 +121,11 @@ public:
    /**
    * @returns A pointer to the head Node.
    */
-   inline std::shared_ptr<Node> GetHead() const noexcept
+   Node GetHead() noexcept
    {
-      assert(m_nodes.size() > 0);
-      return m_nodes.front();
+      assert(m_data.size() > 0 && m_metadata.size() > 0);
+
+      return { this, m_data[0], m_metadata[0] };
    }
 
    /**
@@ -104,8 +137,10 @@ public:
    * @returns The total number of nodes in the Tree. This includes leaf and non-leaf nodes,
    * in addition to the root node.
    */
-   auto Size(std::shared_ptr<Node> node = nullptr) const noexcept
+   auto Size(Node* node = nullptr) const noexcept
    {
+      assert(m_data.size() == m_metadata.size());
+
       if (!node)
       {
          return m_nodes.size();
@@ -234,17 +269,9 @@ public:
    *
    * If nothing else references the detached node, the node will be freed.
    */
-   void Detach(std::shared_ptr<Node>& node)
+   void Detach(Node& node)
    {
       node->DetachFromTree();
-
-      // If no one else is referencing the node, then the reference in the std::vector should be
-      // the only reference that's left. If that's the case, we can reclaim a bit of memory:
-      if (node.use_count() == 1)
-      {
-         // @todo Add test coverage...
-         node.reset();
-      }
    }
 
    /**
@@ -344,11 +371,12 @@ public:
    /**
    *
    */
-   auto& GetNodesAsVector() const noexcept
+   const auto& GetDataAsVector() const noexcept
    {
-      return m_nodes;
+      return m_data;
    }
 
+#if 0
    /**
    * @brief SortChildren performs a merge sort of the direct descendants nodes.
    *
@@ -371,8 +399,6 @@ public:
 
       MergeSort(node.m_firstChild, comparator);
    }
-
-private:
 
    /**
    * @brief MergeSort is the main entry point into the merge sort implementation.
@@ -529,7 +555,12 @@ private:
       return result;
    }
 
-   std::vector<std::shared_ptr<Node>> m_nodes;
+#endif
+
+private:
+
+   std::vector<DataType> m_data;
+   std::vector<Metadata> m_metadata;
 };
 
 template<typename DataType>
@@ -546,14 +577,10 @@ public:
    * @brief Node default constructs a new Node. All outgoing links from this new node will
    * initialized to a nullptr.
    */
-   constexpr Node() noexcept = default;
-
-   /**
-   * @brief Node constructs a new Node encapsulating the specified data. All outgoing links
-   * from the node will be initialized to nullptr.
-   */
-   Node(DataType data) noexcept(std::is_nothrow_move_constructible_v<DataType>) :
-      m_data{ std::move(data) }
+   Node(Tree* tree, DataType& data, Metadata& metadata) noexcept :
+      m_tree{ tree },
+      m_data{ data },
+      m_metadata{ metadata }
    {
    }
 
@@ -572,147 +599,86 @@ public:
    Node& operator=(Node other) = delete;
 
    /**
-   * @brief Destroys the Node and all Nodes under it.
+   * @brief AppendChild will construct and append a new TreeNode as the last child of the TreeNode.
+   *
+   * @param[in] data                The underlying data to be stored in the new TreeNode.
+   *
+   * @returns The newly appended TreeNode.
    */
-   ~Node()
+   Node AppendChild(const DataType& data)
    {
-      if (m_childCount == 0)
+      assert(m_tree);
+      assert(m_tree->m_data.size() == m_tree->m_metadata.size());
+
+      // It's important that this be done before inserting (or you'll be off by one):
+      const auto indexOfNewNode = m_tree->m_data.size();
+
+      const Metadata childNode
       {
-         // @todo Even if a node does not have children, it may still have siblings. The links to
-         // these siblings needs to be broken in order to ensure the proper freeing of these nodes.
-
-         return;
-      }
-
-      // Find the first node to delete:
-
-      auto* victim = this;
-      while (victim->GetFirstChild())
-      {
-         victim = victim->GetFirstChild().get();
-      }
-
-      assert(victim);
-
-      // Find the node immediately following the last node to delete:
-
-      decltype(victim) lastVictim = nullptr;
-      if (victim->GetNextSibling())
-      {
-         auto* lastVictim = victim->GetNextSibling().get();
-         while (lastVictim->HasChildren())
-         {
-            lastVictim = lastVictim->GetFirstChild().get();
-         }
-      }
-      else
-      {
-         lastVictim = victim->GetParent();
-      }
-
-      // Perform deletions:
-
-      bool traversingUpTheTree = false;
-
-      const auto AdvanceToNext = [&](auto* node)
-      {
-         if (node->HasChildren() && !traversingUpTheTree)
-         {
-            while (node->GetFirstChild())
-            {
-               node = node->GetFirstChild().get();
-            }
-         }
-         else if (node->GetNextSibling())
-         {
-            traversingUpTheTree = false;
-
-            node = node->GetNextSibling().get();
-            while (node->HasChildren())
-            {
-               node = node->GetFirstChild().get();
-            }
-         }
-         else
-         {
-            traversingUpTheTree = true;
-
-            node = node->GetParent();
-         }
-
-         return node;
+         /* index =            */ indexOfNewNode,
+         /* childCount =       */ 0,
+         /* parent =           */ StateAndIndex{ true, m_metadata.index },
+         /* nextSibling =      */ UNINITIALIZED,
+         /* previousSibling =  */ m_metadata.lastChild,
+         /* firstChild =       */ UNINITIALIZED,
+         /* lastChild =        */ UNINITIALIZED
       };
 
-      auto* nextVictim = AdvanceToNext(victim);
-      victim->DetachFromTree();
+      m_tree->m_metadata[m_metadata.lastChild.index].nextSibling = StateAndIndex{ true, indexOfNewNode };
 
-      while (nextVictim != lastVictim)
-      {
-         victim = nextVictim;
-         nextVictim = AdvanceToNext(victim);
-         victim->DetachFromTree();
-      }
-   }
+      m_metadata.lastChild = StateAndIndex{ true, indexOfNewNode };
+      ++(m_metadata.childCount);
 
-   /**
-   * @brief Swaps all member variables of the left-hand side with that of the right-hand side.
-   */
-   friend void swap(Node& lhs, Node& rhs)
-      noexcept(noexcept(swap(lhs.m_data, rhs.m_data)))
-   {
-      // Enable Argument Dependent Lookup (ADL):
-      using std::swap;
+      m_tree->m_data.emplace_back(data);
+      m_tree->m_metadata.emplace_back(childNode);
 
-      swap(lhs.m_parent, rhs.m_parent);
-      swap(lhs.m_firstChild, rhs.m_firstChild);
-      swap(lhs.m_lastChild, rhs.m_lastChild);
-      swap(lhs.m_previousSibling, rhs.m_previousSibling);
-      swap(lhs.m_nextSibling, rhs.m_nextSibling);
-      swap(lhs.m_data, rhs.m_data);
-      swap(lhs.m_childCount, rhs.m_childCount);
-      swap(lhs.m_visited, rhs.m_visited);
-   }
-
-   /**
-   * @brief Detaches and then deletes the Node from the Tree it's part of.
-   */
-   inline void DeleteFromTree() noexcept
-   {
-      delete this;
-   }
-
-   /**
-   * @returns The encapsulated data.
-   */
-   inline DataType* operator->() noexcept
-   {
-      return &m_data;
+      return { m_tree, m_tree->m_data.back(), m_tree->m_metadata.back() };
    }
 
    /**
    * @overload
    */
-   inline const DataType* operator->() const noexcept
-   {
-      return &m_data;
-   }
+   //template<typename Type>
+   //Node& AppendChild(Type&& data)
+   //{
+   //   const auto& newNode = Node{ std::forward<Type>(data) };
+   //   return AppendChild(newNode);
+   //}
 
    /**
-   * @brief MarkVisited sets node visitation status.
+   * @brief AppendChild will append the specified TreeNode as a child of the TreeNode.
    *
-   * @param[in] visited             Whether the node should be marked as having been visited.
+   * @param[in] child               The new TreeNode to set as the last child of the TreeNode.
+   *
+   * @returns A pointer to the newly appended child.
    */
-   inline void MarkVisited(const bool visited = true) noexcept
-   {
-      m_visited = visited;
-   }
+   //Node& AppendChild(Node<DataType>& child) noexcept
+   //{
+   //   child.m_parent = this;
+
+   //   if (!m_lastChild)
+   //   {
+   //      return AddFirstChild(child);
+   //   }
+
+   //   assert(m_lastChild);
+
+   //   m_lastChild->m_nextSibling = &child;
+   //   m_lastChild->m_nextSibling->m_previousSibling = m_lastChild;
+   //   m_lastChild = m_lastChild->m_nextSibling;
+
+   //   m_childCount++;
+
+   //   return m_lastChild;
+   //}
+
+
 
    /**
-   * @returns True if the node has been marked as visited.
+   * @brief Detaches and then deletes the Node from the Tree it's part of.
    */
-   inline constexpr bool HasBeenVisited() const noexcept
+   void DeleteFromTree() noexcept
    {
-      return m_visited;
    }
 
    /**
@@ -720,7 +686,7 @@ public:
    */
    auto HasChildren() const noexcept
    {
-      return m_childCount > 0;
+      return m_metadata.childCount > 0;
    }
 
    /**
@@ -728,7 +694,7 @@ public:
    */
    auto GetChildCount() const noexcept
    {
-      return m_childCount;
+      return m_metadata.childCount;
    }
 
    /**
@@ -736,7 +702,7 @@ public:
    */
    auto GetFirstChild() const noexcept
    {
-      return m_firstChild;
+      return m_metadata.firstChild;
    }
 
    /**
@@ -744,7 +710,7 @@ public:
    */
    auto GetLastChild() const noexcept
    {
-      return m_lastChild;
+      return m_metadata.lastChild;
    }
 
    /**
@@ -752,7 +718,7 @@ public:
    */
    auto GetParent() const noexcept
    {
-      return m_parent;
+      return m_metadata.parent;
    }
 
    /**
@@ -760,7 +726,7 @@ public:
    */
    auto GetNextSibling() const noexcept
    {
-      return m_nextSibling;
+      return m_metadata.nextSibling;
    }
 
    /**
@@ -768,7 +734,7 @@ public:
    */
    auto GetPreviousSibling() const noexcept
    {
-      return m_previousSibling;
+      return m_metadata.previousSibling;
    }
 
    /**
@@ -786,12 +752,12 @@ public:
    {
       return m_data;
    }
-   
+
    /**
    * @returns True if the data encapsulated in the left-hand side Node is less than
    * the data encapsulated in the right-hand side Node.
    */
-   friend bool operator<(const Node& lhs, const Node& rhs)
+   friend auto operator<(const Node& lhs, const Node& rhs)
    {
       return lhs.GetData() < rhs.GetData();
    }
@@ -800,7 +766,7 @@ public:
    * @returns True if the data encapsulated in the left-hand side Node is less than
    * or equal to the data encapsulated in the right-hand side Node.
    */
-   friend bool operator<=(const Node& lhs, const Node& rhs)
+   friend auto operator<=(const Node& lhs, const Node& rhs)
    {
       return !(lhs.GetData() > rhs.GetData());
    }
@@ -809,7 +775,7 @@ public:
    * @returns True if the data encapsulated in the left-hand side Node is greater than
    * the data encapsulated in the right-hand side Node.
    */
-   friend bool operator>(const Node& lhs, const Node& rhs)
+   friend auto operator>(const Node& lhs, const Node& rhs)
    {
       return rhs.GetData() < lhs.GetData();
    }
@@ -818,7 +784,7 @@ public:
    * @returns True if the data encapsulated in the left-hand side Node is greater than
    * or equal to the data encapsulated in the right-hand side Node.
    */
-   friend bool operator>=(const Node& lhs, const Node& rhs)
+   friend auto operator>=(const Node& lhs, const Node& rhs)
    {
       return !(lhs.GetData() < rhs.GetData());
    }
@@ -827,7 +793,7 @@ public:
    * @returns True if the data encapsulated in the left-hand side Node is equal to
    * the data encapsulated in the right-hand side Node.
    */
-   friend bool operator==(const Node& lhs, const Node& rhs)
+   friend auto operator==(const Node& lhs, const Node& rhs)
    {
       return lhs.GetData() == rhs.GetData();
    }
@@ -836,86 +802,16 @@ public:
    * @returns True if the data encapsulated in the left-hand side Node is not equal
    * to the data encapsulated in the right-hand side Node.
    */
-   friend bool operator!=(const Node& lhs, const Node& rhs)
+   friend auto operator!=(const Node& lhs, const Node& rhs)
    {
       return !(lhs.GetData() == rhs.GetData());
    }
 
 private:
 
-   /**
-   * @brief Removes the Node from the tree structure, updating all surrounding links
-   * as appropriate.
-   *
-   * @note This function does not actually delete the node.
-   */
-   void DetachFromTree() noexcept
-   {
-      if (m_previousSibling && m_nextSibling)
-      {
-         m_previousSibling->m_nextSibling = m_nextSibling;
-         m_nextSibling->m_previousSibling = m_previousSibling;
-      }
-      else if (m_previousSibling)
-      {
-         m_previousSibling->m_nextSibling = nullptr;
-      }
-      else if (m_nextSibling)
-      {
-         m_nextSibling->m_previousSibling = nullptr;
-      }
-
-      if (!m_parent)
-      {
-         m_previousSibling = nullptr;
-         m_nextSibling = nullptr;
-         return;
-      }
-
-      if (m_parent->m_firstChild == m_parent->m_lastChild)
-      {
-         m_parent->m_firstChild = nullptr;
-         m_parent->m_lastChild = nullptr;
-      }
-      else if (m_parent->m_firstChild.get() == this)
-      {
-         assert(m_parent->m_firstChild->m_nextSibling);
-         m_parent->m_firstChild = m_parent->m_firstChild->m_nextSibling;
-      }
-      else if (m_parent->m_lastChild.get() == this)
-      {
-         assert(m_parent->m_lastChild->m_previousSibling);
-         m_parent->m_lastChild = m_parent->m_lastChild->m_previousSibling;
-      }
-
-      m_previousSibling = nullptr;
-      m_nextSibling = nullptr;
-
-      m_parent->m_childCount--;
-
-      return;
-   }
-
-   // @note Parents should not be a std::shared_ptr<Node>, because we don't want to create cycles.
-   Node* m_parent{ nullptr };
-
-   std::shared_ptr<Node> m_firstChild{ nullptr };
-   std::shared_ptr<Node> m_lastChild{ nullptr };
-
-   // @todo Having adjacent siblings pointing at one another creates an obvious cycle. While this
-   // cycle is properly broken when nodes are detached from the tree, this is likely not to be the
-   // case if the underlying vector of nodes goes out of scope when an exception is throw. This
-   // should ideally not be cyclic, or ~Node() should handle the breaking of this cycle when it is
-   // invoked.
-   std::shared_ptr<Node> m_previousSibling{ nullptr };
-   std::shared_ptr<Node> m_nextSibling{ nullptr };
-
-   DataType m_data;
-
-   std::size_t m_childCount{ 0 };
-
-   // @todo Add supporting infrastructure for this variable:
-   bool m_visited{ false };
+   Tree* m_tree;
+   DataType& m_data;
+   Metadata& m_metadata;
 };
 
 /**

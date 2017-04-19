@@ -2,7 +2,7 @@
 
 int main()
 {
-   Tree<int> tree{ 10 };
+   Tree<int> tree;
 
    return 0;
 }

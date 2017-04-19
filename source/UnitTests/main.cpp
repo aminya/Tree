@@ -8,6 +8,26 @@
 #include <algorithm>
 #include <vector>
 
+
+TEST_CASE("Fundamentals")
+{
+   SECTION("Creating a Tree")
+   {
+      Tree<int> tree{ 10 };
+      REQUIRE(tree.GetHead().GetData() == 10);
+   }
+
+   SECTION("Appending a Two Nodes")
+   {
+      Tree<int> tree{ 10 };
+      const auto& firstChild = tree.GetHead().AppendChild(20);
+      const auto& secondChild = tree.GetHead().AppendChild(30);
+      REQUIRE(tree.GetDataAsVector().size() == 3);
+   }
+}
+
+#if 0
+
 TEST_CASE("Node Construction and Assignment")
 {
    const Tree<std::string>::Node node{ "Bar" };
@@ -1081,6 +1101,8 @@ TEST_CASE("Selectively Delecting Nodes")
       REQUIRE(DESTRUCTION_COUNT == treeSize);
    }
 
+#endif
+
 #if 0
 
    SECTION("Removing a Leaf Node with A Right Sibling")
@@ -1332,6 +1354,6 @@ TEST_CASE("Selectively Delecting Nodes")
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
    }
-#endif
-
 }
+
+#endif
