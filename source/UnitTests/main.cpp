@@ -89,78 +89,62 @@ SCENARIO("Building a Basic Tree of Depth One")
    }
 }
 
-#if 0
-
-TEST_CASE("Node Construction and Assignment")
-{
-   const Tree<std::string>::Node node{ "Bar" };
-
-   SECTION("Default Construction")
-   {
-      const Tree<std::string>::Node defaultNode{ };
-      const std::string defaultString{ };
-
-      REQUIRE(defaultNode.GetChildCount() == 0);
-      REQUIRE(defaultNode.GetFirstChild() == nullptr);
-      REQUIRE(defaultNode.GetLastChild() == nullptr);
-      REQUIRE(defaultNode.GetParent() == nullptr);
-      REQUIRE(defaultNode.GetNextSibling() == nullptr);
-      REQUIRE(defaultNode.GetPreviousSibling() == nullptr);
-      REQUIRE(defaultNode.GetData() == defaultString);
-   }
-}
-
 TEST_CASE("Node Comparison Operations")
 {
-   const Tree<int>::Node ten{ 10 };
-   const Tree<int>::Node twenty{ 20 };
+   Tree<int> tree{ 10 };
+   auto& root = tree.GetRoot();
+
+   const auto& twenty = root.AppendChild(20);
+   const auto& thirty = root.AppendChild(30);
 
    SECTION("Less Than")
    {
-      REQUIRE(ten < twenty);
-      REQUIRE(!(twenty < ten));
+      REQUIRE(twenty < thirty);
+      REQUIRE(!(thirty < twenty));
    }
 
    SECTION("Less Than or Equal")
    {
-      REQUIRE(ten <= ten);
-      REQUIRE(ten <= twenty);
-      REQUIRE(!(twenty <= ten));
+      REQUIRE(twenty <= twenty);
+      REQUIRE(twenty <= thirty);
+      REQUIRE(!(thirty <= twenty));
    }
 
    SECTION("Equality")
    {
-      REQUIRE(ten == ten);
-      REQUIRE(!(ten == twenty));
+      REQUIRE(twenty == twenty);
+      REQUIRE(!(twenty == thirty));
    }
 
    SECTION("Greater Than")
    {
-      REQUIRE(twenty > ten);
-      REQUIRE(!(ten > twenty));
+      REQUIRE(thirty > twenty);
+      REQUIRE(!(twenty > thirty));
    }
 
    SECTION("Greater Than or Equal")
    {
-      REQUIRE(twenty >= twenty);
-      REQUIRE(twenty >= ten);
-      REQUIRE(!(ten >= twenty));
+      REQUIRE(thirty >= thirty);
+      REQUIRE(thirty >= twenty);
+      REQUIRE(!(twenty >= thirty));
    }
 }
 
 TEST_CASE("Node Alterations")
 {
-   Tree<std::string>::Node node{ "Bar" };
-   REQUIRE(node.GetData() == "Bar");
+   Tree<std::string> tree{ "caps" };
+   auto& root = tree.GetRoot();
 
    SECTION("Altering Data")
    {
-      auto& data = node.GetData();
+      auto& data = root.GetData();
       std::transform(std::begin(data), std::end(data), std::begin(data), ::toupper);
 
-      REQUIRE(node.GetData() == "BAR");
+      REQUIRE(root.GetData() == "CAPS");
    }
 }
+
+#if 0
 
 TEST_CASE("Prepending and Appending Nodes")
 {

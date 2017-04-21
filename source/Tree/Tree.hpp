@@ -31,6 +31,18 @@
 #include <type_traits>
 #include <vector>
 
+#define DECLARE_FALSEY_METADATA                       \
+static Metadata falseyMetadata                        \
+{                                                     \
+   /* self =             */ UNINITIALIZED,            \
+   /* parent =           */ UNINITIALIZED,            \
+   /* nextSibling =      */ UNINITIALIZED,            \
+   /* previousSibling =  */ UNINITIALIZED,            \
+   /* firstChild =       */ UNINITIALIZED,            \
+   /* lastChild =        */ UNINITIALIZED,            \
+   /* childCount =       */ 0                         \
+}
+
 /**
 * The Tree class declares a basic tree, built on top of templatized Tree<DataType>::Node objects.
 *
@@ -88,8 +100,20 @@ public:
       m_data.reserve(128);
       m_data.emplace_back(DataType{ });
 
+      // The root now should consider itself valid, but everything else should be uninitialized:
+      const Metadata metadata
+      {
+         /* self =             */ StateAndIndex{ true, 0 },
+         /* parent =           */ UNINITIALIZED,
+         /* nextSibling =      */ UNINITIALIZED,
+         /* previousSibling =  */ UNINITIALIZED,
+         /* firstChild =       */ UNINITIALIZED,
+         /* lastChild =        */ UNINITIALIZED,
+         /* childCount =       */ 0
+      };
+
       m_metadata.reserve(128);
-      m_metadata.emplace_back(Metadata{ });
+      m_metadata.emplace_back(std::move(metadata));
    }
 
    /**
@@ -101,8 +125,20 @@ public:
       m_data.reserve(128);
       m_data.emplace_back(std::move(data));
 
+      // The root now should consider itself valid, but everything else should be uninitialized:
+      const Metadata metadata
+      {
+         /* self =             */ StateAndIndex{ true, 0 },
+         /* parent =           */ UNINITIALIZED,
+         /* nextSibling =      */ UNINITIALIZED,
+         /* previousSibling =  */ UNINITIALIZED,
+         /* firstChild =       */ UNINITIALIZED,
+         /* lastChild =        */ UNINITIALIZED,
+         /* childCount =       */ 0
+      };
+
       m_metadata.reserve(128);
-      m_metadata.emplace_back(Metadata{ });
+      m_metadata.emplace_back(std::move(metadata));
    }
 
    /**
@@ -281,6 +317,19 @@ public:
    {
       assert(m_tree.m_data.size() == m_tree.m_metadata.size());
 
+      if (!m_nodeMetadata.self.state)
+      {
+         assert(!"Attempting to append to a node that's in an invalid state!");
+
+         // @todo Or should this throw instead?
+         return
+         {
+            m_tree,
+            m_tree.m_data[m_nodeMetadata.self.index],
+            m_tree.m_metadata[m_nodeMetadata.self.index]
+         };
+      }
+
       // It's important that this be done before inserting (or you'll be off by one):
       const auto indexOfNewNode = m_tree.m_data.size();
       const auto newNode = StateAndIndex{ true, indexOfNewNode };
@@ -324,6 +373,19 @@ public:
    {
       assert(m_tree.m_data.size() == m_tree.m_metadata.size());
 
+      if (!m_nodeMetadata.self.state)
+      {
+         assert(!"Attempting to prepend to a node that's in an invalid state!");
+
+         // @todo Or should this throw instead?
+         return
+         {
+            m_tree,
+            m_tree.m_data[m_nodeMetadata.self.index],
+            m_tree.m_metadata[m_nodeMetadata.self.index]
+         };
+      }
+
       // It's important that this be done before inserting (or you'll be off by one):
       const auto indexOfNewNode = m_tree.m_data.size();
       const auto newNode = StateAndIndex{ true, indexOfNewNode };
@@ -352,7 +414,7 @@ public:
       m_tree.m_data.emplace_back(std::forward<DatumType>(datum));
       m_tree.m_metadata.emplace_back(std::move(childNode));
 
-      return{ m_tree, m_tree.m_data.back(), m_tree.m_metadata.back() };
+      return { m_tree, m_tree.m_data.back(), m_tree.m_metadata.back() };
    }
 
    /**
@@ -383,12 +445,19 @@ public:
    */
    Node GetFirstChild() const noexcept
    {
-      return
+      if (m_nodeMetadata.firstChild.state)
       {
-         m_tree,
-         m_tree.m_data[m_nodeMetadata.firstChild.index],
-         m_tree.m_metadata[m_nodeMetadata.firstChild.index]
-      };
+         return
+         {
+            m_tree,
+            m_tree.m_data[m_nodeMetadata.firstChild.index],
+            m_tree.m_metadata[m_nodeMetadata.firstChild.index]
+         };
+      }
+
+      DECLARE_FALSEY_METADATA;
+
+      return{ m_tree, m_tree.m_data[0], falseyMetadata };
    }
 
    /**
@@ -396,38 +465,59 @@ public:
    */
    Node GetLastChild() const noexcept
    {
-      return
+      if (m_nodeMetadata.lastChild.state)
       {
-         m_tree,
-         m_tree.m_data[m_nodeMetadata.lastChild.index],
-         m_tree.m_metadata[m_nodeMetadata.lastChild.index]
-      };
+         return
+         {
+            m_tree,
+            m_tree.m_data[m_nodeMetadata.lastChild.index],
+            m_tree.m_metadata[m_nodeMetadata.lastChild.index]
+         };
+      }
+
+      DECLARE_FALSEY_METADATA;
+
+      return { m_tree, m_tree.m_data[0], falseyMetadata };
    }
 
    /**
    * @returns The parent Node of this Node.
    */
-   Node GetParent() const noexcept
+   Node GetParent() noexcept
    {
-      return
+      if (m_nodeMetadata.parent.state)
       {
-         m_tree,
-         m_tree.m_data[m_nodeMetadata.parent.index],
-         m_tree.m_metadata[m_nodeMetadata.parent.index]
-      };
+         return
+         {
+            m_tree,
+            m_tree.m_data[m_nodeMetadata.parent.index],
+            m_tree.m_metadata[m_nodeMetadata.parent.index]
+         };
+      }
+
+      DECLARE_FALSEY_METADATA;
+
+      return { m_tree, m_tree.m_data[0], falseyMetadata };
    }
 
    /**
    * @returns The Node to the right of this Node.
    */
-   Node GetNextSibling() const noexcept
+   Node GetNextSibling() noexcept
    {
-      return
+      if (m_nodeMetadata.nextSibling.state)
       {
-         m_tree,
-         m_tree.m_data[m_nodeMetadata.nextSibling.index],
-         m_tree.m_metadata[m_nodeMetadata.nextSibling.index]
-      };
+         return
+         {
+            m_tree,
+            m_tree.m_data[m_nodeMetadata.nextSibling.index],
+            m_tree.m_metadata[m_nodeMetadata.nextSibling.index]
+         };
+      }
+
+      DECLARE_FALSEY_METADATA;
+
+      return { m_tree, m_tree.m_data[0], falseyMetadata };
    }
 
    /**
@@ -435,12 +525,19 @@ public:
    */
    Node GetPreviousSibling() const noexcept
    {
-      return
+      if (m_nodeMetadata.previousSibling.state)
       {
-         m_tree,
-         m_tree.m_data[m_nodeMetadata.previousSibling.index],
-         m_tree.m_metadata[m_nodeMetadata.previousSibling.index]
-      };
+         return
+         {
+            m_tree,
+            m_tree.m_data[m_nodeMetadata.previousSibling.index],
+            m_tree.m_metadata[m_nodeMetadata.previousSibling.index]
+         };
+      }
+
+      DECLARE_FALSEY_METADATA;
+
+      return { m_tree, m_tree.m_data[0], falseyMetadata };
    }
 
    /**
