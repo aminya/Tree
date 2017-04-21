@@ -8,21 +8,84 @@
 #include <algorithm>
 #include <vector>
 
-
-TEST_CASE("Fundamentals")
+SCENARIO("Building a Basic Tree of Depth One")
 {
-   SECTION("Creating a Tree")
+   GIVEN("A Tree With a Root Node")
    {
       Tree<int> tree{ 10 };
-      REQUIRE(tree.GetHead().GetData() == 10);
-   }
+      auto& root = tree.GetRoot();
 
-   SECTION("Appending a Two Nodes")
-   {
-      Tree<int> tree{ 10 };
-      const auto& firstChild = tree.GetHead().AppendChild(20);
-      const auto& secondChild = tree.GetHead().AppendChild(30);
-      REQUIRE(tree.GetDataAsVector().size() == 3);
+      THEN("The root node should be properly initialized")
+      {
+         REQUIRE(tree.Size() == 1);
+
+         REQUIRE(root.GetData() == 10);
+
+         REQUIRE(!root.GetParent());
+         REQUIRE(!root.GetFirstChild());
+         REQUIRE(!root.GetLastChild());
+         REQUIRE(!root.GetNextSibling());
+         REQUIRE(!root.GetPreviousSibling());
+      }
+
+      WHEN("A single node is appended to the root node")
+      {
+         root.AppendChild(30);
+
+         THEN("The node should be properly integrated into the tree")
+         {
+            REQUIRE(tree.Size() == 2);
+
+            REQUIRE(root.GetFirstChild().GetParent() == root);
+            REQUIRE(root.GetLastChild().GetParent() == root);
+
+            REQUIRE(root.GetFirstChild().GetData() == 30);
+            REQUIRE(root.GetLastChild().GetData() == 30);
+            REQUIRE(root.GetLastChild() == root.GetFirstChild());
+         }
+
+         AND_WHEN("A second node is appended to the root node")
+         {
+            root.AppendChild(40);
+
+            THEN("That node should be properly integrated into the tree")
+            {
+               REQUIRE(tree.Size() == 3);
+
+               REQUIRE(root.GetFirstChild().GetData() == 30);
+               REQUIRE(root.GetFirstChild().GetNextSibling() == root.GetLastChild());
+
+               REQUIRE(root.GetLastChild().GetData() == 40);
+               REQUIRE(root.GetLastChild().GetPreviousSibling() == root.GetFirstChild());
+
+               REQUIRE(root.GetLastChild().GetParent() == root);
+               REQUIRE(root.GetFirstChild().GetParent() == root.GetLastChild().GetParent());
+
+               REQUIRE(root.GetFirstChild().GetNextSibling().GetData() == 40);
+               REQUIRE(root.GetLastChild().GetPreviousSibling().GetData() == 30);
+            }
+
+            AND_WHEN("A third node is prepended to the root node")
+            {
+               root.PrependChild(20);
+
+               THEN("That node should be properly integrated into the tree")
+               {
+                  REQUIRE(tree.Size() == 4);
+
+                  REQUIRE(root.GetFirstChild().GetParent() == root);
+
+                  REQUIRE(root.GetFirstChild().GetData() == 20);
+                  REQUIRE(root.GetFirstChild().GetNextSibling().GetData() == 30);
+                  REQUIRE(root.GetFirstChild().GetNextSibling().GetNextSibling().GetData() == 40);
+
+                  REQUIRE(root.GetLastChild().GetData() == 40);
+                  REQUIRE(root.GetLastChild().GetPreviousSibling().GetData() == 30);
+                  REQUIRE(root.GetLastChild().GetPreviousSibling().GetPreviousSibling().GetData() == 20);
+               }
+            }
+         }
+      }
    }
 }
 

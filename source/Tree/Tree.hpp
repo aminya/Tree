@@ -49,14 +49,15 @@ private:
 
    struct Metadata
    {
-      std::size_t index;
-      std::size_t childCount;
+      StateAndIndex self;
 
       StateAndIndex parent;
       StateAndIndex nextSibling;
       StateAndIndex previousSibling;
       StateAndIndex firstChild;
       StateAndIndex lastChild;
+
+      std::size_t childCount;
    };
 
    constexpr static StateAndIndex UNINITIALIZED{ false, 0 };
@@ -121,11 +122,11 @@ public:
    /**
    * @returns A pointer to the head Node.
    */
-   Node GetHead() noexcept
+   Node GetRoot() noexcept
    {
       assert(m_data.size() > 0 && m_metadata.size() > 0);
 
-      return { this, m_data[0], m_metadata[0] };
+      return { *this, m_data[0], m_metadata[0] };
    }
 
    /**
@@ -137,141 +138,11 @@ public:
    * @returns The total number of nodes in the Tree. This includes leaf and non-leaf nodes,
    * in addition to the root node.
    */
-   auto Size(Node* node = nullptr) const noexcept
+   auto Size() const noexcept
    {
       assert(m_data.size() == m_metadata.size());
 
-      if (!node)
-      {
-         return m_nodes.size();
-      }
-
-      if (m_nodes.size() == 0)
-      {
-         return std::size_t{ 0 };
-      }
-
-      const std::size_t descendantCount = std::count_if(
-         PostOrderIterator{ *node },
-         PostOrderIterator{ },
-         [](const auto&) noexcept
-      {
-         return true;
-      });
-
-      return descendantCount;
-   }
-
-   /**
-   * @brief Adds a new child node to the specified parent node as the last child.
-   *
-   * @param[in] data                The data to be encapsulated in the newly created node.
-   * @param[in] parent              The node to which the new node is to be appended.
-   *
-   * @returns A reference to the newly appended node.
-   */
-   Node& AppendChild(
-      const DataType& data,
-      Node& parent)
-   {
-      const auto child = std::make_shared<Node>(data);
-      child->m_parent = &parent;
-
-      if (!parent.m_lastChild)
-      {
-         assert(parent.m_childCount == 0);
-         parent.m_firstChild = child;
-         parent.m_lastChild = child;
-
-         ++(parent.m_childCount);
-         m_nodes.emplace_back(std::move(child));
-
-         assert(m_nodes.size() > 0);
-         return *m_nodes.back();
-      }
-
-      assert(parent.m_lastChild);
-
-      parent.m_lastChild->m_nextSibling = child;
-      parent.m_lastChild->m_nextSibling->m_previousSibling = parent.m_lastChild;
-      parent.m_lastChild = child;
-
-      ++(parent.m_childCount);
-      m_nodes.emplace_back(std::move(child));
-
-      assert(m_nodes.size() > 0);
-      return *m_nodes.back();
-   }
-
-   /**
-   * @brief Adds a new child node to the specified parent node as the first child.
-   *
-   * @param[in] data                The data to be encapsulated in the newly created node.
-   * @param[in] parent              The node to which the new node is to be prepended.
-   *
-   * @returns A reference to the newly prepended node.
-   */
-   Node& PrependChild(
-      const DataType& data,
-      Node& parent)
-   {
-      const auto child = std::make_shared<Node>(data);
-      child->m_parent = &parent;
-
-      if (!parent.m_firstChild)
-      {
-         assert(parent.m_childCount == 0);
-         parent.m_firstChild = child;
-         parent.m_lastChild = child;
-
-         ++(parent.m_childCount);
-         m_nodes.emplace_back(std::move(child));
-
-         assert(m_nodes.size() > 0);
-         return *m_nodes.back();
-      }
-
-      assert(parent.m_firstChild);
-
-      parent.m_firstChild->m_previousSibling = child;
-      parent.m_firstChild->m_previousSibling->m_nextSibling = parent.m_firstChild;
-      parent.m_firstChild = child;
-
-      ++(parent.m_childCount);
-      m_nodes.emplace_back(std::move(child));
-
-      assert(m_nodes.size() > 0);
-      return *m_nodes.back();
-   }
-
-   /**
-   *
-   */
-   void AppendSibling(
-      const DataType& data,
-      Node& predecessor)
-   {
-      // @todo
-   }
-
-   /**
-   *
-   */
-   void PrependSibling(
-      const DataType& data,
-      Node& successor)
-   {
-      // @todo
-   }
-
-   /**
-   * @brief Detaches the given node from the tree.
-   *
-   * If nothing else references the detached node, the node will be freed.
-   */
-   void Detach(Node& node)
-   {
-      node->DetachFromTree();
+      return m_data.size();
    }
 
    /**
@@ -281,7 +152,7 @@ public:
    typename Tree::PostOrderIterator begin() const noexcept
    {
       assert(m_nodes.size() > 0);
-      const auto iterator = Tree<DataType>::PostOrderIterator{ *GetHead() };
+      const auto iterator = Tree<DataType>::PostOrderIterator{ GetRoot() };
       return iterator;
    }
 
@@ -295,29 +166,12 @@ public:
    }
 
    /**
-   * @returns The zero-indexed depth of the Node in its Tree.
-   */
-   static auto Depth(Node& node) noexcept
-   {
-      std::size_t depth = 0;
-
-      Node* nodePtr = &node;
-      while (nodePtr->GetParent())
-      {
-         ++depth;
-         nodePtr = nodePtr->GetParent();
-      }
-
-      return depth;
-   }
-
-   /**
    * @returns A pre-order iterator that will iterate over all Nodes in the tree.
    */
    typename Tree::PreOrderIterator beginPreOrder() const noexcept
    {
       assert(m_nodes.size() > 0);
-      const auto iterator = Tree<DataType>::PreOrderIterator{ *GetHead() };
+      const auto iterator = Tree<DataType>::PreOrderIterator{ GetRoot() };
       return iterator;
    }
 
@@ -337,7 +191,7 @@ public:
    typename Tree::LeafIterator beginLeaf() const noexcept
    {
       assert(m_nodes.size() > 0);
-      const auto iterator = Tree<DataType>::LeafIterator{ *GetHead() };
+      const auto iterator = Tree<DataType>::LeafIterator{ GetRoot() };
       return iterator;
    }
 
@@ -369,193 +223,12 @@ public:
    }
 
    /**
-   *
+   * @returns The underlying data container.
    */
    const auto& GetDataAsVector() const noexcept
    {
       return m_data;
    }
-
-#if 0
-   /**
-   * @brief SortChildren performs a merge sort of the direct descendants nodes.
-   *
-   * @param[in] node                The node whose children are to be sorted.
-   * @param[in] comparator          A callable type to be used as the basis for the sorting
-   *                                comparison. This type should be equivalent to:
-   *                                   bool comparator(
-   *                                      const Tree<DataType>::Node& lhs,
-   *                                      const Tree<DataType>::Node& rhs);
-   */
-   template<typename ComparatorType>
-   void SortChildren(
-      Node& node,
-      const ComparatorType& comparator) noexcept(noexcept(comparator))
-   {
-      if (!node.m_firstChild)
-      {
-         return;
-      }
-
-      MergeSort(node.m_firstChild, comparator);
-   }
-
-   /**
-   * @brief MergeSort is the main entry point into the merge sort implementation.
-   *
-   * @param[in] list                The first Node in the list of siblings to be sorted.
-   * @param[in] comparator          The comparator function to be called to figure out which node
-   *                                is the lesser of the two.
-   */
-   template<typename ComparatorType>
-   void MergeSort(
-      std::shared_ptr<Node>& list,
-      const ComparatorType& comparator) noexcept(noexcept(comparator))
-   {
-      if (!list || !list->m_nextSibling)
-      {
-         return;
-      }
-
-      std::shared_ptr<Node> head = list;
-      std::shared_ptr<Node> lhs = nullptr;
-      std::shared_ptr<Node> rhs = nullptr;
-
-      DivideList(head, lhs, rhs);
-
-      assert(lhs);
-      assert(rhs);
-
-      MergeSort(lhs, comparator);
-      MergeSort(rhs, comparator);
-
-      list = MergeSortedHalves(lhs, rhs, comparator);
-   }
-
-   /**
-   * @brief DivideList is a helper function that will divide the specified Node list in two.
-   *
-   * @param[in] head                The head of the Node list to be divided in two.
-   * @param[out] lhs                The first Node of the left hand side list.
-   * @param[out] rhs                The first Node of the right hand side list.
-   */
-   void DivideList(
-      std::shared_ptr<Node> head,
-      std::shared_ptr<Node>& lhs,
-      std::shared_ptr<Node>& rhs) noexcept
-   {
-      if (!head || !head->m_nextSibling)
-      {
-         return;
-      }
-
-      std::shared_ptr<Node> tortoise = head;
-      std::shared_ptr<Node> hare = head->m_nextSibling;
-
-      while (hare)
-      {
-         hare = hare->m_nextSibling;
-         if (hare)
-         {
-            tortoise = tortoise->m_nextSibling;
-            hare = hare->m_nextSibling;
-         }
-      }
-
-      lhs = head;
-      rhs = tortoise->m_nextSibling;
-
-      tortoise->m_nextSibling = nullptr;
-   }
-
-   /**
-   * @brief MergeSortedHalves is a helper function that will merge the sorted halves.
-   *
-   * @param[in] lhs                 The first node of the sorted left half.
-   * @param[in] rhs                 The first node of the sorted right half.
-   *
-   * @returns The first node of the merged Node list.
-   */
-   template<typename ComparatorType>
-   std::shared_ptr<Node> MergeSortedHalves(
-      std::shared_ptr<Node>& lhs,
-      std::shared_ptr<Node>& rhs,
-      const ComparatorType& comparator) noexcept(noexcept(comparator))
-   {
-      std::shared_ptr<Node> result = nullptr;
-      if (comparator(*lhs, *rhs))
-      {
-         result = lhs;
-         lhs = lhs->m_nextSibling;
-      }
-      else
-      {
-         result = rhs;
-         rhs = rhs->m_nextSibling;
-      }
-
-      result->m_previousSibling = nullptr;
-
-      std::shared_ptr<Node> tail = result;
-
-      while (lhs && rhs)
-      {
-         if (comparator(*lhs, *rhs))
-         {
-            tail->m_nextSibling = lhs;
-            tail = tail->m_nextSibling;
-
-            lhs = lhs->m_nextSibling;
-
-            if (lhs)
-            {
-               lhs->m_previousSibling = nullptr;
-            }
-         }
-         else
-         {
-            tail->m_nextSibling = rhs;
-            tail = tail->m_nextSibling;
-
-            rhs = rhs->m_nextSibling;
-
-            if (rhs)
-            {
-               rhs->m_previousSibling = nullptr;
-            }
-         }
-      }
-
-      while (lhs)
-      {
-         tail->m_nextSibling = lhs;
-         tail = tail->m_nextSibling;
-
-         lhs = lhs->m_nextSibling;
-
-         if (lhs)
-         {
-            lhs->m_previousSibling = nullptr;
-         }
-      }
-
-      while (rhs)
-      {
-         tail->m_nextSibling = rhs;
-         tail = tail->m_nextSibling;
-
-         rhs = rhs->m_nextSibling;
-
-         if (rhs)
-         {
-            rhs->m_previousSibling = nullptr;
-         }
-      }
-
-      return result;
-   }
-
-#endif
 
 private:
 
@@ -566,8 +239,6 @@ private:
 template<typename DataType>
 class Tree<DataType>::Node
 {
-   friend class Tree<DataType>;
-
 public:
    using value_type = DataType;
    using reference = DataType&;
@@ -577,10 +248,10 @@ public:
    * @brief Node default constructs a new Node. All outgoing links from this new node will
    * initialized to a nullptr.
    */
-   Node(Tree* tree, DataType& data, Metadata& metadata) noexcept :
+   Node(Tree& tree, DataType& data, Metadata& metadata) noexcept :
       m_tree{ tree },
-      m_data{ data },
-      m_metadata{ metadata }
+      m_nodeData{ data },
+      m_nodeMetadata{ metadata }
    {
    }
 
@@ -599,165 +270,208 @@ public:
    Node& operator=(Node other) = delete;
 
    /**
-   * @brief AppendChild will construct and append a new TreeNode as the last child of the TreeNode.
+   * @brief Constructs and appends a new Node as the last child of the Node.
    *
-   * @param[in] data                The underlying data to be stored in the new TreeNode.
+   * @param[in] data                The underlying data to be stored in the new Node.
    *
-   * @returns The newly appended TreeNode.
+   * @returns The newly appended Node.
    */
-   Node AppendChild(const DataType& data)
+   template<typename DatumType>
+   Node AppendChild(DatumType&& datum)
    {
-      assert(m_tree);
-      assert(m_tree->m_data.size() == m_tree->m_metadata.size());
+      assert(m_tree.m_data.size() == m_tree.m_metadata.size());
 
       // It's important that this be done before inserting (or you'll be off by one):
-      const auto indexOfNewNode = m_tree->m_data.size();
+      const auto indexOfNewNode = m_tree.m_data.size();
+      const auto newNode = StateAndIndex{ true, indexOfNewNode };
 
       const Metadata childNode
       {
-         /* index =            */ indexOfNewNode,
-         /* childCount =       */ 0,
-         /* parent =           */ StateAndIndex{ true, m_metadata.index },
+         /* self =             */ newNode,
+         /* parent =           */ m_nodeMetadata.self,
          /* nextSibling =      */ UNINITIALIZED,
-         /* previousSibling =  */ m_metadata.lastChild,
+         /* previousSibling =  */ m_nodeMetadata.lastChild,
          /* firstChild =       */ UNINITIALIZED,
-         /* lastChild =        */ UNINITIALIZED
+         /* lastChild =        */ UNINITIALIZED,
+         /* childCount =       */ 0
       };
 
-      m_tree->m_metadata[m_metadata.lastChild.index].nextSibling = StateAndIndex{ true, indexOfNewNode };
+      m_tree.m_metadata[m_nodeMetadata.lastChild.index].nextSibling = newNode;
 
-      m_metadata.lastChild = StateAndIndex{ true, indexOfNewNode };
-      ++(m_metadata.childCount);
+      if (m_nodeMetadata.firstChild.state == false)
+      {
+         m_nodeMetadata.firstChild = newNode;
+      }
 
-      m_tree->m_data.emplace_back(data);
-      m_tree->m_metadata.emplace_back(childNode);
+      m_nodeMetadata.lastChild = newNode;
+      ++(m_nodeMetadata.childCount);
 
-      return { m_tree, m_tree->m_data.back(), m_tree->m_metadata.back() };
+      m_tree.m_data.emplace_back(std::forward<DatumType>(datum));
+      m_tree.m_metadata.emplace_back(std::move(childNode));
+
+      return { m_tree, m_tree.m_data.back(), m_tree.m_metadata.back() };
    }
 
    /**
-   * @overload
+   * @brief Constructs and prepends a new Node as the first child of the Node.
+   *
+   * @param[in] data                The underlying data to be stored in the new Node.
+   *
+   * @returns The newly prepended Node.
    */
-   //template<typename Type>
-   //Node& AppendChild(Type&& data)
-   //{
-   //   const auto& newNode = Node{ std::forward<Type>(data) };
-   //   return AppendChild(newNode);
-   //}
+   template<typename DatumType>
+   Node PrependChild(DatumType&& datum)
+   {
+      assert(m_tree.m_data.size() == m_tree.m_metadata.size());
+
+      // It's important that this be done before inserting (or you'll be off by one):
+      const auto indexOfNewNode = m_tree.m_data.size();
+      const auto newNode = StateAndIndex{ true, indexOfNewNode };
+
+      const Metadata childNode
+      {
+         /* self =             */ newNode,
+         /* parent =           */ m_nodeMetadata.self,
+         /* nextSibling =      */ m_nodeMetadata.firstChild,
+         /* previousSibling =  */ UNINITIALIZED,
+         /* firstChild =       */ UNINITIALIZED,
+         /* lastChild =        */ UNINITIALIZED,
+         /* childCount =       */ 0
+      };
+
+      m_tree.m_metadata[m_nodeMetadata.firstChild.index].previousSibling = newNode;
+
+      if (m_nodeMetadata.lastChild.state == false)
+      {
+         m_nodeMetadata.lastChild = newNode;
+      }
+
+      m_nodeMetadata.firstChild = newNode;
+      ++(m_nodeMetadata.childCount);
+
+      m_tree.m_data.emplace_back(std::forward<DatumType>(datum));
+      m_tree.m_metadata.emplace_back(std::move(childNode));
+
+      return{ m_tree, m_tree.m_data.back(), m_tree.m_metadata.back() };
+   }
 
    /**
-   * @brief AppendChild will append the specified TreeNode as a child of the TreeNode.
-   *
-   * @param[in] child               The new TreeNode to set as the last child of the TreeNode.
-   *
-   * @returns A pointer to the newly appended child.
-   */
-   //Node& AppendChild(Node<DataType>& child) noexcept
-   //{
-   //   child.m_parent = this;
-
-   //   if (!m_lastChild)
-   //   {
-   //      return AddFirstChild(child);
-   //   }
-
-   //   assert(m_lastChild);
-
-   //   m_lastChild->m_nextSibling = &child;
-   //   m_lastChild->m_nextSibling->m_previousSibling = m_lastChild;
-   //   m_lastChild = m_lastChild->m_nextSibling;
-
-   //   m_childCount++;
-
-   //   return m_lastChild;
-   //}
-
-
-
-   /**
-   * @brief Detaches and then deletes the Node from the Tree it's part of.
+   * @todo
    */
    void DeleteFromTree() noexcept
    {
    }
 
    /**
-   *
+   * @returns True if this Node has children.
    */
    auto HasChildren() const noexcept
    {
-      return m_metadata.childCount > 0;
+      return m_nodeMetadata.childCount > 0;
    }
 
    /**
-   *
+   * @returns The number of children that this Node has.
    */
    auto GetChildCount() const noexcept
    {
-      return m_metadata.childCount;
+      return m_nodeMetadata.childCount;
    }
 
    /**
-   *
+   * @returns The first child Node of this Node.
    */
-   auto GetFirstChild() const noexcept
+   Node GetFirstChild() const noexcept
    {
-      return m_metadata.firstChild;
+      return
+      {
+         m_tree,
+         m_tree.m_data[m_nodeMetadata.firstChild.index],
+         m_tree.m_metadata[m_nodeMetadata.firstChild.index]
+      };
    }
 
    /**
-   *
+   * @returns The last child Node of this Node.
    */
-   auto GetLastChild() const noexcept
+   Node GetLastChild() const noexcept
    {
-      return m_metadata.lastChild;
+      return
+      {
+         m_tree,
+         m_tree.m_data[m_nodeMetadata.lastChild.index],
+         m_tree.m_metadata[m_nodeMetadata.lastChild.index]
+      };
    }
 
    /**
-   *
+   * @returns The parent Node of this Node.
    */
-   auto GetParent() const noexcept
+   Node GetParent() const noexcept
    {
-      return m_metadata.parent;
+      return
+      {
+         m_tree,
+         m_tree.m_data[m_nodeMetadata.parent.index],
+         m_tree.m_metadata[m_nodeMetadata.parent.index]
+      };
    }
 
    /**
-   *
+   * @returns The Node to the right of this Node.
    */
-   auto GetNextSibling() const noexcept
+   Node GetNextSibling() const noexcept
    {
-      return m_metadata.nextSibling;
+      return
+      {
+         m_tree,
+         m_tree.m_data[m_nodeMetadata.nextSibling.index],
+         m_tree.m_metadata[m_nodeMetadata.nextSibling.index]
+      };
    }
 
    /**
-   *
+   * @returns The Node to the left of this Node.
    */
-   auto GetPreviousSibling() const noexcept
+   Node GetPreviousSibling() const noexcept
    {
-      return m_metadata.previousSibling;
+      return
+      {
+         m_tree,
+         m_tree.m_data[m_nodeMetadata.previousSibling.index],
+         m_tree.m_metadata[m_nodeMetadata.previousSibling.index]
+      };
    }
 
    /**
-   *
+   * @returns The encapsulated data.
    */
    auto& GetData() noexcept
    {
-      return m_data;
+      return m_nodeData;
    }
 
    /**
-   *
+   * @returns The encapsulated data.
    */
    const auto& GetData() const noexcept
    {
-      return m_data;
+      return m_nodeData;
+   }
+
+   /**
+   * @returns True is the Node is initialized, or valid.
+   */
+   explicit operator bool() const noexcept
+   {
+      return m_nodeMetadata.self.state;
    }
 
    /**
    * @returns True if the data encapsulated in the left-hand side Node is less than
    * the data encapsulated in the right-hand side Node.
    */
-   friend auto operator<(const Node& lhs, const Node& rhs)
+   friend auto operator<(const Node& lhs, const Node& rhs) noexcept
    {
       return lhs.GetData() < rhs.GetData();
    }
@@ -766,7 +480,7 @@ public:
    * @returns True if the data encapsulated in the left-hand side Node is less than
    * or equal to the data encapsulated in the right-hand side Node.
    */
-   friend auto operator<=(const Node& lhs, const Node& rhs)
+   friend auto operator<=(const Node& lhs, const Node& rhs) noexcept
    {
       return !(lhs.GetData() > rhs.GetData());
    }
@@ -775,7 +489,7 @@ public:
    * @returns True if the data encapsulated in the left-hand side Node is greater than
    * the data encapsulated in the right-hand side Node.
    */
-   friend auto operator>(const Node& lhs, const Node& rhs)
+   friend auto operator>(const Node& lhs, const Node& rhs) noexcept
    {
       return rhs.GetData() < lhs.GetData();
    }
@@ -784,7 +498,7 @@ public:
    * @returns True if the data encapsulated in the left-hand side Node is greater than
    * or equal to the data encapsulated in the right-hand side Node.
    */
-   friend auto operator>=(const Node& lhs, const Node& rhs)
+   friend auto operator>=(const Node& lhs, const Node& rhs) noexcept
    {
       return !(lhs.GetData() < rhs.GetData());
    }
@@ -793,7 +507,7 @@ public:
    * @returns True if the data encapsulated in the left-hand side Node is equal to
    * the data encapsulated in the right-hand side Node.
    */
-   friend auto operator==(const Node& lhs, const Node& rhs)
+   friend auto operator==(const Node& lhs, const Node& rhs) noexcept
    {
       return lhs.GetData() == rhs.GetData();
    }
@@ -802,16 +516,16 @@ public:
    * @returns True if the data encapsulated in the left-hand side Node is not equal
    * to the data encapsulated in the right-hand side Node.
    */
-   friend auto operator!=(const Node& lhs, const Node& rhs)
+   friend auto operator!=(const Node& lhs, const Node& rhs) noexcept
    {
       return !(lhs.GetData() == rhs.GetData());
    }
 
 private:
 
-   Tree* m_tree;
-   DataType& m_data;
-   Metadata& m_metadata;
+   Tree& m_tree;
+   DataType& m_nodeData;
+   Metadata& m_nodeMetadata;
 };
 
 /**
@@ -845,7 +559,7 @@ public:
    /**
    * @returns The Node pointed to by the Tree::Iterator.
    */
-   inline Node& operator*() noexcept
+   Node& operator*() noexcept
    {
       return *m_currentNode;
    }
@@ -853,7 +567,7 @@ public:
    /**
    * @overload
    */
-   inline const Node& operator*() const noexcept
+   const Node& operator*() const noexcept
    {
       return *m_currentNode;
    }
@@ -861,7 +575,7 @@ public:
    /**
    * @returns A pointer to the Node.
    */
-   inline Node* const operator&() noexcept
+   Node* const operator&() noexcept
    {
       return m_currentNode;
    }
@@ -869,7 +583,7 @@ public:
    /**
    * @overload
    */
-   inline const Node* const operator&() const noexcept
+   const Node* const operator&() const noexcept
    {
       return m_currentNode;
    }
@@ -877,7 +591,7 @@ public:
    /**
    * @returns A pointer to the Node pointed to by the Tree:Iterator.
    */
-   inline Node* const operator->() noexcept
+   Node* const operator->() noexcept
    {
       return m_currentNode;
    }
@@ -885,7 +599,7 @@ public:
    /**
    * @overload
    */
-   inline const Node* const operator->() const noexcept
+   const Node* const operator->() const noexcept
    {
       return m_currentNode;
    }
@@ -894,7 +608,7 @@ public:
    * @returns True if the Iterator points to the same node as the other Iterator,
    * and false otherwise.
    */
-   inline bool operator==(const Iterator& other) const
+   bool operator==(const Iterator& other) const noexcept
    {
       return m_currentNode == other.m_currentNode;
    }
@@ -909,6 +623,7 @@ public:
    }
 
 protected:
+
    /**
    * Default constructor.
    */
