@@ -94,39 +94,9 @@ TEST_CASE("Node Comparison Operations")
    Tree<int> tree{ 10 };
    auto& root = tree.GetRoot();
 
-   const auto& twenty = root.AppendChild(20);
-   const auto& thirty = root.AppendChild(30);
-
-   SECTION("Less Than")
-   {
-      REQUIRE(twenty < thirty);
-      REQUIRE(!(thirty < twenty));
-   }
-
-   SECTION("Less Than or Equal")
-   {
-      REQUIRE(twenty <= twenty);
-      REQUIRE(twenty <= thirty);
-      REQUIRE(!(thirty <= twenty));
-   }
-
    SECTION("Equality")
    {
-      REQUIRE(twenty == twenty);
-      REQUIRE(!(twenty == thirty));
-   }
-
-   SECTION("Greater Than")
-   {
-      REQUIRE(thirty > twenty);
-      REQUIRE(!(twenty > thirty));
-   }
-
-   SECTION("Greater Than or Equal")
-   {
-      REQUIRE(thirty >= thirty);
-      REQUIRE(thirty >= twenty);
-      REQUIRE(!(twenty >= thirty));
+      REQUIRE(root == root);
    }
 }
 
@@ -144,68 +114,60 @@ TEST_CASE("Node Alterations")
    }
 }
 
-#if 0
-
-TEST_CASE("Prepending and Appending Nodes")
+TEST_CASE("Prepending and Appending TreeNodes")
 {
    Tree<int> tree{ 10 };
+   auto& root = tree.GetRoot();
 
-   const auto IsEachNodeValueLargerThanTheLast = [&]
+   const auto IsEachNodeValueLargerThanTheLast = [&] () noexcept
    {
       int lastValue = -1;
 
       return std::all_of(std::begin(tree), std::end(tree),
-         [&] (const auto& node)
+         [&](Tree<int>::const_reference node) noexcept
       {
          const auto& data = node.GetData();
-         const auto sanityCheck = data > lastValue;
-
-         lastValue = data;
-
-         return sanityCheck;
+         return data > lastValue;
       });
    };
 
    SECTION("Prepending Nodes")
    {
-      auto& head = *tree.GetHead();
-      tree.AppendChild(1, head);
-      tree.AppendChild(2, head);
-      tree.AppendChild(3, head);
-      tree.AppendChild(4, head);
-      tree.AppendChild(5, head);
-      tree.AppendChild(6, head);
-      tree.AppendChild(7, head);
-      tree.AppendChild(8, head);
-      tree.AppendChild(9, head);
+      root.AppendChild(1);
+      root.AppendChild(2);
+      root.AppendChild(3);
+      root.AppendChild(4);
+      root.AppendChild(5);
+      root.AppendChild(6);
+      root.AppendChild(7);
+      root.AppendChild(8);
+      root.AppendChild(9);
 
       const bool correctlyPrepended = IsEachNodeValueLargerThanTheLast();
 
       REQUIRE(correctlyPrepended);
-      REQUIRE(tree.Size() == 10);
-      REQUIRE(tree.GetHead()->GetChildCount() == 9);
+      //REQUIRE(root.CountAllDescendants() == 9);
    }
-
    SECTION("Appending Nodes")
    {
-      auto& head = *tree.GetHead();
-      tree.PrependChild(9, head);
-      tree.PrependChild(8, head);
-      tree.PrependChild(7, head);
-      tree.PrependChild(6, head);
-      tree.PrependChild(5, head);
-      tree.PrependChild(4, head);
-      tree.PrependChild(3, head);
-      tree.PrependChild(2, head);
-      tree.PrependChild(1, head);
+      root.PrependChild(9);
+      root.PrependChild(8);
+      root.PrependChild(7);
+      root.PrependChild(6);
+      root.PrependChild(5);
+      root.PrependChild(4);
+      root.PrependChild(3);
+      root.PrependChild(2);
+      root.PrependChild(1);
 
-      const bool correctlyPrepended = IsEachNodeValueLargerThanTheLast();
+      const bool correctlyAppended = IsEachNodeValueLargerThanTheLast();
 
-      REQUIRE(correctlyPrepended);
-      REQUIRE(tree.Size() == 10);
-      REQUIRE(tree.GetHead()->GetChildCount() == 9);
+      REQUIRE(correctlyAppended);
+      //REQUIRE(root.CountAllDescendants() == 9);
    }
 }
+
+#if 0
 
 TEST_CASE("Node Metadata")
 {
