@@ -28,7 +28,6 @@
 #include <cassert>
 #include <iterator>
 #include <memory>
-#include <type_traits>
 #include <vector>
 
 /**
@@ -39,49 +38,6 @@
 template<typename DataType>
 class Tree
 {
-private:
-
-   struct StateAndIndex
-   {
-      bool state;
-      std::size_t index;
-   };
-
-   struct Metadata
-   {
-      StateAndIndex self;
-
-      StateAndIndex parent;
-      StateAndIndex nextSibling;
-      StateAndIndex previousSibling;
-      StateAndIndex firstChild;
-      StateAndIndex lastChild;
-
-      std::size_t childCount;
-   };
-
-   constexpr static StateAndIndex UNINITIALIZED
-   {
-      /* state = */ false,
-      /* index = */ 0 
-   };
-
-   // @note Since this is a `constexpr` value, its const-ness will need to be cast away in
-   // various places.
-   constexpr static Metadata FALSEY_METADATA
-   {
-      /* self =             */ UNINITIALIZED,
-      /* parent =           */ UNINITIALIZED,
-      /* nextSibling =      */ UNINITIALIZED,
-      /* previousSibling =  */ UNINITIALIZED,
-      /* firstChild =       */ UNINITIALIZED,
-      /* lastChild =        */ UNINITIALIZED,
-      /* childCount =       */ 0
-   };
-
-   static_assert(std::is_trivial_v<Metadata>,"Metadata is not trivial copyable and trivially defaulted!");
-   static_assert(std::is_trivially_destructible_v<Metadata>, "Metadata is not trivial destructible!");
-
 public:
 
    class Node;
@@ -105,20 +61,8 @@ public:
       m_data.reserve(128);
       m_data.emplace_back(DataType{ });
 
-      // The root now should consider itself valid, but everything else should be uninitialized:
-      const Metadata metadata
-      {
-         /* self =             */ StateAndIndex{ true, 0 },
-         /* parent =           */ UNINITIALIZED,
-         /* nextSibling =      */ UNINITIALIZED,
-         /* previousSibling =  */ UNINITIALIZED,
-         /* firstChild =       */ UNINITIALIZED,
-         /* lastChild =        */ UNINITIALIZED,
-         /* childCount =       */ 0
-      };
-
       m_metadata.reserve(128);
-      m_metadata.emplace_back(std::move(metadata));
+      m_metadata.emplace_back(Node{ this, &m_data.back() });
    }
 
    /**
@@ -130,20 +74,8 @@ public:
       m_data.reserve(128);
       m_data.emplace_back(std::move(data));
 
-      // The root now should consider itself valid, but everything else should be uninitialized:
-      const Metadata metadata
-      {
-         /* self =             */ StateAndIndex{ true, 0 },
-         /* parent =           */ UNINITIALIZED,
-         /* nextSibling =      */ UNINITIALIZED,
-         /* previousSibling =  */ UNINITIALIZED,
-         /* firstChild =       */ UNINITIALIZED,
-         /* lastChild =        */ UNINITIALIZED,
-         /* childCount =       */ 0
-      };
-
       m_metadata.reserve(128);
-      m_metadata.emplace_back(std::move(metadata));
+      m_metadata.emplace_back(Node{ this, &m_data.back() });
    }
 
    /**
@@ -163,11 +95,11 @@ public:
    /**
    * @returns A pointer to the head Node.
    */
-   Node GetRoot() noexcept
+   Node* GetRoot() noexcept
    {
       assert(m_data.size() > 0 && m_metadata.size() > 0);
 
-      return { this, &m_data[0], &m_metadata[0] };
+      return &m_metadata.front();
    }
 
    /**
@@ -209,7 +141,7 @@ public:
    /**
    * @returns A pre-order iterator that will iterate over all Nodes in the tree.
    */
-   typename Tree::PreOrderIterator beginPreOrder() const noexcept
+   typename Tree::PreOrderIterator beginPreOrder() noexcept
    {
       assert(m_data.size() > 0);
       const auto iterator = Tree<DataType>::PreOrderIterator{ GetRoot() };
@@ -219,7 +151,7 @@ public:
    /**
    * @returns A pre-order iterator pointing "past" the end of the tree.
    */
-   typename Tree::PreOrderIterator endPreOrder() const noexcept
+   typename Tree::PreOrderIterator endPreOrder() noexcept
    {
       const auto iterator = Tree<DataType>::PreOrderIterator{ };
       return iterator;
@@ -229,7 +161,7 @@ public:
    * @returns An iterator that will iterator over all leaf nodes in the Tree, starting with the
    * left-most leaf in the Tree.
    */
-   typename Tree::LeafIterator beginLeaf() const noexcept
+   typename Tree::LeafIterator beginLeaf() noexcept
    {
       assert(m_data.size() > 0);
       const auto iterator = Tree<DataType>::LeafIterator{ GetRoot() };
@@ -239,16 +171,16 @@ public:
    /**
    * @return A LeafIterator that points past the last leaf Node in the Tree.
    */
-   typename Tree::LeafIterator endLeaf() const noexcept
+   typename Tree::LeafIterator endLeaf() noexcept
    {
-      const auto iterator = Tree<DataType>::LeafIterator{  };
+      const auto iterator = Tree<DataType>::LeafIterator{ };
       return iterator;
    }
 
    /**
    *
    */
-   typename Tree::SiblingIterator beginSibling(const Node& node) const noexcept
+   typename Tree::SiblingIterator beginSibling(const Node& node) noexcept
    {
       const auto iterator = Tree<DataType>::SiblingIterator{ node };
       return iterator;
@@ -257,7 +189,7 @@ public:
    /**
    * @todo There is probably no test coverage for this function...
    */
-   typename Tree::SiblingIterator endSibling() const noexcept
+   typename Tree::SiblingIterator endSibling() noexcept
    {
       const auto iterator = Tree<DataType>::SiblingIterator{ };
       return iterator;
@@ -274,7 +206,7 @@ public:
 private:
 
    std::vector<DataType> m_data;
-   std::vector<Metadata> m_metadata;
+   std::vector<Node> m_metadata;
 };
 
 template<typename DataType>
@@ -288,19 +220,12 @@ public:
    using reference = DataType&;
    using const_reference = const DataType&;
 
-   /**
-   *
-   */
-   Node() noexcept = delete;
-
-   /**
-   * @brief Node default constructs a new Node. All outgoing links from this new node will
-   * initialized to a nullptr.
-   */
-   Node(Tree* tree, DataType* data, Metadata* metadata) noexcept :
+   explicit Node(
+      Tree* tree,
+      DataType* data)
+      :
       m_tree{ tree },
-      m_nodeData{ data },
-      m_nodeMetadata{ metadata }
+      m_data{ data }
    {
    }
 
@@ -312,52 +237,36 @@ public:
    * @returns The newly appended Node.
    */
    template<typename DatumType>
-   Node AppendChild(DatumType&& datum)
+   Node* AppendChild(DatumType&& datum)
    {
       assert(m_tree->m_data.size() == m_tree->m_metadata.size());
 
-      if (!m_nodeMetadata->self.state)
-      {
-         assert(!"Attempting to append to a node that's in an invalid state!");
-
-         // @todo Or should this throw instead?
-         return
-         {
-            m_tree,
-            &m_tree->m_data[m_nodeMetadata->self.index],
-            &m_tree->m_metadata[m_nodeMetadata->self.index]
-         };
-      }
-
-      // It's important that this be done before inserting (or you'll be off by one):
-      const auto indexOfNewNode = m_tree->m_data.size();
-      const auto newNode = StateAndIndex{ true, indexOfNewNode };
-
-      const Metadata childNode
-      {
-         /* self =             */ newNode,
-         /* parent =           */ m_nodeMetadata->self,
-         /* nextSibling =      */ UNINITIALIZED,
-         /* previousSibling =  */ m_nodeMetadata->lastChild,
-         /* firstChild =       */ UNINITIALIZED,
-         /* lastChild =        */ UNINITIALIZED,
-         /* childCount =       */ 0
-      };
-
-      m_tree->m_metadata[m_nodeMetadata->lastChild.index].nextSibling = newNode;
-
-      if (m_nodeMetadata->firstChild.state == false)
-      {
-         m_nodeMetadata->firstChild = newNode;
-      }
-
-      m_nodeMetadata->lastChild = newNode;
-      ++(m_nodeMetadata->childCount);
-
       m_tree->m_data.emplace_back(std::forward<DatumType>(datum));
-      m_tree->m_metadata.emplace_back(std::move(childNode));
+      m_tree->m_metadata.emplace_back(Node{ m_tree, &m_tree->m_data.back() });
 
-      return { m_tree, &m_tree->m_data.back(), &m_tree->m_metadata.back() };
+      Node& appendee = m_tree->m_metadata.back();
+
+      appendee.m_parent = this;
+
+      if (!m_lastChild)
+      {
+         assert(m_childCount == 0);
+
+         m_firstChild = &appendee;
+         m_lastChild = m_firstChild;
+
+         ++m_childCount;
+
+         return m_lastChild;
+      }
+
+      m_lastChild->m_nextSibling = &appendee;
+      m_lastChild->m_nextSibling->m_previousSibling = m_lastChild;
+      m_lastChild = m_lastChild->m_nextSibling;
+
+      ++m_childCount;
+
+      return m_lastChild;
    }
 
    /**
@@ -368,52 +277,36 @@ public:
    * @returns The newly prepended Node.
    */
    template<typename DatumType>
-   Node PrependChild(DatumType&& datum)
+   Node* PrependChild(DatumType&& datum)
    {
       assert(m_tree->m_data.size() == m_tree->m_metadata.size());
 
-      if (!m_nodeMetadata->self.state)
-      {
-         assert(!"Attempting to prepend to a node that's in an invalid state!");
-
-         // @todo Or should this throw instead?
-         return
-         {
-            m_tree,
-            &m_tree->m_data[m_nodeMetadata->self.index],
-            &m_tree->m_metadata[m_nodeMetadata->self.index]
-         };
-      }
-
-      // It's important that this be done before inserting (or you'll be off by one):
-      const auto indexOfNewNode = m_tree->m_data.size();
-      const auto newNode = StateAndIndex{ true, indexOfNewNode };
-
-      const Metadata childNode
-      {
-         /* self =             */ newNode,
-         /* parent =           */ m_nodeMetadata->self,
-         /* nextSibling =      */ m_nodeMetadata->firstChild,
-         /* previousSibling =  */ UNINITIALIZED,
-         /* firstChild =       */ UNINITIALIZED,
-         /* lastChild =        */ UNINITIALIZED,
-         /* childCount =       */ 0
-      };
-
-      m_tree->m_metadata[m_nodeMetadata->firstChild.index].previousSibling = newNode;
-
-      if (m_nodeMetadata->lastChild.state == false)
-      {
-         m_nodeMetadata->lastChild = newNode;
-      }
-
-      m_nodeMetadata->firstChild = newNode;
-      ++(m_nodeMetadata->childCount);
-
       m_tree->m_data.emplace_back(std::forward<DatumType>(datum));
-      m_tree->m_metadata.emplace_back(std::move(childNode));
+      m_tree->m_metadata.emplace_back(Node{ m_tree, &m_tree->m_data.back() });
 
-      return { m_tree, &m_tree->m_data.back(), &m_tree->m_metadata.back() };
+      Node& prependee = m_tree->m_metadata.back();
+
+      prependee.m_parent = this;
+
+      if (!m_firstChild)
+      {
+         assert(m_childCount == 0);
+
+         m_firstChild = &prependee;
+         m_lastChild = m_firstChild;
+
+         ++m_childCount;
+
+         return m_firstChild;
+      }
+
+      m_firstChild->m_previousSibling = &prependee;
+      m_firstChild->m_previousSibling->m_nextSibling = m_firstChild;
+      m_firstChild = m_firstChild->m_previousSibling;
+
+      ++m_childCount;
+
+      return m_firstChild;
    }
 
    /**
@@ -428,7 +321,7 @@ public:
    */
    auto HasChildren() const noexcept
    {
-      return m_nodeMetadata->childCount > 0;
+      return m_childCount > 0;
    }
 
    /**
@@ -436,98 +329,80 @@ public:
    */
    auto GetChildCount() const noexcept
    {
-      return m_nodeMetadata->childCount;
+      return m_childCount;
+   }
+
+   /**
+   *
+   */
+   auto CountAllDescendants() const noexcept
+   {
+      const auto nodeCount = std::count_if(
+         Tree<DataType>::PostOrderIterator{ this },
+         Tree<DataType>::PostOrderIterator{},
+         [](const auto&) noexcept
+      {
+         return true;
+      });
+
+      return nodeCount - 1;
+   }
+
+   /**
+   * @returns The zero-indexed depth of the TreeNode in its Tree.
+   */
+   auto Depth() const noexcept
+   {
+      std::size_t depth = 0;
+
+      const Node* traversalNode = this;
+      while (traversalNode->GetParent())
+      {
+         ++depth;
+         traversalNode = traversalNode->GetParent();
+      }
+
+      return depth;
    }
 
    /**
    * @returns The first child Node of this Node.
    */
-   Node GetFirstChild() const noexcept
+   Node* GetFirstChild() const noexcept
    {
-      if (m_nodeMetadata->firstChild.state)
-      {
-         return
-         {
-            m_tree,
-            &m_tree->m_data[m_nodeMetadata->firstChild.index],
-            &m_tree->m_metadata[m_nodeMetadata->firstChild.index]
-         };
-      }
-
-      // @todo Return { nullptr, nullptr, nullptr } instead?
-      return { m_tree, &m_tree->m_data[0], const_cast<Metadata*>(&FALSEY_METADATA) };
+      return m_firstChild;
    }
 
    /**
    * @returns The last child Node of this Node.
    */
-   Node GetLastChild() const noexcept
+   Node* GetLastChild() const noexcept
    {
-      if (m_nodeMetadata->lastChild.state)
-      {
-         return
-         {
-            m_tree,
-            &m_tree->m_data[m_nodeMetadata->lastChild.index],
-            &m_tree->m_metadata[m_nodeMetadata->lastChild.index]
-         };
-      }
-
-      return { m_tree, &m_tree->m_data[0], const_cast<Metadata*>(&FALSEY_METADATA) };
+      return m_lastChild;
    }
 
    /**
    * @returns The parent Node of this Node.
    */
-   Node GetParent() noexcept
+   Node* GetParent() const noexcept
    {
-      if (m_nodeMetadata->parent.state)
-      {
-         return
-         {
-            m_tree,
-            &m_tree->m_data[m_nodeMetadata->parent.index],
-            &m_tree->m_metadata[m_nodeMetadata->parent.index]
-         };
-      }
-
-      return { m_tree, &m_tree->m_data[0], const_cast<Metadata*>(&FALSEY_METADATA) };
+      return m_parent;
    }
 
    /**
    * @returns The Node to the right of this Node.
    */
-   Node GetNextSibling() noexcept
+   Node* GetNextSibling() const noexcept
    {
-      if (m_nodeMetadata->nextSibling.state)
-      {
-         return
-         {
-            m_tree,
-            &m_tree->m_data[m_nodeMetadata->nextSibling.index],
-            &m_tree->m_metadata[m_nodeMetadata->nextSibling.index]
-         };
-      }
-
-      return { m_tree, &m_tree->m_data[0], const_cast<Metadata*>(&FALSEY_METADATA) };
+      return m_nextSibling;
    }
 
    /**
    * @returns The Node to the left of this Node.
    */
-   Node GetPreviousSibling() const noexcept
+   Node* GetPreviousSibling() const noexcept
    {
-      if (m_nodeMetadata->previousSibling.state)
-      {
-         return
-         {
-            m_tree,
-            &m_tree->m_data[m_nodeMetadata->previousSibling.index],
-            &m_tree->m_metadata[m_nodeMetadata->previousSibling.index]
-         };
-      }
-
-      return { m_tree, &m_tree->m_data[0], const_cast<Metadata*>(&FALSEY_METADATA) };
+      return m_previousSibling;
    }
 
    /**
@@ -535,7 +410,7 @@ public:
    */
    auto& GetData() noexcept
    {
-      return *m_nodeData;
+      return *m_data;
    }
 
    /**
@@ -543,7 +418,7 @@ public:
    */
    const auto& GetData() const noexcept
    {
-      return *m_nodeData;
+      return *m_data;
    }
 
    /**
@@ -551,7 +426,7 @@ public:
    */
    explicit operator bool() const noexcept
    {
-      return m_nodeMetadata && m_nodeMetadata->self.state;
+      return m_data != nullptr;
    }
 
    /**
@@ -560,9 +435,7 @@ public:
    */
    friend auto operator<(const Node& lhs, const Node& rhs) noexcept
    {
-      return lhs.m_tree < rhs.m_tree
-         && lhs.m_nodeData < rhs.m_nodeData
-         && lhs.m_nodeMetadata < rhs.m_nodeMetadata;
+      return lhs.m_data < rhs.m_data;
    }
 
    /**
@@ -598,9 +471,7 @@ public:
    */
    friend auto operator==(const Node& lhs, const Node& rhs) noexcept
    {
-      return lhs.m_tree == rhs.m_tree
-         && lhs.m_nodeData == rhs.m_nodeData
-         && lhs.m_nodeMetadata == rhs.m_nodeMetadata;
+      return lhs.m_data == rhs.m_data;
    }
 
    /**
@@ -614,22 +485,23 @@ public:
 
 private:
 
-   /**
-   * @brief Copy-constructor
-   *
-   * @note Allow friends to copy-construct this class, while forbidding others to.
-   */
-   Node(const Node& other) = default;
-
    Tree* m_tree{ nullptr };
-   DataType* m_nodeData{ nullptr };
-   Metadata* m_nodeMetadata{ nullptr };
+
+   Node* m_parent{ nullptr };
+   Node* m_firstChild{ nullptr };
+   Node* m_lastChild{ nullptr };
+   Node* m_previousSibling{ nullptr };
+   Node* m_nextSibling{ nullptr };
+
+   DataType* m_data{ nullptr };
+
+   unsigned int m_childCount{ 0 };
 };
 
 /**
 * @brief The Iterator class
 *
-* This is the base iterator class that all other iterators (sibling, leaf, post-, pre-, and 
+* This is the base iterator class that all other iterators (sibling, leaf, post-, pre-, and
 * in-order) will derive from. This class can only instantiated by derived types.
 */
 template<typename DataType>
@@ -658,7 +530,7 @@ public:
    */
    Node& operator*() noexcept
    {
-      return m_currentNode;
+      return *m_currentNode;
    }
 
    /**
@@ -666,7 +538,7 @@ public:
    */
    const Node& operator*() const noexcept
    {
-      return m_currentNode;
+      return *m_currentNode;
    }
 
    /**
@@ -674,7 +546,7 @@ public:
    */
    Node* const operator&() noexcept
    {
-      return &m_currentNode;
+      return m_currentNode;
    }
 
    /**
@@ -682,7 +554,7 @@ public:
    */
    const Node* const operator&() const noexcept
    {
-      return &m_currentNode;
+      return m_currentNode;
    }
 
    /**
@@ -690,7 +562,7 @@ public:
    */
    Node* const operator->() noexcept
    {
-      return &m_currentNode;
+      return m_currentNode;
    }
 
    /**
@@ -698,7 +570,7 @@ public:
    */
    const Node* const operator->() const noexcept
    {
-      return &m_currentNode;
+      return m_currentNode;
    }
 
    /**
@@ -730,33 +602,25 @@ protected:
    * Copy constructor.
    */
    explicit Iterator(const Iterator& other) noexcept :
-      m_tree{ other.m_tree },
-      m_currentNode{ other.m_currentNode },
-      m_startingIndex{ other.m_startingIndex },
-      m_endingIndex{ other.m_endingIndex }
+   m_currentNode{ other.m_currentNode },
+      m_startingNode{ other.m_startingNode },
+      m_endingNode{ other.m_endingNode }
    {
    }
 
    /**
    * Constructs a Iterator started at the specified node.
    */
-   explicit Iterator(const Node& node) noexcept :
-      m_tree{ node.m_tree },
-      m_currentNode{ node }
+   explicit Iterator(const Node* node) noexcept :
+      m_currentNode{ const_cast<Node*>(node) },
+      m_startingNode{ const_cast<Node*>(node) }
    {
    }
 
-   Tree* m_tree{ nullptr };
+   Node* m_currentNode{ nullptr };
 
-   Node m_currentNode
-   {
-      nullptr,
-      nullptr,
-      nullptr
-   };
-
-   std::size_t m_startingIndex{ 0 };
-   std::size_t m_endingIndex{ 0 };
+   const Node* m_startingNode{ nullptr };
+   const Node* m_endingNode{ nullptr };
 };
 
 /**
@@ -774,24 +638,29 @@ public:
    /**
    * Constructs an iterator that starts and ends at the specified node.
    */
-   explicit PreOrderIterator(const Node& node) noexcept :
+   explicit PreOrderIterator(const Node* node) noexcept :
       Iterator{ node }
    {
-      if (node.GetNextSibling())
+      if (!node)
       {
-         m_endingNode = node.GetNextSibling().get();
+         return;
+      }
+
+      if (node->GetNextSibling())
+      {
+         m_endingNode = node->GetNextSibling();
       }
       else
       {
-         m_endingNode = &node;
-         while (m_endingNode->GetParent() && !m_endingNode->GetParent()->GetNextSibling().get())
+         m_endingNode = node;
+         while (m_endingNode->GetParent() && !m_endingNode->GetParent()->GetNextSibling())
          {
             m_endingNode = m_endingNode->GetParent();
          }
 
          if (m_endingNode->GetParent())
          {
-            m_endingNode = m_endingNode->GetParent()->GetNextSibling().get();
+            m_endingNode = m_endingNode->GetParent()->GetNextSibling();
          }
          else
          {
@@ -810,22 +679,22 @@ public:
 
       if (traversingNode->HasChildren())
       {
-         traversingNode = traversingNode->GetFirstChild().get();
+         traversingNode = traversingNode->GetFirstChild();
       }
       else if (traversingNode->GetNextSibling())
       {
-         traversingNode = traversingNode->GetNextSibling().get();
+         traversingNode = traversingNode->GetNextSibling();
       }
       else
       {
-         while (traversingNode->GetParent() && !traversingNode->GetParent()->GetNextSibling().get())
+         while (traversingNode->GetParent() && !traversingNode->GetParent()->GetNextSibling())
          {
             traversingNode = traversingNode->GetParent();
          }
 
          if (traversingNode->GetParent())
          {
-            traversingNode = traversingNode->GetParent()->GetNextSibling().get();
+            traversingNode = traversingNode->GetParent()->GetNextSibling();
          }
          else
          {
@@ -864,38 +733,37 @@ public:
    /**
    * Constructs an iterator that starts and ends at the specified node.
    */
-   explicit PostOrderIterator(const Node& node) noexcept :
+   explicit PostOrderIterator(const Node* node) noexcept :
       Iterator{ node }
    {
+      assert(node);
+
       // Compute and set the starting node:
 
-      auto* traversalMetadata = node.m_nodeMetadata;
-      while (traversalMetadata->firstChild.state)
+      auto* traversingNode = node;
+      while (traversingNode->GetFirstChild())
       {
-         traversalMetadata = &m_tree->m_metadata[traversalMetadata->firstChild.index];
+         traversingNode = traversingNode->GetFirstChild();
       }
 
-      assert(traversalMetadata->self.state);
-
-      m_currentNode.m_nodeData = &m_tree->m_data[traversalMetadata->self.index];
-      m_currentNode.m_nodeMetadata = &m_tree->m_metadata[traversalMetadata->self.index];
+      assert(traversingNode);
+      m_currentNode = const_cast<Node*>(traversingNode);
 
       // Commpute and set the ending node:
 
-      if (node.m_nodeMetadata->nextSibling.state)
+      if (node->GetNextSibling())
       {
-         traversalMetadata = &m_tree->m_metadata[node.m_nodeMetadata->nextSibling.index];
-
-         while (traversalMetadata->childCount)
+         auto* traversingNode = node->GetNextSibling();
+         while (traversingNode->HasChildren())
          {
-            traversalMetadata = &m_tree->m_metadata[traversalMetadata->firstChild.index];
+            traversingNode = traversingNode->GetFirstChild();
          }
 
-         m_endingIndex = traversalMetadata->self.index;
+         m_endingNode = traversingNode;
       }
       else
       {
-         m_endingIndex = node.m_nodeMetadata->parent.index;
+         m_endingNode = node->GetParent();
       }
    }
 
@@ -904,44 +772,34 @@ public:
    */
    typename Tree::PostOrderIterator& operator++() noexcept
    {
-      auto* traversalMetadata = m_currentNode.m_nodeMetadata;
+      assert(m_currentNode);
+      auto* traversingNode = m_currentNode;
 
-      if (traversalMetadata->childCount && !m_traversingUpTheTree)
+      if (traversingNode->HasChildren() && !m_traversingUpTheTree)
       {
-         while (traversalMetadata->firstChild.state)
+         while (traversingNode->GetFirstChild())
          {
-            traversalMetadata = &m_tree->m_metadata[traversalMetadata->firstChild.index];
+            traversingNode = traversingNode->GetFirstChild();
          }
       }
-      else if (traversalMetadata->nextSibling.state)
+      else if (traversingNode->GetNextSibling())
       {
          m_traversingUpTheTree = false;
 
-         traversalMetadata = &m_tree->m_metadata[traversalMetadata->nextSibling.index];
-         while (traversalMetadata->childCount)
+         traversingNode = traversingNode->GetNextSibling();
+         while (traversingNode->HasChildren())
          {
-            traversalMetadata = &m_tree->m_metadata[traversalMetadata->firstChild.index];
+            traversingNode = traversingNode->GetFirstChild();
          }
       }
       else
       {
          m_traversingUpTheTree = true;
 
-         traversalMetadata = &m_tree->m_metadata[traversalMetadata->parent.index];
-      }
-      
-      if (traversalMetadata->self.index != m_endingIndex)
-      {
-         m_currentNode.m_nodeData = &m_tree->m_data[traversalMetadata->self.index];
-         m_currentNode.m_nodeMetadata = &m_tree->m_metadata[traversalMetadata->self.index];
-      }
-      else
-      {
-         m_currentNode.m_tree = nullptr;
-         m_currentNode.m_nodeData = nullptr;
-         m_currentNode.m_nodeMetadata = nullptr;
+         traversingNode = traversingNode->GetParent();
       }
 
+      m_currentNode = (traversingNode != m_endingNode) ? traversingNode : nullptr;
       return *this;
    }
 
@@ -976,17 +834,22 @@ public:
    /**
    * Constructs an iterator that starts at the specified node and iterates to the end.
    */
-   explicit LeafIterator(const Node& node) noexcept :
+   explicit LeafIterator(const Node* node) noexcept :
       Iterator{ node }
    {
+      if (!node)
+      {
+         return;
+      }
+
       // Compute and set the starting node:
 
-      if (node.HasChildren())
+      if (node->HasChildren())
       {
-         auto* firstNode = &node;
-         while (firstNode->GetFirstChild().get())
+         auto* firstNode = node;
+         while (firstNode->GetFirstChild())
          {
-            firstNode = firstNode->GetFirstChild().get();
+            firstNode = firstNode->GetFirstChild();
          }
 
          m_currentNode = const_cast<Node*>(firstNode);
@@ -994,30 +857,30 @@ public:
 
       // Compute and set the ending node:
 
-      if (node.GetNextSibling().get())
+      if (node->GetNextSibling())
       {
-         auto* lastNode = node.GetNextSibling().get();
+         auto* lastNode = node->GetNextSibling();
          while (lastNode->HasChildren())
          {
-            lastNode = lastNode->GetFirstChild().get();
+            lastNode = lastNode->GetFirstChild();
          }
 
          m_endingNode = lastNode;
       }
       else
       {
-         m_endingNode = &node;
-         while (m_endingNode->GetParent() && !m_endingNode->GetParent()->GetNextSibling().get())
+         m_endingNode = node;
+         while (m_endingNode->GetParent() && !m_endingNode->GetParent()->GetNextSibling())
          {
             m_endingNode = m_endingNode->GetParent();
          }
 
          if (m_endingNode->GetParent())
          {
-            m_endingNode = m_endingNode->GetParent()->GetNextSibling().get();
+            m_endingNode = m_endingNode->GetParent()->GetNextSibling();
             while (m_endingNode->HasChildren())
             {
-               m_endingNode = m_endingNode->GetFirstChild().get();
+               m_endingNode = m_endingNode->GetFirstChild();
             }
          }
          else
@@ -1033,38 +896,39 @@ public:
    typename Tree::LeafIterator& operator++() noexcept
    {
       assert(m_currentNode);
+
       auto* traversingNode = m_currentNode;
 
       if (traversingNode->HasChildren())
       {
-         while (traversingNode->GetFirstChild().get())
+         while (traversingNode->GetFirstChild())
          {
-            traversingNode = traversingNode->GetFirstChild().get();
+            traversingNode = traversingNode->GetFirstChild();
          }
       }
-      else if (traversingNode->GetNextSibling().get())
+      else if (traversingNode->GetNextSibling())
       {
-         traversingNode = traversingNode->GetNextSibling().get();
+         traversingNode = traversingNode->GetNextSibling();
 
-         while (traversingNode->GetFirstChild().get())
+         while (traversingNode->GetFirstChild())
          {
-            traversingNode = traversingNode->GetFirstChild().get();
+            traversingNode = traversingNode->GetFirstChild();
          }
       }
       else if (traversingNode->GetParent())
       {
-         while (traversingNode->GetParent() && !traversingNode->GetParent()->GetNextSibling().get())
+         while (traversingNode->GetParent() && !traversingNode->GetParent()->GetNextSibling())
          {
             traversingNode = traversingNode->GetParent();
          }
 
          if (traversingNode->GetParent())
          {
-            traversingNode = traversingNode->GetParent()->GetNextSibling().get();
+            traversingNode = traversingNode->GetParent()->GetNextSibling();
 
             while (traversingNode && traversingNode->HasChildren())
             {
-               traversingNode = traversingNode->GetFirstChild().get();
+               traversingNode = traversingNode->GetFirstChild();
             }
          }
          else
@@ -1104,7 +968,7 @@ public:
    /**
    * Constructs an iterator that starts at the specified node and iterates to the end.
    */
-   explicit SiblingIterator(const Node& node) noexcept :
+   explicit SiblingIterator(const Node* node) noexcept :
       Iterator{ node }
    {
    }
@@ -1116,7 +980,7 @@ public:
    {
       if (m_currentNode)
       {
-         m_currentNode = m_currentNode->GetNextSibling().get();
+         m_currentNode = m_currentNode->GetNextSibling();
       }
 
       return *this;
