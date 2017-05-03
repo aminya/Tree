@@ -408,7 +408,6 @@ TEST_CASE("Partial Tree Iteration Corner Cases")
       REQUIRE(traversalError == false);
       REQUIRE(index == expectedTraversal.size());
    }
-
 }
 
 TEST_CASE("STL Typedef Compliance")
@@ -545,7 +544,7 @@ TEST_CASE("Sibling Iterator")
    SECTION("Forward Traversal")
    {
       const std::vector<std::string> expectedTraversal =
-      { "B", "D", "A", "C", "F", "G", "E", "H", };
+         { "B", "D", "A", "C", "F", "G", "E", "H", };
 
       int index = 0;
 

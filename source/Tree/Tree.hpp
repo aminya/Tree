@@ -31,9 +31,18 @@
 #include <vector>
 
 /**
-* The Tree class declares a basic tree, built on top of templatized Tree<DataType>::Node objects.
+* @brief The Tree class declares a basic tree, built on top of two std::vectors.
 *
-* Each tree consists of a simple head Tree<DataType>::Node and nothing else.
+* The data is stored in a dedicated vector of DataType objects, while the metadata is stored in a
+* separate vector. This data-oriented design should allow for lightning fast traversals of the data
+* for those cases where the nature of the tree cannot be exploited to further increase operations.
+*
+* For increased cache-friendliness, this class also enables consumers to easily rearrange the
+* objects in the vector so that everything is contiguous. This obviously works best for those cases
+* where the tree is been completely built and further operations are purely focused on read
+* operations.
+*
+* See the individual member functions for further documentation.
 */
 template<typename DataType>
 class Tree
@@ -61,8 +70,9 @@ public:
       m_data.reserve(128);
       m_data.emplace_back(DataType{ });
 
-      m_metadata.reserve(128);
-      m_metadata.emplace_back(Node{ this, &m_data.back() });
+      m_nodes.reserve(128);
+      m_nodes.emplace_back(Node{ this, &m_data.back() });
+      m_nodes.back().m_ownIndex = 0;
    }
 
    /**
@@ -74,8 +84,9 @@ public:
       m_data.reserve(128);
       m_data.emplace_back(std::move(data));
 
-      m_metadata.reserve(128);
-      m_metadata.emplace_back(Node{ this, &m_data.back() });
+      m_nodes.reserve(128);
+      m_nodes.emplace_back(Node{ this, &m_data.back() });
+      m_nodes.back().m_ownIndex = 0;
    }
 
    /**
@@ -97,9 +108,9 @@ public:
    */
    Node* GetRoot() noexcept
    {
-      assert(m_data.size() > 0 && m_metadata.size() > 0);
+      assert(m_data.size() > 0 && m_nodes.size() > 0);
 
-      return &m_metadata.front();
+      return &m_nodes.front();
    }
 
    /**
@@ -113,7 +124,7 @@ public:
    */
    auto Size() const noexcept
    {
-      assert(m_data.size() == m_metadata.size());
+      assert(m_data.size() == m_nodes.size());
 
       return m_data.size();
    }
@@ -206,14 +217,13 @@ public:
 private:
 
    std::vector<DataType> m_data;
-   std::vector<Node> m_metadata;
+   std::vector<Node> m_nodes;
 };
 
 template<typename DataType>
 class Tree<DataType>::Node
 {
-   friend class Tree<DataType>::Iterator;
-   friend class Tree<DataType>::PostOrderIterator;
+   friend class Tree;
 
 public:
    using value_type = DataType;
@@ -239,34 +249,37 @@ public:
    template<typename DatumType>
    Node* AppendChild(DatumType&& datum)
    {
-      assert(m_tree->m_data.size() == m_tree->m_metadata.size());
+      assert(m_tree->m_data.size() == m_tree->m_nodes.size());
 
       m_tree->m_data.emplace_back(std::forward<DatumType>(datum));
-      m_tree->m_metadata.emplace_back(Node{ m_tree, &m_tree->m_data.back() });
+      m_tree->m_nodes.emplace_back(Node{ m_tree, &m_tree->m_data.back() });
 
-      Node& appendee = m_tree->m_metadata.back();
+      Node& appendee = m_tree->m_nodes.back();
+      appendee.m_ownIndex = m_tree->m_data.size() - 1;
 
-      appendee.m_parent = this;
+      appendee.m_parentIndex = m_ownIndex;
 
-      if (!m_lastChild)
+      if (m_lastChildIndex == NOT_SPECIFIED)
       {
          assert(m_childCount == 0);
 
-         m_firstChild = &appendee;
-         m_lastChild = m_firstChild;
+         m_firstChildIndex = appendee.m_ownIndex;
+         m_lastChildIndex = m_firstChildIndex;
 
          ++m_childCount;
 
-         return m_lastChild;
+         return &m_tree->m_nodes[m_lastChildIndex];
       }
 
-      m_lastChild->m_nextSibling = &appendee;
-      m_lastChild->m_nextSibling->m_previousSibling = m_lastChild;
-      m_lastChild = m_lastChild->m_nextSibling;
+      auto& nodes = m_tree->m_nodes;
+
+      nodes[m_lastChildIndex].m_nextSiblingIndex = appendee.m_ownIndex;
+      nodes[nodes[m_lastChildIndex].m_nextSiblingIndex].m_previousSiblingIndex = m_lastChildIndex;
+      m_lastChildIndex = nodes[m_lastChildIndex].m_nextSiblingIndex;
 
       ++m_childCount;
 
-      return m_lastChild;
+      return &nodes[m_lastChildIndex];
    }
 
    /**
@@ -279,34 +292,37 @@ public:
    template<typename DatumType>
    Node* PrependChild(DatumType&& datum)
    {
-      assert(m_tree->m_data.size() == m_tree->m_metadata.size());
+      assert(m_tree->m_data.size() == m_tree->m_nodes.size());
 
       m_tree->m_data.emplace_back(std::forward<DatumType>(datum));
-      m_tree->m_metadata.emplace_back(Node{ m_tree, &m_tree->m_data.back() });
+      m_tree->m_nodes.emplace_back(Node{ m_tree, &m_tree->m_data.back() });
 
-      Node& prependee = m_tree->m_metadata.back();
+      Node& prependee = m_tree->m_nodes.back();
+      prependee.m_ownIndex = m_tree->m_data.size() - 1;
 
-      prependee.m_parent = this;
+      prependee.m_parentIndex = m_ownIndex;
 
-      if (!m_firstChild)
+      if (m_firstChildIndex == NOT_SPECIFIED)
       {
          assert(m_childCount == 0);
 
-         m_firstChild = &prependee;
-         m_lastChild = m_firstChild;
+         m_firstChildIndex = prependee.m_ownIndex;
+         m_lastChildIndex = m_firstChildIndex;
 
          ++m_childCount;
 
-         return m_firstChild;
+         return &m_tree->m_nodes[m_firstChildIndex];
       }
 
-      m_firstChild->m_previousSibling = &prependee;
-      m_firstChild->m_previousSibling->m_nextSibling = m_firstChild;
-      m_firstChild = m_firstChild->m_previousSibling;
+      auto& nodes = m_tree->m_nodes;
+
+      nodes[m_firstChildIndex].m_previousSiblingIndex = prependee.m_ownIndex;
+      nodes[nodes[m_firstChildIndex].m_previousSiblingIndex].m_nextSiblingIndex = m_firstChildIndex;
+      m_firstChildIndex = nodes[m_firstChildIndex].m_previousSiblingIndex;
 
       ++m_childCount;
 
-      return m_firstChild;
+      return &nodes[m_firstChildIndex];
    }
 
    /**
@@ -355,11 +371,11 @@ public:
    {
       std::size_t depth = 0;
 
-      const Node* traversalNode = this;
-      while (traversalNode->GetParent())
+      auto traversalIndex = m_ownIndex;
+      while (m_tree->m_nodes[traversalIndex].m_parentIndex != NOT_SPECIFIED)
       {
          ++depth;
-         traversalNode = traversalNode->GetParent();
+         traversalIndex = m_tree->m_nodes[traversalIndex].m_parentIndex;
       }
 
       return depth;
@@ -370,7 +386,9 @@ public:
    */
    Node* GetFirstChild() const noexcept
    {
-      return m_firstChild;
+      return (m_firstChildIndex != NOT_SPECIFIED)
+         ? &m_tree->m_nodes[m_firstChildIndex]
+         : nullptr;
    }
 
    /**
@@ -378,7 +396,9 @@ public:
    */
    Node* GetLastChild() const noexcept
    {
-      return m_lastChild;
+      return (m_lastChildIndex != NOT_SPECIFIED)
+         ? &m_tree->m_nodes[m_lastChildIndex]
+         : nullptr;
    }
 
    /**
@@ -386,7 +406,9 @@ public:
    */
    Node* GetParent() const noexcept
    {
-      return m_parent;
+      return (m_parentIndex != NOT_SPECIFIED)
+         ? &m_tree->m_nodes[m_parentIndex]
+         : nullptr;
    }
 
    /**
@@ -394,7 +416,9 @@ public:
    */
    Node* GetNextSibling() const noexcept
    {
-      return m_nextSibling;
+      return (m_nextSiblingIndex != NOT_SPECIFIED)
+         ? &m_tree->m_nodes[m_nextSiblingIndex]
+         : nullptr;
    }
 
    /**
@@ -402,7 +426,9 @@ public:
    */
    Node* GetPreviousSibling() const noexcept
    {
-      return m_previousSibling;
+      return (m_previousSiblingIndex != NOT_SPECIFIED)
+         ? &m_tree->m_nodes[m_previousSiblingIndex]
+         : nullptr;
    }
 
    /**
@@ -485,17 +511,20 @@ public:
 
 private:
 
-   Tree* m_tree{ nullptr };
+   static constexpr auto NOT_SPECIFIED{ std::numeric_limits<std::size_t>::max() };
 
-   Node* m_parent{ nullptr };
-   Node* m_firstChild{ nullptr };
-   Node* m_lastChild{ nullptr };
-   Node* m_previousSibling{ nullptr };
-   Node* m_nextSibling{ nullptr };
+   Tree* m_tree{ nullptr };
 
    DataType* m_data{ nullptr };
 
-   unsigned int m_childCount{ 0 };
+   std::size_t m_ownIndex{ NOT_SPECIFIED };
+   std::size_t m_parentIndex{ NOT_SPECIFIED };
+   std::size_t m_firstChildIndex{ NOT_SPECIFIED };
+   std::size_t m_lastChildIndex{ NOT_SPECIFIED };
+   std::size_t m_previousSiblingIndex{ NOT_SPECIFIED };
+   std::size_t m_nextSiblingIndex{ NOT_SPECIFIED };
+
+   std::size_t m_childCount{ 0 };
 };
 
 /**
@@ -522,7 +551,7 @@ public:
    */
    explicit operator bool() const noexcept
    {
-      return m_tree && m_tree->m_metadata[m_currentIndex].self.state;
+      return m_tree && m_tree->m_nodes[m_currentIndex].self.state;
    }
 
    /**
