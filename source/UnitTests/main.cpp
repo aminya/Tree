@@ -422,7 +422,7 @@ TEST_CASE("STL Typedef Compliance")
 
    SECTION("Standard Algorithms and Parameter Passing by value_type")
    {
-      const size_t count = std::count_if(std::begin(tree), std::end(tree),
+      const auto count = std::count_if(std::begin(tree), std::end(tree),
          [](Tree<std::string>::value_type node)
       {
          return (node.GetData() == "A");
@@ -433,7 +433,7 @@ TEST_CASE("STL Typedef Compliance")
 
    SECTION("Standard Algorithms and Parameter Passing by reference")
    {
-      const size_t count = std::count_if(std::begin(tree), std::end(tree),
+      const auto count = std::count_if(std::begin(tree), std::end(tree),
          [](Tree<std::string>::reference node)
       {
          return (node.GetData() == "C");
@@ -444,7 +444,7 @@ TEST_CASE("STL Typedef Compliance")
 
    SECTION("Standard Algorithms and Parameter Passing by const_reference")
    {
-      const size_t count = std::count_if(std::begin(tree), std::end(tree),
+      const auto count = std::count_if(std::begin(tree), std::end(tree),
          [](Tree<std::string>::const_reference node)
       {
          return (node.GetData() == "D");
@@ -566,6 +566,54 @@ TEST_CASE("Sibling Iterator")
 
       REQUIRE(traversalError == false);
       REQUIRE(index == expectedTraversal.size());
+   }
+}
+
+TEST_CASE("Memory Layout Optimization")
+{
+   Tree<std::string> tree{ "F" };
+   auto& root = *tree.GetRoot();
+
+   root.AppendChild("B")->AppendChild("A");
+   root.GetFirstChild()->AppendChild("D")->AppendChild("C");
+   root.GetFirstChild()->GetLastChild()->AppendChild("E");
+   root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+
+   SECTION("Pre-Order Iteration")
+   {
+      tree.OptimizeMemoryLayoutFor<decltype(tree)::PreOrderIterator>();
+      const auto& actual = tree.GetDataAsVector();
+
+      const std::vector<std::string> expected =
+      { "F", "B", "A", "D", "C", "E", "G", "I", "H" };
+
+      // @todo
+   }
+
+   SECTION("Post-Order Iteration")
+   {
+      tree.OptimizeMemoryLayoutFor<decltype(tree)::PostOrderIterator>();
+      const auto& actual = tree.GetDataAsVector();
+
+      const std::vector<std::string> expected =
+         { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
+
+      std::vector<std::string> delta;
+
+      // @todo
+   }
+
+   SECTION("Leaf Iteration")
+   {
+      tree.OptimizeMemoryLayoutFor<decltype(tree)::LeafIterator>();
+      const auto& actual = tree.GetDataAsVector();
+
+      const std::vector<std::string> expected =
+         { "A", "C", "E", "H", };
+
+      std::vector<std::string> delta;
+
+      // @todo
    }
 }
 

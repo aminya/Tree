@@ -71,22 +71,21 @@ public:
       m_data.emplace_back(DataType{ });
 
       m_nodes.reserve(128);
-      m_nodes.emplace_back(Node{ this, &m_data.back() });
-      m_nodes.back().m_ownIndex = 0;
+      m_nodes.emplace_back(Node{ this, /* ownIndex = */ 0 });
    }
 
    /**
    * @brief Tree constructs a new Tree with the provided data encapsulated in a new
    * Node.
    */
-   Tree(DataType data)
+   template<typename DatumType>
+   Tree(DatumType&& datum)
    {
       m_data.reserve(128);
-      m_data.emplace_back(std::move(data));
+      m_data.emplace_back(std::forward<DatumType>(datum));
 
       m_nodes.reserve(128);
-      m_nodes.emplace_back(Node{ this, &m_data.back() });
-      m_nodes.back().m_ownIndex = 0;
+      m_nodes.emplace_back(Node{ this, /* ownIndex = */ 0 });
    }
 
    /**
@@ -214,6 +213,15 @@ public:
       return m_data;
    }
 
+   /**
+   *
+   */
+   template<typename IteratorType>
+   void OptimizeMemoryLayoutFor()
+   {
+      const auto itr = IteratorType{ };
+   }
+
 private:
 
    std::vector<DataType> m_data;
@@ -223,19 +231,20 @@ private:
 template<typename DataType>
 class Tree<DataType>::Node
 {
-   friend class Tree;
-
 public:
    using value_type = DataType;
    using reference = DataType&;
    using const_reference = const DataType&;
 
-   explicit Node(
+   /**
+   * @todo Restrict access to this function.
+   */
+   Node(
       Tree* tree,
-      DataType* data)
+      std::size_t ownIndex)
       :
       m_tree{ tree },
-      m_data{ data }
+      m_ownIndex{ ownIndex }
    {
    }
 
@@ -252,10 +261,9 @@ public:
       assert(m_tree->m_data.size() == m_tree->m_nodes.size());
 
       m_tree->m_data.emplace_back(std::forward<DatumType>(datum));
-      m_tree->m_nodes.emplace_back(Node{ m_tree, &m_tree->m_data.back() });
+      m_tree->m_nodes.emplace_back(Node{ m_tree, m_tree->m_nodes.size() });
 
       Node& appendee = m_tree->m_nodes.back();
-      appendee.m_ownIndex = m_tree->m_data.size() - 1;
 
       appendee.m_parentIndex = m_ownIndex;
 
@@ -295,10 +303,9 @@ public:
       assert(m_tree->m_data.size() == m_tree->m_nodes.size());
 
       m_tree->m_data.emplace_back(std::forward<DatumType>(datum));
-      m_tree->m_nodes.emplace_back(Node{ m_tree, &m_tree->m_data.back() });
+      m_tree->m_nodes.emplace_back(Node{ m_tree, m_tree->m_nodes.size() });
 
       Node& prependee = m_tree->m_nodes.back();
-      prependee.m_ownIndex = m_tree->m_data.size() - 1;
 
       prependee.m_parentIndex = m_ownIndex;
 
@@ -355,7 +362,7 @@ public:
    {
       const auto nodeCount = std::count_if(
          Tree<DataType>::PostOrderIterator{ this },
-         Tree<DataType>::PostOrderIterator{},
+         Tree<DataType>::PostOrderIterator{ },
          [](const auto&) noexcept
       {
          return true;
@@ -436,7 +443,7 @@ public:
    */
    auto& GetData() noexcept
    {
-      return *m_data;
+      return m_tree->m_data[m_ownIndex];
    }
 
    /**
@@ -444,7 +451,7 @@ public:
    */
    const auto& GetData() const noexcept
    {
-      return *m_data;
+      return m_tree->m_data[m_ownIndex];
    }
 
    /**
@@ -452,7 +459,7 @@ public:
    */
    explicit operator bool() const noexcept
    {
-      return m_data != nullptr;
+      return m_ownIndex != NOT_SPECIFIED;
    }
 
    /**
@@ -461,7 +468,8 @@ public:
    */
    friend auto operator<(const Node& lhs, const Node& rhs) noexcept
    {
-      return lhs.m_data < rhs.m_data;
+      return lhs.m_tree->GetDataAsVector()[lhs.m_ownIndex]
+         < rhs.m_tree->GetDataAsVector()[rhs.m_ownIndex];
    }
 
    /**
@@ -497,7 +505,8 @@ public:
    */
    friend auto operator==(const Node& lhs, const Node& rhs) noexcept
    {
-      return lhs.m_data == rhs.m_data;
+      return lhs.m_tree->GetDataAsVector()[lhs.m_ownIndex]
+         == rhs.m_tree->GetDataAsVector()[rhs.m_ownIndex];
    }
 
    /**
@@ -514,8 +523,6 @@ private:
    static constexpr auto NOT_SPECIFIED{ std::numeric_limits<std::size_t>::max() };
 
    Tree* m_tree{ nullptr };
-
-   DataType* m_data{ nullptr };
 
    std::size_t m_ownIndex{ NOT_SPECIFIED };
    std::size_t m_parentIndex{ NOT_SPECIFIED };
@@ -545,14 +552,6 @@ public:
    using size_type = std::size_t;
    using difference_type = std::ptrdiff_t;
    using iterator_category = std::forward_iterator_tag;
-
-   /**
-   * @returns True if the Tree::Iterator points to a valid Node; false otherwise.
-   */
-   explicit operator bool() const noexcept
-   {
-      return m_tree && m_tree->m_nodes[m_currentIndex].self.state;
-   }
 
    /**
    * @returns The Node pointed to by the Tree::Iterator.
@@ -631,7 +630,7 @@ protected:
    * Copy constructor.
    */
    explicit Iterator(const Iterator& other) noexcept :
-   m_currentNode{ other.m_currentNode },
+      m_currentNode{ other.m_currentNode },
       m_startingNode{ other.m_startingNode },
       m_endingNode{ other.m_endingNode }
    {
@@ -1026,3 +1025,19 @@ public:
       return result;
    }
 };
+
+#if _WIN64
+#define X64 1
+#else
+#define X86 1
+#endif
+
+#if X86
+static_assert(
+   sizeof(Tree<int>::Node) <= 32,
+   "Two Node instances will no longer fit on a typical cache line size.");
+#elif X64
+static_assert(
+   sizeof(Tree<int>::Node) <= 64,
+   "A single Node instance will not fit on a typical cache line size.");
+#endif
