@@ -569,7 +569,27 @@ TEST_CASE("Sibling Iterator")
    }
 }
 
-TEST_CASE("Memory Layout Optimization")
+TEST_CASE("Simple Memory Layout Optimization")
+{
+   Tree<std::string> tree{ "F" };
+   auto& root = *tree.GetRoot();
+
+   root.PrependChild("E");
+   root.PrependChild("D");
+   root.PrependChild("C");
+   root.PrependChild("B");
+   root.PrependChild("A");
+
+   SECTION("Leaf Iteration")
+   {
+      tree.OptimizeMemoryLayoutFor<decltype(tree)::LeafIterator>();
+      const auto& actual = tree.GetDataAsVector();
+
+      const std::vector<std::string> expected = { "A", "B", "C", "D", "E", "F" };
+   }
+}
+
+TEST_CASE("More Complex Memory Layout Optimization")
 {
    Tree<std::string> tree{ "F" };
    auto& root = *tree.GetRoot();
@@ -579,16 +599,16 @@ TEST_CASE("Memory Layout Optimization")
    root.GetFirstChild()->GetLastChild()->AppendChild("E");
    root.AppendChild("G")->AppendChild("I")->AppendChild("H");
 
-   SECTION("Pre-Order Iteration")
-   {
-      tree.OptimizeMemoryLayoutFor<decltype(tree)::PreOrderIterator>();
-      const auto& actual = tree.GetDataAsVector();
+   //SECTION("Pre-Order Iteration")
+   //{
+   //   tree.OptimizeMemoryLayoutFor<Tree<std::string>::PreOrderIterator>();
+   //   const auto& actual = tree.GetDataAsVector();
 
-      const std::vector<std::string> expected =
-      { "F", "B", "A", "D", "C", "E", "G", "I", "H" };
+   //   const std::vector<std::string> expected =
+   //      { "F", "B", "A", "D", "C", "E", "G", "I", "H" };
 
-      // @todo
-   }
+   //   // @todo
+   //}
 
    SECTION("Post-Order Iteration")
    {

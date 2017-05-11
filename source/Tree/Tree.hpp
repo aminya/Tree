@@ -30,6 +30,11 @@
 #include <memory>
 #include <vector>
 
+namespace
+{
+   static constexpr auto NOT_SPECIFIED{ std::numeric_limits<std::size_t>::max() };
+}
+
 /**
 * @brief The Tree class declares a basic tree, built on top of two std::vectors.
 *
@@ -219,7 +224,118 @@ public:
    template<typename IteratorType>
    void OptimizeMemoryLayoutFor()
    {
-      const auto itr = IteratorType{ };
+      static_assert(
+         std::is_same<IteratorType::value_type, decltype(m_data)::value_type>::value,
+         "Types don't match!");
+
+      // Enable Argument Dependent Lookup (ADL):
+      using std::swap;
+
+      IteratorType itr{ GetRoot() };
+
+      for (std::size_t sinkIndex{ 0u }; sinkIndex < m_data.size(); ++sinkIndex, ++itr)
+      {
+         const auto sourceIndex = itr->m_ownIndex;
+
+         if (sourceIndex == sinkIndex)
+         {
+            continue;
+         }
+
+         const auto source = m_nodes[sourceIndex];
+         const auto sink = m_nodes[sinkIndex];
+
+         std::swap(m_data[sinkIndex], m_data[sourceIndex]);
+         std::swap(m_nodes[sinkIndex], m_nodes[sourceIndex]);
+
+         m_nodes[sinkIndex].m_ownIndex = sinkIndex;
+         m_nodes[sourceIndex].m_ownIndex = sourceIndex;
+
+         { // Update parent-child relationships:
+            if (source.m_parentIndex == sink.m_ownIndex)
+            {
+               m_nodes[sinkIndex].m_parentIndex = sourceIndex;
+
+               auto previousSiblingIndex = m_nodes[sinkIndex].m_previousSiblingIndex;
+               while (previousSiblingIndex != NOT_SPECIFIED)
+               {
+                  m_nodes[previousSiblingIndex].m_parentIndex = sourceIndex;
+                  previousSiblingIndex = m_nodes[previousSiblingIndex].m_previousSiblingIndex;
+               }
+
+               auto nextSiblingIndex = m_nodes[sinkIndex].m_nextSiblingIndex;
+               while (nextSiblingIndex != NOT_SPECIFIED)
+               {
+                  m_nodes[nextSiblingIndex].m_parentIndex = sourceIndex;
+                  nextSiblingIndex = m_nodes[nextSiblingIndex].m_nextSiblingIndex;
+               }
+
+               if (sink.m_firstChildIndex == source.m_ownIndex)
+               {
+                  m_nodes[sourceIndex].m_firstChildIndex = sinkIndex;
+               }
+
+               if (sink.m_lastChildIndex == source.m_ownIndex)
+               {
+                  m_nodes[sourceIndex].m_lastChildIndex = sinkIndex;
+               }
+            }
+            else if (sink.m_parentIndex == source.m_ownIndex)
+            {
+               m_nodes[sourceIndex].m_parentIndex = sinkIndex;
+
+               auto previousSiblingIndex = m_nodes[sourceIndex].m_previousSiblingIndex;
+               while (previousSiblingIndex != NOT_SPECIFIED)
+               {
+                  m_nodes[previousSiblingIndex].m_parentIndex = sinkIndex;
+                  previousSiblingIndex = m_nodes[previousSiblingIndex].m_previousSiblingIndex;
+               }
+
+               auto nextSiblingIndex = m_nodes[sourceIndex].m_nextSiblingIndex;
+               while (nextSiblingIndex != NOT_SPECIFIED)
+               {
+                  m_nodes[nextSiblingIndex].m_parentIndex = sinkIndex;
+                  nextSiblingIndex = m_nodes[nextSiblingIndex].m_nextSiblingIndex;
+               }
+
+               if (source.m_firstChildIndex == sink.m_ownIndex)
+               {
+                  m_nodes[sinkIndex].m_firstChildIndex = sourceIndex;
+               }
+
+               if (source.m_lastChildIndex == sink.m_ownIndex)
+               {
+                  m_nodes[sinkIndex].m_lastChildIndex = sourceIndex;
+               }
+            }
+         }
+
+         { // Update the source node's neighbours:
+            if (source.m_nextSiblingIndex != NOT_SPECIFIED)
+            {
+               m_nodes[source.m_nextSiblingIndex].m_previousSiblingIndex = sinkIndex;
+            }
+
+            if (source.m_previousSiblingIndex != NOT_SPECIFIED)
+            {
+               m_nodes[source.m_previousSiblingIndex].m_nextSiblingIndex = sinkIndex;
+            }
+         }
+
+         { // Update the sink node's neighbours:
+            if (sink.m_nextSiblingIndex != NOT_SPECIFIED)
+            {
+               m_nodes[sink.m_nextSiblingIndex].m_previousSiblingIndex = sourceIndex;
+            }
+
+            if (sink.m_previousSiblingIndex != NOT_SPECIFIED)
+            {
+               m_nodes[sink.m_previousSiblingIndex].m_nextSiblingIndex = sourceIndex;
+            }
+         }
+
+         itr.m_currentNode = &m_nodes[sinkIndex];
+      }
    }
 
 private:
@@ -231,22 +347,12 @@ private:
 template<typename DataType>
 class Tree<DataType>::Node
 {
+   friend class Tree;
+
 public:
    using value_type = DataType;
    using reference = DataType&;
    using const_reference = const DataType&;
-
-   /**
-   * @todo Restrict access to this function.
-   */
-   Node(
-      Tree* tree,
-      std::size_t ownIndex)
-      :
-      m_tree{ tree },
-      m_ownIndex{ ownIndex }
-   {
-   }
 
    /**
    * @brief Constructs and appends a new Node as the last child of the Node.
@@ -518,9 +624,37 @@ public:
       return !(lhs == rhs);
    }
 
+   /**
+   * @brief Swaps all member variables of the left-hand side with that of the right-hand side.
+   */
+   friend void swap(Node& lhs, Node& rhs) noexcept
+   {
+      // Enable Argument Dependent Lookup (ADL):
+      using std::swap;
+
+      swap(lhs.m_tree, rhs.m_tree);
+      swap(lhs.m_ownIndex, rhs.m_ownIndex);
+      swap(lhs.m_parentIndex, rhs.m_parentIndex);
+      swap(lhs.m_firstChildIndex, rhs.m_firstChildIndex);
+      swap(lhs.m_lastChildIndex, rhs.m_lastChildIndex);
+      swap(lhs.m_previousSiblingIndex, rhs.m_previousSiblingIndex);
+      swap(lhs.m_nextSiblingIndex, rhs.m_nextSiblingIndex);
+      swap(lhs.m_childCount, rhs.m_childCount);
+   }
+
 private:
 
-   static constexpr auto NOT_SPECIFIED{ std::numeric_limits<std::size_t>::max() };
+   /**
+   * @todo
+   */
+   Node(
+      Tree* tree,
+      std::size_t ownIndex)
+      :
+      m_tree{ tree },
+      m_ownIndex{ ownIndex }
+   {
+   }
 
    Tree* m_tree{ nullptr };
 
@@ -543,6 +677,8 @@ private:
 template<typename DataType>
 class Tree<DataType>::Iterator
 {
+   friend class Tree;
+
 public:
    // Typedefs needed for STL compliance:
    using value_type = DataType;
@@ -1035,9 +1171,9 @@ public:
 #if X86
 static_assert(
    sizeof(Tree<int>::Node) <= 32,
-   "Two Node instances will no longer fit on a typical cache line size.");
+   "Two Node instances will no longer fit on a typical cache line.");
 #elif X64
 static_assert(
    sizeof(Tree<int>::Node) <= 64,
-   "A single Node instance will not fit on a typical cache line size.");
+   "A single Node instance will not fit on a typical cache line.");
 #endif
