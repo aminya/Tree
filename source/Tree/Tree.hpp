@@ -235,6 +235,11 @@ public:
 
       for (std::size_t sinkIndex{ 0u }; sinkIndex < m_data.size(); ++sinkIndex, ++itr)
       {
+         if (!itr)
+         {
+            break;
+         }
+
          const auto sourceIndex = itr->m_ownIndex;
 
          if (sourceIndex == sinkIndex)
@@ -251,86 +256,143 @@ public:
          m_nodes[sinkIndex].m_ownIndex = sinkIndex;
          m_nodes[sourceIndex].m_ownIndex = sourceIndex;
 
-         { // Update parent-child relationships:
-            if (source.m_parentIndex == sink.m_ownIndex)
+         // Update source node's children to point to the new parent location:
+         {
+            if (source.m_childCount > 0)
             {
-               m_nodes[sinkIndex].m_parentIndex = sourceIndex;
+               auto childIndex = source.m_firstChildIndex;
 
-               auto previousSiblingIndex = m_nodes[sinkIndex].m_previousSiblingIndex;
-               while (previousSiblingIndex != NOT_SPECIFIED)
-               {
-                  m_nodes[previousSiblingIndex].m_parentIndex = sourceIndex;
-                  previousSiblingIndex = m_nodes[previousSiblingIndex].m_previousSiblingIndex;
-               }
-
-               auto nextSiblingIndex = m_nodes[sinkIndex].m_nextSiblingIndex;
-               while (nextSiblingIndex != NOT_SPECIFIED)
-               {
-                  m_nodes[nextSiblingIndex].m_parentIndex = sourceIndex;
-                  nextSiblingIndex = m_nodes[nextSiblingIndex].m_nextSiblingIndex;
-               }
-
-               if (sink.m_firstChildIndex == source.m_ownIndex)
-               {
-                  m_nodes[sourceIndex].m_firstChildIndex = sinkIndex;
-               }
-
-               if (sink.m_lastChildIndex == source.m_ownIndex)
-               {
-                  m_nodes[sourceIndex].m_lastChildIndex = sinkIndex;
-               }
-            }
-            else if (sink.m_parentIndex == source.m_ownIndex)
-            {
-               m_nodes[sourceIndex].m_parentIndex = sinkIndex;
-
-               auto previousSiblingIndex = m_nodes[sourceIndex].m_previousSiblingIndex;
-               while (previousSiblingIndex != NOT_SPECIFIED)
-               {
-                  m_nodes[previousSiblingIndex].m_parentIndex = sinkIndex;
-                  previousSiblingIndex = m_nodes[previousSiblingIndex].m_previousSiblingIndex;
-               }
-
-               auto nextSiblingIndex = m_nodes[sourceIndex].m_nextSiblingIndex;
-               while (nextSiblingIndex != NOT_SPECIFIED)
-               {
-                  m_nodes[nextSiblingIndex].m_parentIndex = sinkIndex;
-                  nextSiblingIndex = m_nodes[nextSiblingIndex].m_nextSiblingIndex;
-               }
-
-               if (source.m_firstChildIndex == sink.m_ownIndex)
+               // Handle the case where the source node's child is the sink node:
+               if (childIndex == sinkIndex)
                {
                   m_nodes[sinkIndex].m_firstChildIndex = sourceIndex;
+                  childIndex = m_nodes[sourceIndex].m_nextSiblingIndex;
                }
 
-               if (source.m_lastChildIndex == sink.m_ownIndex)
+               while (childIndex != NOT_SPECIFIED)
                {
-                  m_nodes[sinkIndex].m_lastChildIndex = sourceIndex;
+                  m_nodes[childIndex].m_parentIndex = sinkIndex;
+                  childIndex = m_nodes[childIndex].m_nextSiblingIndex;
+               }
+            }
+
+            // Update source node's parent to point to the new child location:
+            if (source.m_parentIndex != NOT_SPECIFIED)
+            {
+               // Handle the case where the source is an immediate child of the sink:
+               if (source.m_parentIndex == sinkIndex)
+               {
+                  m_nodes[sinkIndex].m_parentIndex = sourceIndex;
+               }
+               else
+               {
+                  if (m_nodes[source.m_parentIndex].m_firstChildIndex == sourceIndex)
+                  {
+                     m_nodes[source.m_parentIndex].m_firstChildIndex = sinkIndex;
+                  }
+
+                  if (m_nodes[source.m_parentIndex].m_lastChildIndex == sourceIndex)
+                  {
+                     m_nodes[source.m_parentIndex].m_lastChildIndex = sinkIndex;
+                  }
                }
             }
          }
 
-         { // Update the source node's neighbours:
+         // Update sink node's children to point to the new parent location:
+         {
+            if (sink.m_childCount > 0)
+            {
+               auto childIndex = sink.m_firstChildIndex;
+
+               // Handle the case where the sink node's child is the source node:
+               if (childIndex == sourceIndex)
+               {
+                  m_nodes[sourceIndex].m_firstChildIndex = sinkIndex;
+                  childIndex = m_nodes[sinkIndex].m_nextSiblingIndex;
+               }
+
+               while (childIndex != NOT_SPECIFIED)
+               {
+                  m_nodes[childIndex].m_parentIndex = sourceIndex;
+                  childIndex = m_nodes[childIndex].m_nextSiblingIndex;
+               }
+            }
+
+            // Update node's parent to point to its child's new location:
+            if (sink.m_parentIndex != NOT_SPECIFIED)
+            {
+               // Handle the case where the source is an immediate child of the sink:
+               if (sink.m_parentIndex == sourceIndex)
+               {
+                  m_nodes[sourceIndex].m_parentIndex = sinkIndex;
+               }
+               else
+               {
+                  if (m_nodes[sink.m_parentIndex].m_firstChildIndex == sinkIndex)
+                  {
+                     m_nodes[sink.m_parentIndex].m_firstChildIndex = sourceIndex;
+                  }
+
+                  if (m_nodes[sink.m_parentIndex].m_lastChildIndex == sinkIndex)
+                  {
+                     m_nodes[sink.m_parentIndex].m_lastChildIndex = sourceIndex;
+                  }
+               }
+            }
+         }
+
+         // Update the source node's neighbors:
+         {
             if (source.m_nextSiblingIndex != NOT_SPECIFIED)
             {
-               m_nodes[source.m_nextSiblingIndex].m_previousSiblingIndex = sinkIndex;
+               if (source.m_nextSiblingIndex != sinkIndex)
+               {
+                  m_nodes[source.m_nextSiblingIndex].m_previousSiblingIndex = sinkIndex;
+               }
+               else
+               {
+                  m_nodes[sinkIndex].m_nextSiblingIndex = sourceIndex;
+               }
             }
 
             if (source.m_previousSiblingIndex != NOT_SPECIFIED)
             {
-               m_nodes[source.m_previousSiblingIndex].m_nextSiblingIndex = sinkIndex;
+               if (source.m_previousSiblingIndex != sinkIndex)
+               {
+                  m_nodes[source.m_previousSiblingIndex].m_nextSiblingIndex = sinkIndex;
+               }
+               else
+               {
+                  m_nodes[sinkIndex].m_previousSiblingIndex = sourceIndex;
+               }
             }
          }
 
-         { // Update the sink node's neighbours:
+         // Update the sink node's neighbors:
+         {
             if (sink.m_nextSiblingIndex != NOT_SPECIFIED)
             {
-               m_nodes[sink.m_nextSiblingIndex].m_previousSiblingIndex = sourceIndex;
+               if (sink.m_nextSiblingIndex != sourceIndex)
+               {
+                  m_nodes[sink.m_nextSiblingIndex].m_previousSiblingIndex = sourceIndex;
+               }
+               else
+               {
+                  m_nodes[sourceIndex].m_nextSiblingIndex = sinkIndex;
+               }
             }
 
             if (sink.m_previousSiblingIndex != NOT_SPECIFIED)
             {
-               m_nodes[sink.m_previousSiblingIndex].m_nextSiblingIndex = sourceIndex;
+               if (sink.m_previousSiblingIndex != sourceIndex)
+               {
+                  m_nodes[sink.m_previousSiblingIndex].m_nextSiblingIndex = sourceIndex;
+               }
+               else
+               {
+                  m_nodes[sourceIndex].m_previousSiblingIndex = sinkIndex;
+               }
             }
          }
 
@@ -688,6 +750,14 @@ public:
    using size_type = std::size_t;
    using difference_type = std::ptrdiff_t;
    using iterator_category = std::forward_iterator_tag;
+
+   /**
+   * @returns True if the iterator is not "past the end."
+   */
+   explicit operator bool() const noexcept
+   {
+      return m_currentNode != nullptr;
+   }
 
    /**
    * @returns The Node pointed to by the Tree::Iterator.
@@ -1163,16 +1233,16 @@ public:
 };
 
 #if _WIN64
-#define X64 1
+#define X64
 #else
-#define X86 1
+#define X86
 #endif
 
-#if X86
+#ifdef X86
 static_assert(
    sizeof(Tree<int>::Node) <= 32,
    "Two Node instances will no longer fit on a typical cache line.");
-#elif X64
+#elif defined(X64)
 static_assert(
    sizeof(Tree<int>::Node) <= 64,
    "A single Node instance will not fit on a typical cache line.");

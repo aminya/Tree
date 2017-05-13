@@ -514,16 +514,17 @@ TEST_CASE("Leaf Iterator")
 
    SECTION("Tree<T>::beginLeaf and Tree<T>::endLeaf")
    {
-      const std::vector<std::string> expectedTraversal = { "A", "C", "E", "H", };
+      const std::vector<std::string> expected = { "A", "C", "E", "H", };
 
-      std::vector<std::string> output;
-      std::transform(tree.beginLeaf(), tree.endLeaf(), std::back_inserter(output),
+      std::vector<std::string> actual;
+      std::transform(tree.beginLeaf(), tree.endLeaf(), std::back_inserter(actual),
          [](Tree<std::string>::const_reference node)
       {
          return node.GetData();
       });
 
-      REQUIRE(output.size() == expectedTraversal.size());
+      REQUIRE(actual.size() == expected.size());
+      REQUIRE(std::equal(std::begin(expected), std::end(expected), std::begin(actual)) == true);
    }
 }
 
@@ -569,35 +570,50 @@ TEST_CASE("Sibling Iterator")
    }
 }
 
-TEST_CASE("Simple Memory Layout Optimization")
-{
-   Tree<std::string> tree{ "F" };
-   auto& root = *tree.GetRoot();
-
-   root.PrependChild("E");
-   root.PrependChild("D");
-   root.PrependChild("C");
-   root.PrependChild("B");
-   root.PrependChild("A");
-
-   SECTION("Leaf Iteration")
-   {
-      tree.OptimizeMemoryLayoutFor<decltype(tree)::LeafIterator>();
-      const auto& actual = tree.GetDataAsVector();
-
-      const std::vector<std::string> expected = { "A", "B", "C", "D", "E", "F" };
-   }
-}
+//TEST_CASE("Simple Memory Layout Optimization")
+//{
+//   Tree<std::string> tree{ "F" };
+//   auto& root = *tree.GetRoot();
+//
+//   root.PrependChild("E");
+//   root.PrependChild("D");
+//   root.PrependChild("C");
+//   root.PrependChild("B");
+//   root.PrependChild("A");
+//
+//   SECTION("Leaf Iteration")
+//   {
+//      tree.OptimizeMemoryLayoutFor<decltype(tree)::LeafIterator>();
+//      const auto& actual = tree.GetDataAsVector();
+//
+//      const std::vector<std::string> expected = { "A", "B", "C", "D", "E" };
+//
+//      auto isOrderCorrect{ false };
+//      for (std::size_t index{ 0 }; index < expected.size(); ++index)
+//      {
+//         isOrderCorrect = (expected[index] == actual[index]);
+//      }
+//
+//      REQUIRE(isOrderCorrect == true);
+//   }
+//}
 
 TEST_CASE("More Complex Memory Layout Optimization")
 {
-   Tree<std::string> tree{ "F" };
+   Tree<std::string> tree{ "B" };
    auto& root = *tree.GetRoot();
 
-   root.AppendChild("B")->AppendChild("A");
-   root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-   root.GetFirstChild()->GetLastChild()->AppendChild("E");
-   root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+   root.AppendChild("A");
+   root.AppendChild("D")->AppendChild("C");
+   root.GetLastChild()->AppendChild("E");
+
+   //Tree<std::string> tree{ "F" };
+   //auto& root = *tree.GetRoot();
+
+   //root.AppendChild("B")->AppendChild("A");
+   //root.GetFirstChild()->AppendChild("D")->AppendChild("C");
+   //root.GetFirstChild()->GetLastChild()->AppendChild("E");
+   //root.AppendChild("G")->AppendChild("I")->AppendChild("H");
 
    //SECTION("Pre-Order Iteration")
    //{
@@ -607,33 +623,46 @@ TEST_CASE("More Complex Memory Layout Optimization")
    //   const std::vector<std::string> expected =
    //      { "F", "B", "A", "D", "C", "E", "G", "I", "H" };
 
-   //   // @todo
+   //   const auto isCorrectOrder =
+   //        std::equal(std::begin(actual), std::end(actual), std::begin(expected));
+
+   //   REQUIRE(isCorrectOrder == true);
    //}
 
-   SECTION("Post-Order Iteration")
-   {
-      tree.OptimizeMemoryLayoutFor<decltype(tree)::PostOrderIterator>();
-      const auto& actual = tree.GetDataAsVector();
+   //SECTION("Post-Order Iteration")
+   //{
+   //   tree.OptimizeMemoryLayoutFor<decltype(tree)::PostOrderIterator>();
+   //   const auto& actual = tree.GetDataAsVector();
 
-      const std::vector<std::string> expected =
-         { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
+   //   const std::vector<std::string> expected =
+   //      { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
 
-      std::vector<std::string> delta;
+   //   const auto isCorrectOrder =
+   //      std::equal(std::begin(actual), std::end(actual), std::begin(expected));
 
-      // @todo
-   }
+   //   REQUIRE(isCorrectOrder == true);
+   //}
+
+   //struct Leaf_tag
+   //{
+   //   using itrType = lea
+   //};
 
    SECTION("Leaf Iteration")
    {
+      //tree.OptimizeMemoryLayoutFor(TRAVERSAL_ORDER::LEAF);
       tree.OptimizeMemoryLayoutFor<decltype(tree)::LeafIterator>();
       const auto& actual = tree.GetDataAsVector();
 
-      const std::vector<std::string> expected =
-         { "A", "C", "E", "H", };
+      const std::vector<std::string> expected = { "A", "C", "E" };
 
-      std::vector<std::string> delta;
+      auto isOrderCorrect{ false };
+      for (std::size_t index{ 0 }; index < expected.size(); ++index)
+      {
+         isOrderCorrect = (expected[index] == actual[index]);
+      }
 
-      // @todo
+      REQUIRE(isOrderCorrect == true);
    }
 }
 
