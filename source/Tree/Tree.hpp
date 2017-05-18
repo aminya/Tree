@@ -29,10 +29,11 @@
 #include <iterator>
 #include <memory>
 #include <vector>
+#include <type_traits>
 
 namespace
 {
-   static constexpr auto NOT_SPECIFIED{ std::numeric_limits<std::size_t>::max() };
+   static constexpr auto NONE{ std::numeric_limits<std::size_t>::max() };
 }
 
 /**
@@ -43,9 +44,7 @@ namespace
 * for those cases where the nature of the tree cannot be exploited to further increase operations.
 *
 * For increased cache-friendliness, this class also enables consumers to easily rearrange the
-* objects in the vector so that everything is contiguous. This obviously works best for those cases
-* where the tree is been completely built and further operations are purely focused on read
-* operations.
+* objects in the vector so that everything is contiguous, relative to a chosen traversal order.
 *
 * See the individual member functions for further documentation.
 */
@@ -80,8 +79,7 @@ public:
    }
 
    /**
-   * @brief Tree constructs a new Tree with the provided data encapsulated in a new
-   * Node.
+   * @brief Constructs a new tree with the provided data encapsulated in a new node.
    */
    template<typename DatumType>
    Tree(DatumType&& datum)
@@ -108,22 +106,19 @@ public:
    Tree<DataType>& operator=(Tree<DataType> other) = delete;
 
    /**
-   * @returns A pointer to the head Node.
+   * @returns A pointer to the head node.
    */
    Node* GetRoot() noexcept
    {
       assert(m_data.size() > 0 && m_nodes.size() > 0);
+      assert(m_data.size() == m_nodes.size());
+      assert(m_data.size() > m_rootIndex);
 
-      return &m_nodes.front();
+      return &m_nodes[m_rootIndex];
    }
 
    /**
-   * @brief Computes the size of either the whole Tree, or a portion thereof.
-   *
-   * @param[in] node                The node at which to start counting. If this parameter is not
-   *                                provided, then the size of the entire tree is returned.
-   *
-   * @returns The total number of nodes in the Tree. This includes leaf and non-leaf nodes,
+   * @returns The total number of nodes in the tree. This includes leaf and non-leaf nodes,
    * in addition to the root node.
    */
    auto Size() const noexcept
@@ -134,8 +129,8 @@ public:
    }
 
    /**
-   * @returns A post-order iterator that will iterator over all nodes in the tree, starting
-   * with the head of the Tree.
+   * @returns A post-order iterator that will iterator over all nodes in the tree, ending
+   * at the root of the tree.
    */
    typename Tree::PostOrderIterator begin() noexcept
    {
@@ -145,7 +140,7 @@ public:
    }
 
    /**
-   * @returns A post-order iterator that points past the end of the Tree.
+   * @returns A post-order iterator that points "past the end" of the tree.
    */
    typename Tree::PostOrderIterator end() noexcept
    {
@@ -154,7 +149,8 @@ public:
    }
 
    /**
-   * @returns A pre-order iterator that will iterate over all Nodes in the tree.
+   * @returns A pre-order iterator that will iterate over all nodes in the tree, starting
+   * at the root of the tree.
    */
    typename Tree::PreOrderIterator beginPreOrder() noexcept
    {
@@ -164,7 +160,7 @@ public:
    }
 
    /**
-   * @returns A pre-order iterator pointing "past" the end of the tree.
+   * @returns A pre-order iterator pointing "past the end" of the tree.
    */
    typename Tree::PreOrderIterator endPreOrder() noexcept
    {
@@ -173,8 +169,8 @@ public:
    }
 
    /**
-   * @returns An iterator that will iterator over all leaf nodes in the Tree, starting with the
-   * left-most leaf in the Tree.
+   * @returns A leaf iterator that will iterate over all leaf nodes in the tree, starting
+   * with the left-most leaf in the tree.
    */
    typename Tree::LeafIterator beginLeaf() noexcept
    {
@@ -184,7 +180,7 @@ public:
    }
 
    /**
-   * @return A LeafIterator that points past the last leaf Node in the Tree.
+   * @returns A leaf iterator that points "past" the last leaf node in the tree.
    */
    typename Tree::LeafIterator endLeaf() noexcept
    {
@@ -193,7 +189,9 @@ public:
    }
 
    /**
+   * @returns A sibling iterator that will iterator over all subsequent siblings of a node.
    *
+   * @todo There is probably no test coverage for this function...
    */
    typename Tree::SiblingIterator beginSibling(const Node& node) noexcept
    {
@@ -202,6 +200,8 @@ public:
    }
 
    /**
+   * @returns A sibling iterator that points "past" the last sibling of a node.
+   *
    * @todo There is probably no test coverage for this function...
    */
    typename Tree::SiblingIterator endSibling() noexcept
@@ -211,7 +211,7 @@ public:
    }
 
    /**
-   * @returns The underlying data container.
+   * @returns A const reference to the underlying data vector.
    */
    const auto& GetDataAsVector() const noexcept
    {
@@ -219,7 +219,21 @@ public:
    }
 
    /**
+   * @brief Swaps around the nodes in the underlying vectors so that all of the nodes are
+   * in the proper traversal order relative to the specified iterator.
    *
+   * By making sure that all nodes are contiguous (relative to a specified traversal order),
+   * we can hopefully take full advantage of cache locality.
+   *
+   * This function would ideally be called once the tree has been fully constructed, and the
+   * remainder (or at least the vast majority) of subsequent operations on the tree involve
+   * iteration and reading of data.
+   *
+   * @tparam IteratorType           One of the supported Tree::Iterator types:
+   *                                   @li Tree::PreOrderIterator
+   *                                   @li Tree::PostOrderIterator
+   *                                   @li Tree::LeafIterator
+   *                                   @li Tree::SiblingIterator
    */
    template<typename IteratorType>
    void OptimizeMemoryLayoutFor()
@@ -246,6 +260,14 @@ public:
          {
             continue;
          }
+         else if (sourceIndex == m_rootIndex)
+         {
+            m_rootIndex = sinkIndex;
+         }
+         else if (sinkIndex == m_rootIndex)
+         {
+            m_rootIndex = sourceIndex;
+         }
 
          const auto source = m_nodes[sourceIndex];
          const auto sink = m_nodes[sinkIndex];
@@ -269,15 +291,21 @@ public:
                   childIndex = m_nodes[sourceIndex].m_nextSiblingIndex;
                }
 
-               while (childIndex != NOT_SPECIFIED)
+               while (childIndex != NONE)
                {
+                  if (childIndex == sinkIndex)
+                  {
+                     childIndex = m_nodes[childIndex].m_nextSiblingIndex;
+                     continue;
+                  }
+
                   m_nodes[childIndex].m_parentIndex = sinkIndex;
                   childIndex = m_nodes[childIndex].m_nextSiblingIndex;
                }
             }
 
             // Update source node's parent to point to the new child location:
-            if (source.m_parentIndex != NOT_SPECIFIED)
+            if (source.m_parentIndex != NONE)
             {
                // Handle the case where the source is an immediate child of the sink:
                if (source.m_parentIndex == sinkIndex)
@@ -312,15 +340,21 @@ public:
                   childIndex = m_nodes[sinkIndex].m_nextSiblingIndex;
                }
 
-               while (childIndex != NOT_SPECIFIED)
+               while (childIndex != NONE)
                {
+                  if (childIndex == sourceIndex)
+                  {
+                     childIndex = m_nodes[childIndex].m_nextSiblingIndex;
+                     continue;
+                  }
+
                   m_nodes[childIndex].m_parentIndex = sourceIndex;
                   childIndex = m_nodes[childIndex].m_nextSiblingIndex;
                }
             }
 
             // Update node's parent to point to its child's new location:
-            if (sink.m_parentIndex != NOT_SPECIFIED)
+            if (sink.m_parentIndex != NONE)
             {
                // Handle the case where the source is an immediate child of the sink:
                if (sink.m_parentIndex == sourceIndex)
@@ -344,7 +378,7 @@ public:
 
          // Update the source node's neighbors:
          {
-            if (source.m_nextSiblingIndex != NOT_SPECIFIED)
+            if (source.m_nextSiblingIndex != NONE)
             {
                if (source.m_nextSiblingIndex != sinkIndex)
                {
@@ -356,7 +390,7 @@ public:
                }
             }
 
-            if (source.m_previousSiblingIndex != NOT_SPECIFIED)
+            if (source.m_previousSiblingIndex != NONE)
             {
                if (source.m_previousSiblingIndex != sinkIndex)
                {
@@ -371,7 +405,7 @@ public:
 
          // Update the sink node's neighbors:
          {
-            if (sink.m_nextSiblingIndex != NOT_SPECIFIED)
+            if (sink.m_nextSiblingIndex != NONE)
             {
                if (sink.m_nextSiblingIndex != sourceIndex)
                {
@@ -383,7 +417,7 @@ public:
                }
             }
 
-            if (sink.m_previousSiblingIndex != NOT_SPECIFIED)
+            if (sink.m_previousSiblingIndex != NONE)
             {
                if (sink.m_previousSiblingIndex != sourceIndex)
                {
@@ -404,8 +438,13 @@ private:
 
    std::vector<DataType> m_data;
    std::vector<Node> m_nodes;
+
+   std::size_t m_rootIndex{ 0 };
 };
 
+/**
+* @todo
+*/
 template<typename DataType>
 class Tree<DataType>::Node
 {
@@ -417,11 +456,11 @@ public:
    using const_reference = const DataType&;
 
    /**
-   * @brief Constructs and appends a new Node as the last child of the Node.
+   * @brief Constructs and appends a new node as the last child of this node.
    *
-   * @param[in] data                The underlying data to be stored in the new Node.
+   * @param[in] data                The underlying data to be stored in the new node.
    *
-   * @returns The newly appended Node.
+   * @returns The newly appended node.
    */
    template<typename DatumType>
    Node* AppendChild(DatumType&& datum)
@@ -435,7 +474,7 @@ public:
 
       appendee.m_parentIndex = m_ownIndex;
 
-      if (m_lastChildIndex == NOT_SPECIFIED)
+      if (m_lastChildIndex == NONE)
       {
          assert(m_childCount == 0);
 
@@ -459,11 +498,11 @@ public:
    }
 
    /**
-   * @brief Constructs and prepends a new Node as the first child of the Node.
+   * @brief Constructs and prepends a new node as the first child of this node.
    *
-   * @param[in] data                The underlying data to be stored in the new Node.
+   * @param[in] data                The underlying data to be stored in the new node.
    *
-   * @returns The newly prepended Node.
+   * @returns The newly prepended node.
    */
    template<typename DatumType>
    Node* PrependChild(DatumType&& datum)
@@ -477,7 +516,7 @@ public:
 
       prependee.m_parentIndex = m_ownIndex;
 
-      if (m_firstChildIndex == NOT_SPECIFIED)
+      if (m_firstChildIndex == NONE)
       {
          assert(m_childCount == 0);
 
@@ -508,7 +547,7 @@ public:
    }
 
    /**
-   * @returns True if this Node has children.
+   * @returns True if this node has children.
    */
    auto HasChildren() const noexcept
    {
@@ -516,7 +555,7 @@ public:
    }
 
    /**
-   * @returns The number of children that this Node has.
+   * @returns The number of children that this node has.
    */
    auto GetChildCount() const noexcept
    {
@@ -524,7 +563,7 @@ public:
    }
 
    /**
-   *
+   * @returns The total number of descendants that this node has.
    */
    auto CountAllDescendants() const noexcept
    {
@@ -536,18 +575,19 @@ public:
          return true;
       });
 
-      return nodeCount - 1;
+      constexpr decltype(nodeCount) currentNode{ 1 };
+      return nodeCount - currentNode;
    }
 
    /**
-   * @returns The zero-indexed depth of the TreeNode in its Tree.
+   * @returns The zero-indexed depth of this node in the tree.
    */
    auto Depth() const noexcept
    {
       std::size_t depth = 0;
 
       auto traversalIndex = m_ownIndex;
-      while (m_tree->m_nodes[traversalIndex].m_parentIndex != NOT_SPECIFIED)
+      while (m_tree->m_nodes[traversalIndex].m_parentIndex != NONE)
       {
          ++depth;
          traversalIndex = m_tree->m_nodes[traversalIndex].m_parentIndex;
@@ -557,51 +597,51 @@ public:
    }
 
    /**
-   * @returns The first child Node of this Node.
+   * @returns The first (or left-most) child of this node.
    */
    Node* GetFirstChild() const noexcept
    {
-      return (m_firstChildIndex != NOT_SPECIFIED)
+      return (m_firstChildIndex != NONE)
          ? &m_tree->m_nodes[m_firstChildIndex]
          : nullptr;
    }
 
    /**
-   * @returns The last child Node of this Node.
+   * @returns The last (or right-most) child of this node.
    */
    Node* GetLastChild() const noexcept
    {
-      return (m_lastChildIndex != NOT_SPECIFIED)
+      return (m_lastChildIndex != NONE)
          ? &m_tree->m_nodes[m_lastChildIndex]
          : nullptr;
    }
 
    /**
-   * @returns The parent Node of this Node.
+   * @returns The parent of this node.
    */
    Node* GetParent() const noexcept
    {
-      return (m_parentIndex != NOT_SPECIFIED)
+      return (m_parentIndex != NONE)
          ? &m_tree->m_nodes[m_parentIndex]
          : nullptr;
    }
 
    /**
-   * @returns The Node to the right of this Node.
+   * @returns The node to the right of this node in the tree.
    */
    Node* GetNextSibling() const noexcept
    {
-      return (m_nextSiblingIndex != NOT_SPECIFIED)
+      return (m_nextSiblingIndex != NONE)
          ? &m_tree->m_nodes[m_nextSiblingIndex]
          : nullptr;
    }
 
    /**
-   * @returns The Node to the left of this Node.
+   * @returns The node to the left of this node in the tree.
    */
    Node* GetPreviousSibling() const noexcept
    {
-      return (m_previousSiblingIndex != NOT_SPECIFIED)
+      return (m_previousSiblingIndex != NONE)
          ? &m_tree->m_nodes[m_previousSiblingIndex]
          : nullptr;
    }
@@ -623,26 +663,28 @@ public:
    }
 
    /**
-   * @returns True is the Node is initialized, or valid.
+   * @returns True if this node is a valid member of a tree.
    */
    explicit operator bool() const noexcept
    {
-      return m_ownIndex != NOT_SPECIFIED;
+      return m_ownIndex != NONE;
    }
 
    /**
-   * @returns True if the data encapsulated in the left-hand side Node is less than
-   * the data encapsulated in the right-hand side Node.
+   * @returns True if the data encapsulated in the left-hand side node is less than
+   * the data encapsulated in the right-hand side node.
    */
    friend auto operator<(const Node& lhs, const Node& rhs) noexcept
    {
-      return lhs.m_tree->GetDataAsVector()[lhs.m_ownIndex]
-         < rhs.m_tree->GetDataAsVector()[rhs.m_ownIndex];
+      const auto& lhsVector = lhs.m_tree->GetDataAsVector();
+      const auto& rhsVector = rhs.m_tree->GetDataAsVector();
+
+      return lhsVector[lhs.m_ownIndex] < rhsVector[rhs.m_ownIndex];
    }
 
    /**
-   * @returns True if the data encapsulated in the left-hand side Node is less than
-   * or equal to the data encapsulated in the right-hand side Node.
+   * @returns True if the data encapsulated in the left-hand side node is less than
+   * or equal to the data encapsulated in the right-hand side node.
    */
    friend auto operator<=(const Node& lhs, const Node& rhs) noexcept
    {
@@ -650,8 +692,8 @@ public:
    }
 
    /**
-   * @returns True if the data encapsulated in the left-hand side Node is greater than
-   * the data encapsulated in the right-hand side Node.
+   * @returns True if the data encapsulated in the left-hand side node is greater than
+   * the data encapsulated in the right-hand side node.
    */
    friend auto operator>(const Node& lhs, const Node& rhs) noexcept
    {
@@ -659,8 +701,8 @@ public:
    }
 
    /**
-   * @returns True if the data encapsulated in the left-hand side Node is greater than
-   * or equal to the data encapsulated in the right-hand side Node.
+   * @returns True if the data encapsulated in the left-hand side node is greater than
+   * or equal to the data encapsulated in the right-hand side node.
    */
    friend auto operator>=(const Node& lhs, const Node& rhs) noexcept
    {
@@ -668,18 +710,20 @@ public:
    }
 
    /**
-   * @returns True if the data encapsulated in the left-hand side Node is equal to
-   * the data encapsulated in the right-hand side Node.
+   * @returns True if the data encapsulated in the left-hand side node is equal to
+   * the data encapsulated in the right-hand side node.
    */
    friend auto operator==(const Node& lhs, const Node& rhs) noexcept
    {
-      return lhs.m_tree->GetDataAsVector()[lhs.m_ownIndex]
-         == rhs.m_tree->GetDataAsVector()[rhs.m_ownIndex];
+      const auto& lhsVector = lhs.m_tree->GetDataAsVector();
+      const auto& rhsVector = rhs.m_tree->GetDataAsVector();
+
+      return lhsVector[lhs.m_ownIndex] == rhsVector[rhs.m_ownIndex];
    }
 
    /**
-   * @returns True if the data encapsulated in the left-hand side Node is not equal
-   * to the data encapsulated in the right-hand side Node.
+   * @returns True if the data encapsulated in the left-hand side node is not equal
+   * to the data encapsulated in the right-hand side node.
    */
    friend auto operator!=(const Node& lhs, const Node& rhs) noexcept
    {
@@ -707,7 +751,8 @@ public:
 private:
 
    /**
-   * @todo
+   * @brief Private constructor to be used by the Tree class when it creates new nodes and inserts
+   * them into the tree.
    */
    Node(
       Tree* tree,
@@ -720,12 +765,12 @@ private:
 
    Tree* m_tree{ nullptr };
 
-   std::size_t m_ownIndex{ NOT_SPECIFIED };
-   std::size_t m_parentIndex{ NOT_SPECIFIED };
-   std::size_t m_firstChildIndex{ NOT_SPECIFIED };
-   std::size_t m_lastChildIndex{ NOT_SPECIFIED };
-   std::size_t m_previousSiblingIndex{ NOT_SPECIFIED };
-   std::size_t m_nextSiblingIndex{ NOT_SPECIFIED };
+   std::size_t m_ownIndex{ NONE };
+   std::size_t m_parentIndex{ NONE };
+   std::size_t m_firstChildIndex{ NONE };
+   std::size_t m_lastChildIndex{ NONE };
+   std::size_t m_previousSiblingIndex{ NONE };
+   std::size_t m_nextSiblingIndex{ NONE };
 
    std::size_t m_childCount{ 0 };
 };
@@ -733,8 +778,8 @@ private:
 /**
 * @brief The Iterator class
 *
-* This is the base iterator class that all other iterators (sibling, leaf, post-, pre-, and
-* in-order) will derive from. This class can only instantiated by derived types.
+* This is the base iterator class that all other iterators (sibling, leaf, pre-, and post-order)
+* will derive from. This class can only instantiated by derived types.
 */
 template<typename DataType>
 class Tree<DataType>::Iterator
@@ -742,6 +787,7 @@ class Tree<DataType>::Iterator
    friend class Tree;
 
 public:
+
    // Typedefs needed for STL compliance:
    using value_type = DataType;
    using pointer = DataType*;
@@ -760,7 +806,7 @@ public:
    }
 
    /**
-   * @returns The Node pointed to by the Tree::Iterator.
+   * @returns The node pointed to by the Tree::Iterator.
    */
    Node& operator*() noexcept
    {
@@ -776,7 +822,7 @@ public:
    }
 
    /**
-   * @returns A pointer to the Node.
+   * @returns A pointer to the node.
    */
    Node* const operator&() noexcept
    {
@@ -792,7 +838,7 @@ public:
    }
 
    /**
-   * @returns A pointer to the Node pointed to by the Tree:Iterator.
+   * @returns A pointer to the node pointed to by the Tree:Iterator.
    */
    Node* const operator->() noexcept
    {
@@ -808,19 +854,19 @@ public:
    }
 
    /**
-   * @returns True if the Iterator points to the same node as the other Iterator,
+   * @returns True if the iterator points to the same node as the other iterator,
    * and false otherwise.
    */
-   bool operator==(const Iterator& other) const noexcept
+   auto operator==(const Iterator& other) const noexcept
    {
       return m_currentIndex == other.m_currentIndex;
    }
 
    /**
-   * @returns True if the Iterator points to the same node as the other Iterator,
+   * @returns True if the iterator points to the same node as the other iterator,
    * and false otherwise.
    */
-   bool operator!=(const Iterator& other) const noexcept
+   auto operator!=(const Iterator& other) const noexcept
    {
       return m_currentNode != other.m_currentNode;
    }
@@ -843,7 +889,7 @@ protected:
    }
 
    /**
-   * Constructs a Iterator started at the specified node.
+   * Constructs a iterator started at the specified node.
    */
    explicit Iterator(const Node* node) noexcept :
       m_currentNode{ const_cast<Node*>(node) },
@@ -863,6 +909,7 @@ protected:
 template<typename DataType>
 class Tree<DataType>::PreOrderIterator final : public Tree<DataType>::Iterator
 {
+
 public:
    /**
    * Default constructor.
@@ -959,6 +1006,7 @@ template<typename DataType>
 class Tree<DataType>::PostOrderIterator final : public Tree<DataType>::Iterator
 {
 public:
+
    /**
    * Default constructor.
    */
@@ -1060,6 +1108,7 @@ template<typename DataType>
 class Tree<DataType>::LeafIterator final : public Tree<DataType>::Iterator
 {
 public:
+
    /**
    * Default constructor.
    */
@@ -1194,6 +1243,7 @@ template<typename DataType>
 class Tree<DataType>::SiblingIterator final : public Tree<DataType>::Iterator
 {
 public:
+
    /**
    * Default constructor.
    */
