@@ -540,10 +540,16 @@ public:
    }
 
    /**
-   * @todo
+   * @brief Removes the TreeNode from the tree structure, updating all surrounding links
+   * as appropriate.
+   *
+   * @note This function does not actually reclaim the memory occupied by the doomed node, although
+   * that memory may be reused by subsequent node allocations. Once the tree that originally owned
+   * this object reaches the end of it's life, the memory will be reclaimed.
    */
-   void DeleteFromTree() noexcept
+   void Detach() noexcept
    {
+      // @todo
    }
 
    /**

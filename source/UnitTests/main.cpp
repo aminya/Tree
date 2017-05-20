@@ -8,6 +8,62 @@
 #include <algorithm>
 #include <vector>
 
+namespace
+{
+   /**
+   * @brief Allows for the comparison of vectors of unequal length.
+   *
+   * The `expected` vector has to be smaller than the `actual` vector that it is compared against.
+   */
+   template<typename DataType>
+   auto SubsetEquals(
+      const std::vector<DataType>& expected,
+      const std::vector<DataType>& actual)
+   {
+      bool isCorrect{ false };
+
+      const auto expectedSize = expected.size();
+      const auto actualSize = actual.size();
+      if (expectedSize < actualSize)
+      {
+         const auto delta = static_cast<int>(actualSize - expectedSize);
+
+         auto actualEnd = std::end(actual);
+         std::advance(actualEnd, -delta);
+
+         isCorrect = std::equal(
+            std::begin(actual), actualEnd,
+            std::begin(expected), std::end(expected));
+      }
+
+      REQUIRE(isCorrect == true);
+   }
+
+   /**
+   * @brief Compares two vectors, ensuring that both contain the same data.
+   */
+   template<typename DataType>
+   auto VerifyTraversal(
+      const std::vector<DataType>& expected,
+      const std::vector<DataType>& actual,
+      bool performSubsetComparision = false)
+   {
+      if (performSubsetComparision)
+      {
+         SubsetEquals(expected, actual);
+         return;
+      }
+
+      REQUIRE(expected.size() == actual.size());
+
+      const auto isCorrect = std::equal(
+         std::begin(actual), std::end(actual),
+         std::begin(expected), std::end(expected));
+
+      REQUIRE(isCorrect == true);
+   }
+}
+
 SCENARIO("Building a Basic Tree of Depth One")
 {
    GIVEN("A Tree With a Root Node")
@@ -216,46 +272,24 @@ TEST_CASE("Forward Pre- and Post-Order Traversal of Simple Binary Tree")
 
    SECTION("Pre-order Traversal")
    {
-      const std::vector<std::string> expectedTraversal =
-         { "F", "B", "A", "D", "C", "E", "G", "I", "H" };
+      const std::vector<std::string> expected = { "F", "B", "A", "D", "C", "E", "G", "I", "H" };
 
-      std::size_t index{ 0 };
+      std::vector<std::string> actual;
+      std::transform(tree.beginPreOrder(), tree.endPreOrder(), std::back_inserter(actual),
+         [] (const auto& node) noexcept { return node.GetData(); });
 
-      bool traversalError = false;
-      for (auto itr = tree.beginPreOrder(); itr != tree.endPreOrder(); ++itr)
-      {
-         const auto& data = itr->GetData();
-         if (data != expectedTraversal[index++])
-         {
-            traversalError = true;
-            break;
-         }
-      }
-
-      REQUIRE(traversalError == false);
-      REQUIRE(index == expectedTraversal.size());
+      VerifyTraversal(expected, actual);
    }
 
    SECTION("Post-order Traversal")
    {
-      const std::vector<std::string> expectedTraversal = 
-         { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
+      const std::vector<std::string> expected = { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
 
-      std::size_t index{ 0 };
+      std::vector<std::string> actual;
+      std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
+         [] (const auto& node) noexcept { return node.GetData(); });
 
-      bool traversalError = false;
-      for (auto itr = tree.begin(); itr != tree.end(); ++itr, ++index)
-      {
-         const auto& data = itr->GetData();
-         if (data != expectedTraversal[index])
-         {
-            traversalError = true;
-            break;
-         }
-      }
-
-      REQUIRE(traversalError == false);
-      REQUIRE(index == expectedTraversal.size());
+      VerifyTraversal(expected, actual);
    }
 }
 
@@ -271,53 +305,30 @@ TEST_CASE("Partial Tree Iteration")
 
    SECTION("Pre-Order Iteration")
    {
-      const std::vector<std::string> expectedTraversal = { "B", "A", "D", "C", "E" };
+      const std::vector<std::string> expected = { "B", "A", "D", "C", "E" };
 
-      std::size_t index{ 0 };
-
-      auto traversalError{ false };
-
-      auto* startingNode = root.GetFirstChild();
-
-      auto itr = Tree<std::string>::PreOrderIterator{ startingNode };
+      const auto begin = Tree<std::string>::PreOrderIterator{ root.GetFirstChild() };
       const auto end = Tree<std::string>::PreOrderIterator{ };
-      for (; itr != end; itr++, ++index) //< Using the post-fix operator for more test coverage.
-      {
-         const auto& data = itr->GetData();
-         if (data != expectedTraversal[index])
-         {
-            traversalError = true;
-            break;
-         }
-      }
 
-      REQUIRE(traversalError == false);
-      REQUIRE(index == expectedTraversal.size());
+      std::vector<std::string> actual;
+      std::transform(begin, end, std::back_inserter(actual),
+         [] (const auto& node) noexcept { return node.GetData(); });
+
+      VerifyTraversal(expected, actual);
    }
+
    SECTION("Post-Order Iteration")
    {
-      const std::vector<std::string> expectedTraversal = { "A", "C", "E", "D", "B" };
+      const std::vector<std::string> expected = { "A", "C", "E", "D", "B" };
 
-      std::size_t index{ 0 };
-
-      auto traversalError{ false };
-
-      auto* startingNode = root.GetFirstChild();
-
-      auto itr = Tree<std::string>::PostOrderIterator{ startingNode };
+      const auto begin = Tree<std::string>::PostOrderIterator{ root.GetFirstChild() };
       const auto end = Tree<std::string>::PostOrderIterator{ };
-      for (; itr != end; itr++, ++index)  //< Using the post-fix operator for more test coverage.
-      {
-         const auto& data = itr->GetData();
-         if (data != expectedTraversal[index])
-         {
-            traversalError = true;
-            break;
-         }
-      }
 
-      REQUIRE(traversalError == false);
-      REQUIRE(index == expectedTraversal.size());
+      std::vector<std::string> actual;
+      std::transform(begin, end, std::back_inserter(actual),
+         [] (const auto& node) noexcept { return node.GetData(); });
+
+      VerifyTraversal(expected, actual);
    }
 }
 
@@ -333,80 +344,50 @@ TEST_CASE("Partial Tree Iteration Corner Cases")
 
    SECTION("Pre-Order Iteration")
    {
-      const std::vector<std::string> expectedTraversal = { "D", "C", "E" };
+      const std::vector<std::string> expected = { "D", "C", "E" };
 
-      std::size_t index{ 0 };
+      const auto* startingNode = root.GetFirstChild()->GetLastChild();
 
-      auto traversalError{ false };
-
-      auto* startingNode = root.GetFirstChild()->GetLastChild();
-
-      auto itr = Tree<std::string>::PreOrderIterator{ startingNode };
+      const auto begin = Tree<std::string>::PreOrderIterator{ startingNode };
       const auto end = Tree<std::string>::PreOrderIterator{ };
-      for (; itr != end; itr++, ++index) //< Using the post-fix operator for more test coverage.
-      {
-         const auto& data = itr->GetData();
-         if (data != expectedTraversal[index])
-         {
-            traversalError = true;
-            break;
-         }
-      }
 
-      REQUIRE(traversalError == false);
-      REQUIRE(index == expectedTraversal.size());
+      std::vector<std::string> actual;
+      std::transform(begin, end, std::back_inserter(actual),
+         [] (const auto& node) noexcept { return node.GetData(); });
+
+      VerifyTraversal(expected, actual);
    }
 
    SECTION("Post-Order Iteration")
    {
-      const std::vector<std::string> expectedTraversal = { "C", "E", "D" };
+      const std::vector<std::string> expected = { "C", "E", "D" };
 
-      std::size_t index{ 0 };
+      const auto* startingNode = root.GetFirstChild()->GetLastChild();
 
-      auto traversalError{ false };
-
-      auto* startingNode = root.GetFirstChild()->GetLastChild();
-
-      auto itr = Tree<std::string>::PostOrderIterator{ startingNode };
+      const auto begin = Tree<std::string>::PostOrderIterator{ startingNode };
       const auto end = Tree<std::string>::PostOrderIterator{ };
-      for (; itr != end; itr++, ++index) //< Using the post-fix operator for more test coverage.
-      {
-         const auto& data = itr->GetData();
-         if (data != expectedTraversal[index])
-         {
-            traversalError = true;
-            break;
-         }
-      }
 
-      REQUIRE(traversalError == false);
-      REQUIRE(index == expectedTraversal.size());
+      std::vector<std::string> actual;
+      std::transform(begin, end, std::back_inserter(actual),
+         [] (const auto& node) noexcept { return node.GetData(); });
+
+      VerifyTraversal(expected, actual);
    }
 
    SECTION("Leaf Iteration")
    {
-      const std::vector<std::string> expectedTraversal = { "C", "E" };
+      const std::vector<std::string> expected = { "C", "E" };
 
-      std::size_t index{ 0 };
+      const auto* startingNode = root.GetFirstChild()->GetLastChild();
 
-      auto traversalError{ false };
-
-      auto* startingNode = root.GetFirstChild()->GetLastChild();
-
-      auto itr = Tree<std::string>::LeafIterator{ startingNode };
+      const auto begin = Tree<std::string>::LeafIterator{ startingNode };
       const auto end = Tree<std::string>::LeafIterator{ };
-      for (; itr != end; itr++, ++index) //< Using the post-fix operator for more test coverage.
-      {
-         const auto& data = itr->GetData();
-         if (data != expectedTraversal[index])
-         {
-            traversalError = true;
-            break;
-         }
-      }
 
-      REQUIRE(traversalError == false);
-      REQUIRE(index == expectedTraversal.size());
+      std::vector<std::string> actual;
+      std::transform(begin, end, std::back_inserter(actual),
+         [] (const auto& node) noexcept { return node.GetData(); });
+
+      VerifyTraversal(expected, actual);
    }
 }
 
@@ -423,7 +404,7 @@ TEST_CASE("STL Typedef Compliance")
    SECTION("Standard Algorithms and Parameter Passing by value_type")
    {
       const auto count = std::count_if(std::begin(tree), std::end(tree),
-         [](Tree<std::string>::value_type node)
+         [] (Tree<std::string>::value_type node)
       {
          return (node.GetData() == "A");
       });
@@ -434,7 +415,7 @@ TEST_CASE("STL Typedef Compliance")
    SECTION("Standard Algorithms and Parameter Passing by reference")
    {
       const auto count = std::count_if(std::begin(tree), std::end(tree),
-         [](Tree<std::string>::reference node)
+         [] (Tree<std::string>::reference node)
       {
          return (node.GetData() == "C");
       });
@@ -445,7 +426,7 @@ TEST_CASE("STL Typedef Compliance")
    SECTION("Standard Algorithms and Parameter Passing by const_reference")
    {
       const auto count = std::count_if(std::begin(tree), std::end(tree),
-         [](Tree<std::string>::const_reference node)
+         [] (Tree<std::string>::const_reference node)
       {
          return (node.GetData() == "D");
       });
@@ -466,50 +447,30 @@ TEST_CASE("Leaf Iterator")
 
    SECTION("Forward Traversal")
    {
-      const std::vector<std::string> expectedTraversal = { "A", "C", "E", "H", };
+      const std::vector<std::string> expected = { "A", "C", "E", "H", };
 
-      std::size_t index{ 0 };
-
-      auto traversalError{ false };
-
-      auto itr = Tree<std::string>::LeafIterator{ &root };
+      const auto begin = Tree<std::string>::LeafIterator{ &root };
       const auto end = Tree<std::string>::LeafIterator{ };
-      for (; itr != end; ++itr)
-      {
-         const auto& data = itr->GetData();
-         if (data != expectedTraversal[index++])
-         {
-            traversalError = true;
-            break;
-         }
-      }
 
-      REQUIRE(traversalError == false);
-      REQUIRE(index == expectedTraversal.size());
+      std::vector<std::string> actual;
+      std::transform(begin, end, std::back_inserter(actual),
+         [] (const auto& node) noexcept { return node.GetData(); });
+
+      VerifyTraversal(expected, actual);
    }
 
    SECTION("Partial Tree Iteration")
    {
-      const std::vector<std::string> expectedTraversal = { "A", "C", "E" };
+      const std::vector<std::string> expected = { "A", "C", "E" };
 
-      std::size_t index{ 0 };
-
-      auto traversalError{ false };
-
-      auto itr = Tree<std::string>::LeafIterator{ root.GetFirstChild() };
+      const auto begin = Tree<std::string>::LeafIterator{ root.GetFirstChild() };
       const auto end = Tree<std::string>::LeafIterator{ };
-      for (; itr != end; ++itr)
-      {
-         const auto& data = itr->GetData();
-         if (data != expectedTraversal[index++])
-         {
-            traversalError = true;
-            break;
-         }
-      }
 
-      REQUIRE(traversalError == false);
-      REQUIRE(index == expectedTraversal.size());
+      std::vector<std::string> actual;
+      std::transform(begin, end, std::back_inserter(actual),
+         [] (const auto& node) noexcept { return node.GetData(); });
+
+      VerifyTraversal(expected, actual);
    }
 
    SECTION("Tree<T>::beginLeaf and Tree<T>::endLeaf")
@@ -518,13 +479,9 @@ TEST_CASE("Leaf Iterator")
 
       std::vector<std::string> actual;
       std::transform(tree.beginLeaf(), tree.endLeaf(), std::back_inserter(actual),
-         [](Tree<std::string>::const_reference node)
-      {
-         return node.GetData();
-      });
+         [] (Tree<std::string>::const_reference node) { return node.GetData(); });
 
-      REQUIRE(actual.size() == expected.size());
-      REQUIRE(std::equal(std::begin(expected), std::end(expected), std::begin(actual)) == true);
+      VerifyTraversal(expected, actual);
    }
 }
 
@@ -544,29 +501,16 @@ TEST_CASE("Sibling Iterator")
 
    SECTION("Forward Traversal")
    {
-      const std::vector<std::string> expectedTraversal =
-         { "B", "D", "A", "C", "F", "G", "E", "H", };
+      const std::vector<std::string> expected = { "B", "D", "A", "C", "F", "G", "E", "H", };
 
-      std::size_t index{ 0 };
-
-      auto traversalError{ false };
-
-      const auto& startingNode = root.GetFirstChild();
-
-      auto itr = decltype(tree)::SiblingIterator{ startingNode };
+      const auto begin = decltype(tree)::SiblingIterator{ root.GetFirstChild() };
       const auto end = decltype(tree)::SiblingIterator{ };
-      for (; itr != end; ++itr, ++index)
-      {
-         const auto& data = itr->GetData();
-         if (data != expectedTraversal[index])
-         {
-            traversalError = true;
-            break;
-         }
-      }
 
-      REQUIRE(traversalError == false);
-      REQUIRE(index == expectedTraversal.size());
+      std::vector<std::string> actual;
+      std::transform(begin, end, std::back_inserter(actual),
+         [] (const auto& node) noexcept { return node.GetData(); });
+
+      VerifyTraversal(expected, actual);
    }
 }
 
@@ -584,25 +528,14 @@ TEST_CASE("Simple Memory Layout Optimization")
       root.PrependChild("A");
 
       tree.OptimizeMemoryLayoutFor<decltype(tree)::LeafIterator>();
-      const auto& actual = tree.GetDataAsVector();
 
+      const auto& actual = tree.GetDataAsVector();
       const std::vector<std::string> expected = { "A", "B", "C", "D", "E" };
 
-      std::size_t index{ 0 };
-
-      auto isVectorOrderingCorrect{ true };
-      for (; index < expected.size(); ++index)
-      {
-         if (expected[index] != actual[index])
-         {
-            isVectorOrderingCorrect = false;
-            break;
-         }
-      }
+      constexpr auto compareSubset{ true };
+      VerifyTraversal(expected, actual, compareSubset);
 
       REQUIRE(tree.GetRoot()->GetData() == "F");
-      REQUIRE(index == expected.size());
-      REQUIRE(isVectorOrderingCorrect == true);
    }
 
    SECTION("Pre-Order Iteration")
@@ -615,25 +548,13 @@ TEST_CASE("Simple Memory Layout Optimization")
       root.PrependChild("A");
 
       tree.OptimizeMemoryLayoutFor<decltype(tree)::PreOrderIterator>();
+      
       const auto& actual = tree.GetDataAsVector();
-
       const std::vector<std::string> expected = { "B", "A", "D", "C", "E" };
 
-      std::size_t index{ 0 };
-
-      auto isVectorOrderingCorrect{ true };
-      for (; index < expected.size(); ++index)
-      {
-         if (expected[index] != actual[index])
-         {
-            isVectorOrderingCorrect = false;
-            break;
-         }
-      }
+      VerifyTraversal(expected, actual);
 
       REQUIRE(tree.GetRoot()->GetData() == "B");
-      REQUIRE(index == expected.size());
-      REQUIRE(isVectorOrderingCorrect == true);
    }
 
    SECTION("Post-Order Iteration")
@@ -646,25 +567,13 @@ TEST_CASE("Simple Memory Layout Optimization")
       root.PrependChild("A");
 
       tree.OptimizeMemoryLayoutFor<decltype(tree)::PostOrderIterator>();
+      
       const auto& actual = tree.GetDataAsVector();
-
       const std::vector<std::string> expected = { "A", "C", "E", "D", "B" };
 
-      std::size_t index{ 0 };
-
-      auto isVectorOrderingCorrect{ true };
-      for (; index < expected.size(); ++index)
-      {
-         if (expected[index] != actual[index])
-         {
-            isVectorOrderingCorrect = false;
-            break;
-         }
-      }
+      VerifyTraversal(expected, actual);
 
       REQUIRE(tree.GetRoot()->GetData() == "B");
-      REQUIRE(index == expected.size());
-      REQUIRE(isVectorOrderingCorrect == true);
    }
 }
 
@@ -683,35 +592,13 @@ TEST_CASE("More Complex Memory Layout Optimization")
       using IteratorType = decltype(tree)::PreOrderIterator;
 
       tree.OptimizeMemoryLayoutFor<IteratorType>();
+
       const auto& actual = tree.GetDataAsVector();
+      const std::vector<std::string> expected =  { "F", "B", "A", "D", "C", "E", "G", "I", "H" };
 
-      const std::vector<std::string> expected =
-         { "F", "B", "A", "D", "C", "E", "G", "I", "H" };
-
-      const auto isVectorOrderingCorrect =
-           std::equal(std::begin(actual), std::end(actual), std::begin(expected));
-
-      REQUIRE(isVectorOrderingCorrect == true);
-
-      std::size_t index{ 0 };
-
-      auto isTraversalOrderCorrect{ true };
-
-      auto itr = IteratorType{ tree.GetRoot() };
-      const auto end = IteratorType{ };
-      for (; itr != end; ++itr, ++index)
-      {
-         const auto& data = itr->GetData();
-         if (data != expected[index])
-         {
-            isTraversalOrderCorrect = false;
-            break;
-         }
-      }
-
+      VerifyTraversal(expected, actual);
+      
       REQUIRE(tree.GetRoot()->GetData() == "F");
-      REQUIRE(index == expected.size());
-      REQUIRE(isTraversalOrderCorrect == true);
    }
 
    SECTION("Post-Order Iteration")
@@ -719,35 +606,13 @@ TEST_CASE("More Complex Memory Layout Optimization")
       using IteratorType = decltype(tree)::PostOrderIterator;
 
       tree.OptimizeMemoryLayoutFor<IteratorType>();
+
       const auto& actual = tree.GetDataAsVector();
+      const std::vector<std::string> expected = { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
 
-      const std::vector<std::string> expected =
-         { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
-
-      const auto isVectorOrderingCorrect =
-         std::equal(std::begin(actual), std::end(actual), std::begin(expected));
-
-      REQUIRE(isVectorOrderingCorrect == true);
-
-      std::size_t index{ 0 };
-
-      auto isTraversalOrderCorrect{ true };
-
-      auto itr = IteratorType{ tree.GetRoot() };
-      const auto end = IteratorType{ };
-      for (; itr != end; ++itr, ++index)
-      {
-         const auto& data = itr->GetData();
-         if (data != expected[index])
-         {
-            isTraversalOrderCorrect = false;
-            break;
-         }
-      }
+      VerifyTraversal(expected, actual);
 
       REQUIRE(tree.GetRoot()->GetData() == "F");
-      REQUIRE(index == expected.size());
-      REQUIRE(isTraversalOrderCorrect == true);
    }
 
    SECTION("Leaf Iteration")
@@ -759,225 +624,27 @@ TEST_CASE("More Complex Memory Layout Optimization")
 
       const std::vector<std::string> expected = { "A", "C", "E", "H" };
 
-      auto isVectorOrderingCorrect{ true };
-      for (std::size_t index{ 0 }; index < expected.size(); ++index)
-      {
-         if (expected[index] != actual[index])
-         {
-            isVectorOrderingCorrect = false;
-            break;
-         }
-      }
-
-      REQUIRE(isVectorOrderingCorrect == true);
-
-      std::size_t index{ 0 };
-
-      auto isTraversalOrderCorrect{ true };
-
-      auto itr = IteratorType{ tree.GetRoot() };
-      const auto end = IteratorType{ };
-      for (; itr != end; ++itr)
-      {
-         const auto& data = itr->GetData();
-         if (data != expected[index++])
-         {
-            isTraversalOrderCorrect = false;
-            break;
-         }
-      }
+      constexpr auto compareSubset{ true };
+      VerifyTraversal(expected, actual, compareSubset);
 
       REQUIRE(tree.GetRoot()->GetData() == "F");
-      REQUIRE(index == expected.size());
-      REQUIRE(isTraversalOrderCorrect == true);
+   }
+
+   SECTION("Cycling Through Layouts")
+   {
+      tree.OptimizeMemoryLayoutFor<decltype(tree)::LeafIterator>();
+      tree.OptimizeMemoryLayoutFor<decltype(tree)::PostOrderIterator>();
+      tree.OptimizeMemoryLayoutFor<decltype(tree)::LeafIterator>();
+      tree.OptimizeMemoryLayoutFor<decltype(tree)::PreOrderIterator>();
+
+      const auto& actual = tree.GetDataAsVector();
+      const std::vector<std::string> expected = { "F", "B", "A", "D", "C", "E", "G", "I", "H" };
+
+      VerifyTraversal(expected, actual);
+
+      REQUIRE(tree.GetRoot()->GetData() == "F");
    }
 }
-
-#if 0
-
-TEST_CASE("Sorting")
-{
-   SECTION("One Generation of Children")
-   {
-      Tree<std::string> tree{ "X" };
-      auto& head = *tree.GetHead();
-      tree.AppendChild("B", head);
-      tree.AppendChild("D", head);
-      tree.AppendChild("A", head);
-      tree.AppendChild("C", head);
-      tree.AppendChild("F", head);
-      tree.AppendChild("G", head);
-      tree.AppendChild("E", head);
-      tree.AppendChild("H", head);
-
-      const auto comparator =
-         [](Tree<std::string>::const_reference lhs, Tree<std::string>::const_reference rhs) noexcept
-      {
-         return (lhs < rhs);
-      };
-
-      tree.SortChildren(head, comparator);
-
-      const std::vector<std::string> expectedTraversal =
-         { "A", "B", "C", "D", "E", "F", "G", "H", };
-
-      int index = 0;
-
-      bool traversalError = false;
-
-      auto itr = Tree<std::string>::LeafIterator(*tree.GetHead());
-      const auto end = Tree<std::string>::LeafIterator{ };
-      for (; itr != end; itr++)  ///< Using the post-fix operator for more test coverage.
-      {
-         const auto& data = itr->GetData();
-         if (data != expectedTraversal[index++])
-         {
-            traversalError = true;
-            break;
-         }
-      }
-
-      REQUIRE(traversalError == false);
-      REQUIRE(index == expectedTraversal.size());
-   }
-
-   SECTION("An Entire Tree")
-   {
-      Tree<int> tree{ 999 };
-      auto& head = *tree.GetHead();
-      auto& firstChild = tree.AppendChild(634, head);
-      tree.AppendChild(34, firstChild);
-      tree.AppendChild(13, firstChild);
-      tree.AppendChild(89, firstChild);
-      tree.AppendChild(3, firstChild);
-      tree.AppendChild(1, firstChild);
-      tree.AppendChild(0, firstChild);
-      tree.AppendChild(-5, firstChild);
-
-      tree.AppendChild(375, head);
-      tree.AppendChild(173, head);
-      tree.AppendChild(128, head);
-
-      const auto sizeBeforeSort = tree.Size();
-
-      // Sort:
-      std::for_each(std::begin(tree), std::end(tree),
-         [&](auto& node) noexcept
-      {
-         tree.SortChildren(node,
-            [] (auto& lhs, auto& rhs) noexcept
-         {
-            return lhs < rhs;
-         });
-      });
-
-      const auto sizeAfterSort = tree.Size();
-
-      bool sortingError = false;
-      int lastItem = -999;
-
-      // Verify:
-      std::for_each(std::begin(tree), std::end(tree),
-         [&](Tree<int>::const_reference node) noexcept
-      {
-         if (!node.HasChildren())
-         {
-            return;
-         }
-
-         auto child = node.GetFirstChild();
-         while (child)
-         {
-            if (child->GetData() < lastItem)
-            {
-               sortingError = true;
-               lastItem = child->GetData();
-            }
-
-            child = child->GetNextSibling();
-         }
-      });
-
-      REQUIRE(sizeBeforeSort == sizeAfterSort);
-      REQUIRE(sortingError == false);
-   }
-}
-
-#if 0
-
-TEST_CASE("Node Copying")
-{
-   TreeNode<std::string> node{ "Node" };
-
-   const auto copy = node;
-
-   REQUIRE(node.GetData() == copy.GetData());
-}
-
-TEST_CASE("Tree Copying")
-{
-   Tree<std::string> tree{ "F" };
-
-   auto& nodeF = *tree.GetHead();
-   auto& nodeB = tree.AppendChild("B", nodeF);
-   auto& nodeA = tree.AppendChild("A", nodeB);
-   auto& nodeD = tree.AppendChild("D", nodeB);
-   auto& nodeC = tree.AppendChild("C", nodeD);
-   auto& nodeE = tree.AppendChild("E", nodeD);
-   auto& nodeG = tree.AppendChild("G", nodeF);
-   auto& nodeI = tree.AppendChild("I", nodeG);
-   auto& nodeH = tree.AppendChild("H", nodeI);
-
-   const auto copy = tree;
-
-   REQUIRE(tree.Size() == copy.Size());
-
-   SECTION("Pre-order Verification")
-   {
-      const std::vector<std::string> expectedTraversal =
-      { "F", "B", "A", "D", "C", "E", "G", "I", "H" };
-
-      int index = 0;
-
-      bool traversalError = false;
-      for (auto itr = copy.beginPreOrder(); itr != copy.endPreOrder(); ++itr)
-      {
-         const auto& data = itr->GetData();
-         if (data != expectedTraversal[index++])
-         {
-            traversalError = true;
-            break;
-         }
-      }
-
-      REQUIRE(traversalError == false);
-      REQUIRE(index == expectedTraversal.size());
-   }
-
-   SECTION("Post-order Verification")
-   {
-      const std::vector<std::string> expectedTraversal =
-      { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
-
-      int index = 0;
-
-      bool traversalError = false;
-      for (auto itr = copy.begin(); itr != copy.end(); ++itr)
-      {
-         const auto& data = itr->GetData();
-         if (data != expectedTraversal[index++])
-         {
-            traversalError = true;
-            break;
-         }
-      }
-
-      REQUIRE(traversalError == false);
-      REQUIRE(index == expectedTraversal.size());
-   }
-}
-
-#endif
 
 namespace
 {
@@ -1009,45 +676,13 @@ TEST_CASE("Tree and Node Destruction")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& nodeF = *tree.GetHead();
-         auto& nodeB = tree.AppendChild("B", nodeF);
-         auto& nodeA = tree.AppendChild("A", nodeB);
-         auto& nodeD = tree.AppendChild("D", nodeB);
-         auto& nodeC = tree.AppendChild("C", nodeD);
-         auto& nodeE = tree.AppendChild("E", nodeD);
-         auto& nodeG = tree.AppendChild("G", nodeF);
-         auto& nodeI = tree.AppendChild("I", nodeG);
-         auto& nodeH = tree.AppendChild("H", nodeI);
+         auto& root = *tree.GetRoot();
 
-         // Reset the destruction count, so that we don't accidentally count any destructor calls
-         // that took place during the construction of the tree.
-         DESTRUCTION_COUNT = 0u;
+         root.AppendChild("B")->AppendChild("A");
+         root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+         root.GetFirstChild()->AppendChild("D")->AppendChild("C");
+         root.GetFirstChild()->GetLastChild()->AppendChild("E");
 
-         REQUIRE(tree.Size() == CONSTRUCTION_COUNT);
-      }
-
-      REQUIRE(CONSTRUCTION_COUNT == DESTRUCTION_COUNT);
-   }
-
-   SECTION("Depth of One")
-   {
-      CONSTRUCTION_COUNT = 0u;
-
-      {
-         Tree<VerboseNode> tree{ "0" };
-         auto& head = *tree.GetHead();
-         tree.AppendChild("1", head);
-         tree.AppendChild("2", head);
-         tree.AppendChild("3", head);
-         tree.AppendChild("4", head);
-         tree.AppendChild("5", head);
-         tree.AppendChild("6", head);
-         tree.AppendChild("7", head);
-         tree.AppendChild("8", head);
-         tree.AppendChild("9", head);
-
-         // Reset the destruction count, so that we don't accidentally count any destructor calls
-         // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0u;
 
          REQUIRE(tree.Size() == CONSTRUCTION_COUNT);
@@ -1057,60 +692,43 @@ TEST_CASE("Tree and Node Destruction")
    }
 }
 
+#if 0
+
 TEST_CASE("Selectively Delecting Nodes")
 {
-   const auto VerifyTraversal =
-      [](const Tree<VerboseNode>& tree, const std::vector<std::string>& expected) noexcept
-   {
-      int index = 0;
-
-      bool traversalError = false;
-      for (auto itr = std::begin(tree); itr != std::end(tree); ++itr)
-      {
-         const auto& data = itr->GetData().m_data;
-         if (data != expected[index++])
-         {
-            traversalError = true;
-            break;
-         }
-      }
-
-      REQUIRE(expected.size() == index);
-
-      return !traversalError;
-   };
+   CONSTRUCTION_COUNT = 0u;
 
    SECTION("Removing One of Many Siblings")
    {
-      CONSTRUCTION_COUNT = 0u;
-
       {
          Tree<VerboseNode> tree{ "0" };
-         auto& head = *tree.GetHead();
-         tree.AppendChild("1", head);
-         tree.AppendChild("2", head);
-         tree.AppendChild("3", head);
-         tree.AppendChild("4", head);
-         tree.AppendChild("5", head);
-         tree.AppendChild("6", head);
-         tree.AppendChild("7", head);
-         tree.AppendChild("8", head);
-         tree.AppendChild("9", head);
+         auto& root = *tree.GetRoot();
 
-         // Reset the destruction count, so that we don't accidentally count any destructor calls
-         // that took place during the construction of the tree.
+         root.AppendChild("1");
+         root.AppendChild("2");
+         root.AppendChild("3");
+         root.AppendChild("4");
+         root.AppendChild("5");
+         root.AppendChild("6");
+         root.AppendChild("7");
+         root.AppendChild("8");
+         root.AppendChild("9");
+
          DESTRUCTION_COUNT = 0u;
 
-         auto doomedNode = tree.GetHead()->GetFirstChild()->GetNextSibling()->GetNextSibling();
+         auto* doomedNode = tree.GetHead()->GetFirstChild()->GetNextSibling()->GetNextSibling();
          REQUIRE(doomedNode->GetData().m_data == "3");
 
-         tree.Detach(doomedNode);
+         //tree.Detach(doomedNode);
+         doomedNode->Detach();
 
-         const std::vector<std::string> expectedTraversal =
-            { "1", "2", "4", "5", "6", "7", "8", "9", "0" };
+         const std::vector<std::string> expected = { "1", "2", "4", "5", "6", "7", "8", "9", "0" };
 
-         const bool errorFree = VerifyTraversal(tree, expectedTraversal);
-         REQUIRE(errorFree == true);
+         std::vector<std::string> actual;
+         std::transform(std::begin(tree), std::end(end), std::back_inserter(actual),
+            [] (const auto& node) noexcept { return node.GetData(); });
+
+         VerifyTraversal(expected, actual);
 
          REQUIRE(tree.Size() == CONSTRUCTION_COUNT);
       }
@@ -1120,20 +738,16 @@ TEST_CASE("Selectively Delecting Nodes")
 
    SECTION("Removing a Leaf Node Without Siblings")
    {
-      CONSTRUCTION_COUNT = 0u;
       std::size_t treeSize = 0u;
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& nodeF = *tree.GetHead();
-         auto& nodeB = tree.AppendChild("B", nodeF);
-         auto& nodeA = tree.AppendChild("A", nodeB);
-         auto& nodeD = tree.AppendChild("D", nodeB);
-         auto& nodeC = tree.AppendChild("C", nodeD);
-         auto& nodeE = tree.AppendChild("E", nodeD);
-         auto& nodeG = tree.AppendChild("G", nodeF);
-         auto& nodeI = tree.AppendChild("I", nodeG);
-         auto& nodeH = tree.AppendChild("H", nodeI);
+         auto& root = *tree.GetRoot();
+
+         root.AppendChild("B")->AppendChild("A");
+         root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+         root.GetFirstChild()->AppendChild("D")->AppendChild("C");
+         root.GetFirstChild()->GetLastChild()->AppendChild("E");
 
          treeSize = tree.Size();
 
@@ -1141,7 +755,7 @@ TEST_CASE("Selectively Delecting Nodes")
          // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0u;
 
-         auto doomedNode = tree.GetHead()->GetLastChild()->GetLastChild()->GetFirstChild();
+         auto* doomedNode = tree.GetHead()->GetLastChild()->GetLastChild()->GetFirstChild();
          REQUIRE(doomedNode != nullptr);
          REQUIRE(doomedNode->GetData().m_data == "H");
          REQUIRE(doomedNode->GetPreviousSibling() == nullptr);
@@ -1152,21 +766,8 @@ TEST_CASE("Selectively Delecting Nodes")
          const auto parentOfTarget = doomedNode->GetParent();
          const auto parentsChildCount = doomedNode->GetChildCount();
 
-         // Before removing the node from the tree, there should be 4 references to it:
-         //    * Once in the underlying vector.
-         //    * Once here as a local variable.
-         //    * Once as the child-node of "D"
-         //    * Once as the sibling-node of "C".
-         REQUIRE(doomedNode.use_count() == 4);
-
-         tree.Detach(doomedNode);
-
-         // After removing the node from the tree, there should be 2 references to it:
-         //    * Once in the underlying vector.
-         //    * Once here as a local variable.
-         REQUIRE(doomedNode.use_count() == 2);
-
-         doomedNode.~shared_ptr();
+         //tree.Detach(doomedNode);
+         doomedNode->Detach();
 
          // After destroying the local copy, the only remaining copy should be the one in the
          // underlying vector:
@@ -1174,11 +775,13 @@ TEST_CASE("Selectively Delecting Nodes")
          REQUIRE(underlyingVector.size() > 0);
          REQUIRE(underlyingVector.back().use_count() == 1);
 
-         const std::vector<std::string> expectedTraversal =
-            { "A", "C", "E", "D", "B", "I", "G", "F" };
+         const std::vector<std::string> expected = { "A", "C", "E", "D", "B", "I", "G", "F" };
 
-         const bool errorFree = VerifyTraversal(tree, expectedTraversal);
-         REQUIRE(errorFree == true);
+         std::vector<std::string> actual;
+         std::transform(std::begin(tree), std::end(end), std::back_inserter(actual),
+            [] (const auto& node) noexcept { return node.GetData(); });
+
+         VerifyTraversal(expected, actual);
       }
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
@@ -1191,15 +794,12 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& nodeF = *tree.GetHead();
-         auto& nodeB = tree.AppendChild("B", nodeF);
-         auto& nodeA = tree.AppendChild("A", nodeB);
-         auto& nodeD = tree.AppendChild("D", nodeB);
-         auto& nodeC = tree.AppendChild("C", nodeD);
-         auto& nodeE = tree.AppendChild("E", nodeD);
-         auto& nodeG = tree.AppendChild("G", nodeF);
-         auto& nodeI = tree.AppendChild("I", nodeG);
-         auto& nodeH = tree.AppendChild("H", nodeI);
+         auto& root = *tree.GetRoot();
+
+         root.AppendChild("B")->AppendChild("A");
+         root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+         root.GetFirstChild()->AppendChild("D")->AppendChild("C");
+         root.GetFirstChild()->GetLastChild()->AppendChild("E");
 
          treeSize = tree.Size();
 
@@ -1275,10 +875,6 @@ TEST_CASE("Selectively Delecting Nodes")
       REQUIRE(DESTRUCTION_COUNT == treeSize);
    }
 
-#endif
-
-#if 0
-
    SECTION("Removing a Leaf Node with A Right Sibling")
    {
       CONSTRUCTION_COUNT = 0;
@@ -1286,15 +882,12 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& nodeF = *tree.GetHead();
-         auto& nodeB = tree.AppendChild("B", nodeF);
-         auto& nodeA = tree.AppendChild("A", nodeB);
-         auto& nodeD = tree.AppendChild("D", nodeB);
-         auto& nodeC = tree.AppendChild("C", nodeD);
-         auto& nodeE = tree.AppendChild("E", nodeD);
-         auto& nodeG = tree.AppendChild("G", nodeF);
-         auto& nodeI = tree.AppendChild("I", nodeG);
-         auto& nodeH = tree.AppendChild("H", nodeI);
+         auto& root = *tree.GetRoot();
+
+         root.AppendChild("B")->AppendChild("A");
+         root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+         root.GetFirstChild()->AppendChild("D")->AppendChild("C");
+         root.GetFirstChild()->GetLastChild()->AppendChild("E");
 
          treeSize = tree.Size();
 
@@ -1336,15 +929,12 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& nodeF = *tree.GetHead();
-         auto& nodeB = tree.AppendChild("B", nodeF);
-         auto& nodeA = tree.AppendChild("A", nodeB);
-         auto& nodeD = tree.AppendChild("D", nodeB);
-         auto& nodeC = tree.AppendChild("C", nodeD);
-         auto& nodeE = tree.AppendChild("E", nodeD);
-         auto& nodeG = tree.AppendChild("G", nodeF);
-         auto& nodeI = tree.AppendChild("I", nodeG);
-         auto& nodeH = tree.AppendChild("H", nodeI);
+         auto& root = *tree.GetRoot();
+
+         root.AppendChild("B")->AppendChild("A");
+         root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+         root.GetFirstChild()->AppendChild("D")->AppendChild("C");
+         root.GetFirstChild()->GetLastChild()->AppendChild("E");
 
          treeSize = tree.Size();
 
@@ -1387,15 +977,12 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& nodeF = *tree.GetHead();
-         auto& nodeB = tree.AppendChild("B", nodeF);
-         auto& nodeA = tree.AppendChild("A", nodeB);
-         auto& nodeD = tree.AppendChild("D", nodeB);
-         auto& nodeC = tree.AppendChild("C", nodeD);
-         auto& nodeE = tree.AppendChild("E", nodeD);
-         auto& nodeG = tree.AppendChild("G", nodeF);
-         auto& nodeI = tree.AppendChild("I", nodeG);
-         auto& nodeH = tree.AppendChild("H", nodeI);
+         auto& root = *tree.GetRoot();
+
+         root.AppendChild("B")->AppendChild("A");
+         root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+         root.GetFirstChild()->AppendChild("D")->AppendChild("C");
+         root.GetFirstChild()->GetLastChild()->AppendChild("E");
 
          treeSize = tree.Size();
 
@@ -1437,15 +1024,12 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& nodeF = *tree.GetHead();
-         auto& nodeB = tree.AppendChild("B", nodeF);
-         auto& nodeA = tree.AppendChild("A", nodeB);
-         auto& nodeD = tree.AppendChild("D", nodeB);
-         auto& nodeC = tree.AppendChild("C", nodeD);
-         auto& nodeE = tree.AppendChild("E", nodeD);
-         auto& nodeG = tree.AppendChild("G", nodeF);
-         auto& nodeI = tree.AppendChild("I", nodeG);
-         auto& nodeH = tree.AppendChild("H", nodeI);
+         auto& root = *tree.GetRoot();
+
+         root.AppendChild("B")->AppendChild("A");
+         root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+         root.GetFirstChild()->AppendChild("D")->AppendChild("C");
+         root.GetFirstChild()->GetLastChild()->AppendChild("E");
 
          treeSize = tree.Size();
 
@@ -1527,6 +1111,114 @@ TEST_CASE("Selectively Delecting Nodes")
       }
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
+   }
+}
+
+TEST_CASE("Sorting")
+{
+   SECTION("One Generation of Children")
+   {
+      Tree<std::string> tree{ "X" };
+      auto& head = *tree.GetHead();
+      tree.AppendChild("B", head);
+      tree.AppendChild("D", head);
+      tree.AppendChild("A", head);
+      tree.AppendChild("C", head);
+      tree.AppendChild("F", head);
+      tree.AppendChild("G", head);
+      tree.AppendChild("E", head);
+      tree.AppendChild("H", head);
+
+      const auto comparator =
+         [](Tree<std::string>::const_reference lhs, Tree<std::string>::const_reference rhs) noexcept
+      {
+         return (lhs < rhs);
+      };
+
+      tree.SortChildren(head, comparator);
+
+      const std::vector<std::string> expectedTraversal =
+      { "A", "B", "C", "D", "E", "F", "G", "H", };
+
+      int index = 0;
+
+      bool traversalError = false;
+
+      auto itr = Tree<std::string>::LeafIterator(*tree.GetHead());
+      const auto end = Tree<std::string>::LeafIterator{};
+      for (; itr != end; itr++)  ///< Using the post-fix operator for more test coverage.
+      {
+         const auto& data = itr->GetData();
+         if (data != expectedTraversal[index++])
+         {
+            traversalError = true;
+            break;
+         }
+      }
+
+      REQUIRE(traversalError == false);
+      REQUIRE(index == expectedTraversal.size());
+   }
+
+   SECTION("An Entire Tree")
+   {
+      Tree<int> tree{ 999 };
+      auto& head = *tree.GetHead();
+      auto& firstChild = tree.AppendChild(634, head);
+      tree.AppendChild(34, firstChild);
+      tree.AppendChild(13, firstChild);
+      tree.AppendChild(89, firstChild);
+      tree.AppendChild(3, firstChild);
+      tree.AppendChild(1, firstChild);
+      tree.AppendChild(0, firstChild);
+      tree.AppendChild(-5, firstChild);
+
+      tree.AppendChild(375, head);
+      tree.AppendChild(173, head);
+      tree.AppendChild(128, head);
+
+      const auto sizeBeforeSort = tree.Size();
+
+      // Sort:
+      std::for_each(std::begin(tree), std::end(tree),
+         [&](auto& node) noexcept
+      {
+         tree.SortChildren(node,
+            [](auto& lhs, auto& rhs) noexcept
+         {
+            return lhs < rhs;
+         });
+      });
+
+      const auto sizeAfterSort = tree.Size();
+
+      bool sortingError = false;
+      int lastItem = -999;
+
+      // Verify:
+      std::for_each(std::begin(tree), std::end(tree),
+         [&](Tree<int>::const_reference node) noexcept
+      {
+         if (!node.HasChildren())
+         {
+            return;
+         }
+
+         auto child = node.GetFirstChild();
+         while (child)
+         {
+            if (child->GetData() < lastItem)
+            {
+               sortingError = true;
+               lastItem = child->GetData();
+            }
+
+            child = child->GetNextSibling();
+         }
+      });
+
+      REQUIRE(sizeBeforeSort == sizeAfterSort);
+      REQUIRE(sortingError == false);
    }
 }
 
