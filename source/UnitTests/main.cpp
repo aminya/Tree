@@ -548,7 +548,7 @@ TEST_CASE("Simple Memory Layout Optimization")
       root.PrependChild("A");
 
       tree.OptimizeMemoryLayoutFor<decltype(tree)::PreOrderIterator>();
-      
+
       const auto& actual = tree.GetDataAsVector();
       const std::vector<std::string> expected = { "B", "A", "D", "C", "E" };
 
@@ -567,7 +567,7 @@ TEST_CASE("Simple Memory Layout Optimization")
       root.PrependChild("A");
 
       tree.OptimizeMemoryLayoutFor<decltype(tree)::PostOrderIterator>();
-      
+
       const auto& actual = tree.GetDataAsVector();
       const std::vector<std::string> expected = { "A", "C", "E", "D", "B" };
 
@@ -597,7 +597,7 @@ TEST_CASE("More Complex Memory Layout Optimization")
       const std::vector<std::string> expected =  { "F", "B", "A", "D", "C", "E", "G", "I", "H" };
 
       VerifyTraversal(expected, actual);
-      
+
       REQUIRE(tree.GetRoot()->GetData() == "F");
    }
 
@@ -692,8 +692,6 @@ TEST_CASE("Tree and Node Destruction")
    }
 }
 
-#if 0
-
 TEST_CASE("Selectively Delecting Nodes")
 {
    CONSTRUCTION_COUNT = 0u;
@@ -716,7 +714,7 @@ TEST_CASE("Selectively Delecting Nodes")
 
          DESTRUCTION_COUNT = 0u;
 
-         auto* doomedNode = tree.GetHead()->GetFirstChild()->GetNextSibling()->GetNextSibling();
+         auto* doomedNode = root.GetFirstChild()->GetNextSibling()->GetNextSibling();
          REQUIRE(doomedNode->GetData().m_data == "3");
 
          //tree.Detach(doomedNode);
@@ -725,8 +723,8 @@ TEST_CASE("Selectively Delecting Nodes")
          const std::vector<std::string> expected = { "1", "2", "4", "5", "6", "7", "8", "9", "0" };
 
          std::vector<std::string> actual;
-         std::transform(std::begin(tree), std::end(end), std::back_inserter(actual),
-            [] (const auto& node) noexcept { return node.GetData(); });
+         std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
+            [](const auto& node) noexcept { return node.GetData().m_data; });
 
          VerifyTraversal(expected, actual);
 
@@ -751,11 +749,9 @@ TEST_CASE("Selectively Delecting Nodes")
 
          treeSize = tree.Size();
 
-         // Reset the destruction count, so that we don't accidentally count any destructor calls
-         // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0u;
 
-         auto* doomedNode = tree.GetHead()->GetLastChild()->GetLastChild()->GetFirstChild();
+         auto* doomedNode = tree.GetRoot()->GetLastChild()->GetLastChild()->GetFirstChild();
          REQUIRE(doomedNode != nullptr);
          REQUIRE(doomedNode->GetData().m_data == "H");
          REQUIRE(doomedNode->GetPreviousSibling() == nullptr);
@@ -763,23 +759,13 @@ TEST_CASE("Selectively Delecting Nodes")
          REQUIRE(doomedNode->GetFirstChild() == nullptr);
          REQUIRE(doomedNode->GetLastChild() == nullptr);
 
-         const auto parentOfTarget = doomedNode->GetParent();
-         const auto parentsChildCount = doomedNode->GetChildCount();
-
-         //tree.Detach(doomedNode);
          doomedNode->Detach();
-
-         // After destroying the local copy, the only remaining copy should be the one in the
-         // underlying vector:
-         const auto& underlyingVector = tree.GetNodesAsVector();
-         REQUIRE(underlyingVector.size() > 0);
-         REQUIRE(underlyingVector.back().use_count() == 1);
 
          const std::vector<std::string> expected = { "A", "C", "E", "D", "B", "I", "G", "F" };
 
          std::vector<std::string> actual;
-         std::transform(std::begin(tree), std::end(end), std::back_inserter(actual),
-            [] (const auto& node) noexcept { return node.GetData(); });
+         std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
+            [](const auto& node) noexcept { return node.GetData().m_data; });
 
          VerifyTraversal(expected, actual);
       }
@@ -803,11 +789,9 @@ TEST_CASE("Selectively Delecting Nodes")
 
          treeSize = tree.Size();
 
-         // Reset the destruction count, so that we don't accidentally count any destructor calls
-         // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0;
 
-         auto doomedNode = tree.GetHead()->GetFirstChild()->GetLastChild()->GetLastChild();
+         auto doomedNode = tree.GetRoot()->GetFirstChild()->GetLastChild()->GetLastChild();
          REQUIRE(doomedNode != nullptr);
          REQUIRE(doomedNode->GetData().m_data == "E");
          REQUIRE(doomedNode->GetPreviousSibling() != nullptr);
@@ -815,61 +799,15 @@ TEST_CASE("Selectively Delecting Nodes")
          REQUIRE(doomedNode->GetFirstChild() == nullptr);
          REQUIRE(doomedNode->GetLastChild() == nullptr);
 
-         const auto parentOfTarget = doomedNode->GetParent();
-         const auto parentsChildCount = parentOfTarget->GetChildCount();
+         doomedNode->Detach();
 
-         // Before removing the node from the tree, there should be 4 references to it:
-         //    * Once in the underlying vector.
-         //    * Once here as a local variable.
-         //    * Once as the child-node of "D"
-         //    * Once as the sibling-node of "C".
-         REQUIRE(doomedNode.use_count() == 4);
+         const std::vector<std::string> expected = { "A", "C", "D", "B", "H", "I", "G", "F" };
 
-         tree.Detach(doomedNode);
+         std::vector<std::string> actual;
+         std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
+            [](const auto& node) noexcept { return node.GetData().m_data; });
 
-         // After removing the node from the tree, there should be 2 references to it:
-         //    * Once in the underlying vector.
-         //    * Once here as a local variable.
-         REQUIRE(doomedNode.use_count() == 2);
-
-         doomedNode.~shared_ptr();
-
-         const auto& underlyingVector = tree.GetNodesAsVector();
-
-         auto itr = std::find_if(std::begin(underlyingVector), std::end(underlyingVector),
-            [](const auto& node) noexcept
-         {
-            return node->GetData().m_data == "E";
-         });
-
-         if (itr != std::end(underlyingVector))
-         {
-            // After removing the targeted node from the tree, it should have a reference count
-            // of 1, since it should only exist in the underlying vector:
-            REQUIRE(itr->use_count() == 1);
-         }
-
-         itr = std::find_if(std::begin(underlyingVector), std::end(underlyingVector),
-            [](const auto& node) noexcept
-         {
-            return node->GetData().m_data == "C";
-         });
-
-         if (itr != std::end(underlyingVector))
-         {
-            // After removing the node "E" from the tree, there should only be 3 references
-            // to its sibling node "C":
-            //    * Once in the underlying vector.
-            //    * Once as the first child of "D"
-            //    * Once as the last child of "D"
-            REQUIRE(itr->use_count() == 3);
-         }
-
-         const std::vector<std::string> expectedTraversal =
-            { "A", "C", "D", "B", "H", "I", "G", "F" };
-
-         const bool errorFree = VerifyTraversal(tree, expectedTraversal);
-         REQUIRE(errorFree == true);
+         VerifyTraversal(expected, actual);
       }
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
@@ -891,32 +829,25 @@ TEST_CASE("Selectively Delecting Nodes")
 
          treeSize = tree.Size();
 
-         // Reset the destruction count, so that we don't accidentally count any destructor calls
-         // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0;
 
-         const auto* targetNode = tree.GetHead()->GetFirstChild()->GetLastChild()->GetFirstChild();
-         REQUIRE(targetNode != nullptr);
-         REQUIRE(targetNode->GetData().m_data == "C");
-         REQUIRE(targetNode->GetPreviousSibling() == nullptr);
-         REQUIRE(targetNode->GetNextSibling() != nullptr);
-         REQUIRE(targetNode->GetFirstChild() == nullptr);
-         REQUIRE(targetNode->GetLastChild() == nullptr);
+         auto* doomedNode = tree.GetRoot()->GetFirstChild()->GetLastChild()->GetFirstChild();
+         REQUIRE(doomedNode != nullptr);
+         REQUIRE(doomedNode->GetData().m_data == "C");
+         REQUIRE(doomedNode->GetPreviousSibling() == nullptr);
+         REQUIRE(doomedNode->GetNextSibling() != nullptr);
+         REQUIRE(doomedNode->GetFirstChild() == nullptr);
+         REQUIRE(doomedNode->GetLastChild() == nullptr);
 
-         const auto parentOfTarget = targetNode->GetParent();
-         const auto parentsChildCount = parentOfTarget->GetChildCount();
+         doomedNode->Detach();
 
-         delete targetNode;
+         const std::vector<std::string> expected = { "A", "E", "D", "B", "H", "I", "G", "F" };
 
-         REQUIRE(DESTRUCTION_COUNT == 1);
-         REQUIRE(parentOfTarget->GetChildCount() == parentsChildCount - DESTRUCTION_COUNT);
-         REQUIRE(tree.Size() == treeSize - DESTRUCTION_COUNT);
+         std::vector<std::string> actual;
+         std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
+            [] (const auto& node) noexcept { return node.GetData().m_data; });
 
-         const std::vector<std::string> expectedTraversal =
-         { "A", "E", "D", "B", "H", "I", "G", "F" };
-
-         const bool errorFree = VerifyTraversal(tree, expectedTraversal);
-         REQUIRE(errorFree == true);
+         VerifyTraversal(expected, actual);
       }
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
@@ -934,37 +865,35 @@ TEST_CASE("Selectively Delecting Nodes")
          root.AppendChild("B")->AppendChild("A");
          root.AppendChild("G")->AppendChild("I")->AppendChild("H");
          root.GetFirstChild()->AppendChild("D")->AppendChild("C");
+         root.GetFirstChild()->GetLastChild()->AppendChild("X");
          root.GetFirstChild()->GetLastChild()->AppendChild("E");
 
          treeSize = tree.Size();
 
-         // Reset the destruction count, so that we don't accidentally count any destructor calls
-         // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0;
 
-         const auto* targetNode =
-            tree.GetHead()->GetFirstChild()->GetLastChild()->GetFirstChild()->GetNextSibling();
-         REQUIRE(targetNode != nullptr);
-         REQUIRE(targetNode->GetData().m_data == "X");
-         REQUIRE(targetNode->GetPreviousSibling() != nullptr);
-         REQUIRE(targetNode->GetNextSibling() != nullptr);
-         REQUIRE(targetNode->GetFirstChild() == nullptr);
-         REQUIRE(targetNode->GetLastChild() == nullptr);
+         auto* doomedNode =
+            tree.GetRoot()->GetFirstChild()->GetLastChild()->GetFirstChild()->GetNextSibling();
 
-         const auto parentOfTarget = targetNode->GetParent();
+         REQUIRE(doomedNode != nullptr);
+         REQUIRE(doomedNode->GetData().m_data == "X");
+         REQUIRE(doomedNode->GetPreviousSibling() != nullptr);
+         REQUIRE(doomedNode->GetNextSibling() != nullptr);
+         REQUIRE(doomedNode->GetFirstChild() == nullptr);
+         REQUIRE(doomedNode->GetLastChild() == nullptr);
+
+         const auto parentOfTarget = doomedNode->GetParent();
          const auto parentsChildCount = parentOfTarget->GetChildCount();
 
-         delete targetNode;
+         doomedNode->Detach();
 
-         REQUIRE(DESTRUCTION_COUNT == 1);
-         REQUIRE(parentOfTarget->GetChildCount() == parentsChildCount - DESTRUCTION_COUNT);
-         REQUIRE(tree.Size() == treeSize - DESTRUCTION_COUNT);
+         const std::vector<std::string> expected = { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
 
-         const std::vector<std::string> expectedTraversal =
-         { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
+         std::vector<std::string> actual;
+         std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
+            [] (const auto& node) noexcept { return node.GetData().m_data; });
 
-         const bool errorFree = VerifyTraversal(tree, expectedTraversal);
-         REQUIRE(errorFree == true);
+         VerifyTraversal(expected, actual);
       }
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
@@ -986,36 +915,32 @@ TEST_CASE("Selectively Delecting Nodes")
 
          treeSize = tree.Size();
 
-         // Reset the destruction count, so that we don't accidentally count any destructor calls
-         // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0;
 
-         const auto* targetNode = tree.GetHead()->GetFirstChild()->GetLastChild();
-         REQUIRE(targetNode != nullptr);
-         REQUIRE(targetNode->GetData().m_data == "D");
-         REQUIRE(targetNode->GetPreviousSibling() != nullptr);
-         REQUIRE(targetNode->GetNextSibling() == nullptr);
-         REQUIRE(targetNode->GetFirstChild() != nullptr);
-         REQUIRE(targetNode->GetFirstChild() != targetNode->GetLastChild());
+         auto* doomedNode = tree.GetRoot()->GetFirstChild()->GetLastChild();
+         REQUIRE(doomedNode != nullptr);
+         REQUIRE(doomedNode->GetData().m_data == "D");
+         REQUIRE(doomedNode->GetPreviousSibling() != nullptr);
+         REQUIRE(doomedNode->GetNextSibling() == nullptr);
+         REQUIRE(doomedNode->GetFirstChild() != nullptr);
+         REQUIRE(doomedNode->GetFirstChild() != doomedNode->GetLastChild());
 
-         const auto parentOfTarget = targetNode->GetParent();
-         const auto parentsChildCount = parentOfTarget->GetChildCount();
+         doomedNode->Detach();
 
-         delete targetNode;
+         const std::vector<std::string> expected = { "A", "B", "H", "I", "G", "F" };
 
-         REQUIRE(DESTRUCTION_COUNT == 3);
-         REQUIRE(parentOfTarget->GetChildCount() == parentsChildCount - 1);
-         REQUIRE(tree.Size() == treeSize - DESTRUCTION_COUNT);
+         std::vector<std::string> actual;
+         std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
+            [] (const auto& node) noexcept { return node.GetData().m_data; });
 
-         const std::vector<std::string> expectedTraversal =
-         { "A", "B", "H", "I", "G", "F" };
-
-         const bool errorFree = VerifyTraversal(tree, expectedTraversal);
-         REQUIRE(errorFree == true);
+         VerifyTraversal(expected, actual);
       }
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
    }
+}
+
+#if 0
 
    SECTION("Deleting a Node by Calling DeleteFromTree()")
    {

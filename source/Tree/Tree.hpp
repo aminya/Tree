@@ -37,14 +37,16 @@ namespace
 }
 
 /**
-* @brief The Tree class declares a basic tree, built on top of two std::vectors.
+* @brief A basic tree, built on top of two std::vectors. Each node in the tree can have any number
+* of children.
 *
 * The data is stored in a dedicated vector of DataType objects, while the metadata is stored in a
 * separate vector. This data-oriented design should allow for lightning fast traversals of the data
 * for those cases where the nature of the tree cannot be exploited to further increase operations.
 *
 * For increased cache-friendliness, this class also enables consumers to easily rearrange the
-* objects in the vector so that everything is contiguous, relative to a chosen traversal order.
+* objects in the underlying vector so that everything is contiguous relative to a chosen traversal
+* order.
 *
 * See the individual member functions for further documentation.
 */
@@ -223,7 +225,7 @@ public:
    * in the proper traversal order relative to the specified iterator.
    *
    * By making sure that all nodes are contiguous (relative to a specified traversal order),
-   * we can hopefully take full advantage of cache locality.
+   * the data structure should hopefully be able to take full advantage of cache locality.
    *
    * This function would ideally be called once the tree has been fully constructed, and the
    * remainder (or at least the vast majority) of subsequent operations on the tree involve
@@ -443,7 +445,7 @@ private:
 };
 
 /**
-* @todo
+* @brief Represents the nodes that form the tree.
 */
 template<typename DataType>
 class Tree<DataType>::Node
@@ -549,7 +551,48 @@ public:
    */
    void Detach() noexcept
    {
-      // @todo
+      auto& nodes = m_tree->m_nodes;
+
+      if (m_previousSiblingIndex != NONE && m_nextSiblingIndex != NONE)
+      {
+         nodes[m_previousSiblingIndex].m_nextSiblingIndex = m_nextSiblingIndex;
+         nodes[m_nextSiblingIndex].m_previousSiblingIndex = m_previousSiblingIndex;
+      }
+      else if (m_previousSiblingIndex != NONE)
+      {
+         nodes[m_previousSiblingIndex].m_nextSiblingIndex = NONE;
+      }
+      else if (m_nextSiblingIndex != NONE)
+      {
+         nodes[m_nextSiblingIndex].m_previousSiblingIndex = NONE;
+      }
+
+      if (m_parentIndex == NONE)
+      {
+         return;
+      }
+
+      if (nodes[m_parentIndex].m_firstChildIndex == nodes[m_parentIndex].m_lastChildIndex)
+      {
+         nodes[m_parentIndex].m_firstChildIndex = NONE;
+         nodes[m_parentIndex].m_lastChildIndex = NONE;
+      }
+      else if (nodes[m_parentIndex].m_firstChildIndex == m_ownIndex)
+      {
+         assert(nodes[nodes[m_parentIndex].m_firstChildIndex].m_nextSiblingIndex != NONE);
+
+         nodes[m_parentIndex].m_firstChildIndex =
+            nodes[nodes[m_parentIndex].m_firstChildIndex].m_nextSiblingIndex;
+      }
+      else if (nodes[m_parentIndex].m_lastChildIndex == m_ownIndex)
+      {
+         assert(nodes[nodes[m_parentIndex].m_lastChildIndex].m_previousSiblingIndex != NONE);
+
+         nodes[m_parentIndex].m_lastChildIndex =
+            nodes[nodes[m_parentIndex].m_lastChildIndex].m_previousSiblingIndex;
+      }
+
+      --(nodes[m_parentIndex].m_childCount);
    }
 
    /**
@@ -576,7 +619,7 @@ public:
       const auto nodeCount = std::count_if(
          Tree<DataType>::PostOrderIterator{ this },
          Tree<DataType>::PostOrderIterator{ },
-         [](const auto&) noexcept
+         [] (const auto&) noexcept
       {
          return true;
       });
