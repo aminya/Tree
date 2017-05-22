@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <functional>
 #include <memory>
 #include <vector>
 #include <type_traits>
@@ -213,6 +214,48 @@ public:
    }
 
    /**
+   * @brief Each node in the traversal range for which the supplied predicate returns true is
+   * detached from the tree.
+   *
+   * @todo Rewrite this function to eliminate the need for the additional vector.
+   * @todo Add additional handling to deal with unreachable
+   *
+   * @param[in] begin               An iterator pointing to the starting location.
+   * @param[in] end                 An iterator pointing past the last node to iterate over.
+   * @param[in] shouldRemove        Predicate that will return true if the node is to be removed,
+   *                                and false otherwise. This predicate should have the following
+   *                                signature: [...] (const Node& node) -> bool { ... }
+   *
+   * @returns The number of nodes that have been removed from the tree.
+   */
+   template<
+      typename IteratorType,
+      typename PredicateType
+   >
+   auto DetachNodeIf(
+      const IteratorType& begin,
+      const IteratorType& end,
+      const PredicateType& shouldRemove)
+   {
+      std::vector<std::reference_wrapper<Node>> victims;
+
+      std::copy_if(begin, end, std::back_inserter(victims),
+         [&] (const auto& node)
+      {
+         return shouldRemove(node);
+      });
+
+      const auto nodesRemoved = victims.size();
+
+      for (auto& node : victims)
+      {
+         node.get().Detach();
+      }
+
+      return nodesRemoved;
+   }
+
+   /**
    * @returns A const reference to the underlying data vector.
    */
    const auto& GetDataAsVector() const noexcept
@@ -231,23 +274,18 @@ public:
    * remainder (or at least the vast majority) of subsequent operations on the tree involve
    * iteration and reading of data.
    *
-   * @tparam IteratorType           One of the supported Tree::Iterator types:
-   *                                   @li Tree::PreOrderIterator
-   *                                   @li Tree::PostOrderIterator
-   *                                   @li Tree::LeafIterator
-   *                                   @li Tree::SiblingIterator
+   * @tparam TraversalTag           One of the supported Traversal Tag types:
+   *                                   @li PreOrderTraversal
+   *                                   @li PostOrderTraversal
+   *                                   @li LeafTraversal
+   *                                   @li SiblingTraversal
    */
-   template<typename IteratorType>
+   template<typename TraversalTag>
    void OptimizeMemoryLayoutFor()
    {
-      static_assert(
-         std::is_same<IteratorType::value_type, decltype(m_data)::value_type>::value,
-         "Types don't match!");
+      using std::swap; //< Enable Argument Dependent Lookup (ADL)
 
-      // Enable Argument Dependent Lookup (ADL):
-      using std::swap;
-
-      IteratorType itr{ GetRoot() };
+      TraversalTag::Iterator<DataType> itr{ GetRoot() };
 
       for (std::size_t sinkIndex{ 0u }; sinkIndex < m_data.size(); ++sinkIndex, ++itr)
       {
@@ -1329,6 +1367,30 @@ public:
 
       return result;
    }
+};
+
+struct PreOrderTraversal
+{
+   template<typename DataType>
+   using Iterator = typename Tree<DataType>::PreOrderIterator;
+};
+
+struct PostOrderTraversal
+{
+   template<typename DataType>
+   using Iterator = typename Tree<DataType>::PostOrderIterator;
+};
+
+struct LeafTraversal
+{
+   template<typename DataType>
+   using Iterator = typename Tree<DataType>::LeafIterator;
+};
+
+struct SiblingTraversal
+{
+   template<typename DataType>
+   using Iterator = typename Tree<DataType>::SiblingIterator;
 };
 
 #if _WIN64
