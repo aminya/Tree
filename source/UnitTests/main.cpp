@@ -13,10 +13,14 @@ namespace
    /**
    * @brief Allows for the comparison of vectors of unequal length.
    *
-   * The `expected` vector has to be smaller than the `actual` vector that it is compared against.
+   * @param[in] expected            The expected sequence.
+   * @param[in] actual              The actual sequence.
+   *
+   * @note The `expected` vector has to be smaller than the `actual` vector that it is compared
+   * against.
    */
    template<typename DataType>
-   auto SubsetEquals(
+   void SubsetEquals(
       const std::vector<DataType>& expected,
       const std::vector<DataType>& actual)
    {
@@ -41,9 +45,14 @@ namespace
 
    /**
    * @brief Compares two vectors, ensuring that both contain the same data.
+   *
+   * @param[in] expected                  The expected sequence.
+   * @param[in] actual                    The actual sequence.
+   * @param[in] performSubsetComparision  Forces the consumer to explicitly acknowledge that he
+   *                                      or she wants to allow subset comparison.
    */
    template<typename DataType>
-   auto VerifyTraversal(
+   void VerifyTraversal(
       const std::vector<DataType>& expected,
       const std::vector<DataType>& actual,
       bool performSubsetComparision = false)
@@ -719,7 +728,7 @@ TEST_CASE("Selectively Delecting Nodes")
 
          std::vector<std::string> actual;
          std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
-            [](const auto& node) noexcept { return node.GetData().m_data; });
+            [] (const auto& node) noexcept { return node.GetData().m_data; });
 
          VerifyTraversal(expected, actual);
 
@@ -754,13 +763,14 @@ TEST_CASE("Selectively Delecting Nodes")
          REQUIRE(doomedNode->GetFirstChild() == nullptr);
          REQUIRE(doomedNode->GetLastChild() == nullptr);
 
-         doomedNode->Detach();
+         const auto numberOfRemovedNodes = doomedNode->Detach();
+         REQUIRE(numberOfRemovedNodes == 1);
 
          const std::vector<std::string> expected = { "A", "C", "E", "D", "B", "I", "G", "F" };
 
          std::vector<std::string> actual;
          std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
-            [](const auto& node) noexcept { return node.GetData().m_data; });
+            [] (const auto& node) noexcept { return node.GetData().m_data; });
 
          VerifyTraversal(expected, actual);
       }
@@ -794,13 +804,14 @@ TEST_CASE("Selectively Delecting Nodes")
          REQUIRE(doomedNode->GetFirstChild() == nullptr);
          REQUIRE(doomedNode->GetLastChild() == nullptr);
 
-         doomedNode->Detach();
+         const auto numberOfRemovedNodes = doomedNode->Detach();
+         REQUIRE(numberOfRemovedNodes == 1);
 
          const std::vector<std::string> expected = { "A", "C", "D", "B", "H", "I", "G", "F" };
 
          std::vector<std::string> actual;
          std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
-            [](const auto& node) noexcept { return node.GetData().m_data; });
+            [] (const auto& node) noexcept { return node.GetData().m_data; });
 
          VerifyTraversal(expected, actual);
       }
@@ -834,13 +845,14 @@ TEST_CASE("Selectively Delecting Nodes")
          REQUIRE(doomedNode->GetFirstChild() == nullptr);
          REQUIRE(doomedNode->GetLastChild() == nullptr);
 
-         doomedNode->Detach();
+         const auto numberOfRemovedNodes = doomedNode->Detach();
+         REQUIRE(numberOfRemovedNodes == 1);
 
          const std::vector<std::string> expected = { "A", "E", "D", "B", "H", "I", "G", "F" };
 
          std::vector<std::string> actual;
          std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
-            [](const auto& node) noexcept { return node.GetData().m_data; });
+            [] (const auto& node) noexcept { return node.GetData().m_data; });
 
          VerifyTraversal(expected, actual);
       }
@@ -880,13 +892,14 @@ TEST_CASE("Selectively Delecting Nodes")
          const auto parentOfTarget = doomedNode->GetParent();
          const auto parentsChildCount = parentOfTarget->GetChildCount();
 
-         doomedNode->Detach();
+         const auto numberOfRemovedNodes = doomedNode->Detach();
+         REQUIRE(numberOfRemovedNodes == 1);
 
          const std::vector<std::string> expected = { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
 
          std::vector<std::string> actual;
          std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
-            [](const auto& node) noexcept { return node.GetData().m_data; });
+            [] (const auto& node) noexcept { return node.GetData().m_data; });
 
          VerifyTraversal(expected, actual);
       }
@@ -920,13 +933,14 @@ TEST_CASE("Selectively Delecting Nodes")
          REQUIRE(doomedNode->GetFirstChild() != nullptr);
          REQUIRE(doomedNode->GetFirstChild() != doomedNode->GetLastChild());
 
-         doomedNode->Detach();
+         const auto numberOfRemovedNodes = doomedNode->Detach();
+         REQUIRE(numberOfRemovedNodes == 3);
 
          const std::vector<std::string> expected = { "A", "B", "H", "I", "G", "F" };
 
          std::vector<std::string> actual;
          std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
-            [](const auto& node) noexcept { return node.GetData().m_data; });
+            [] (const auto& node) noexcept { return node.GetData().m_data; });
 
          VerifyTraversal(expected, actual);
       }
@@ -958,7 +972,7 @@ TEST_CASE("Selectively Delecting Nodes")
             return node.GetData().m_data.find("Delete Me") != std::string::npos;
          });
 
-         REQUIRE(numberOfRemovedNodes == 3);
+         REQUIRE(numberOfRemovedNodes == 5);
 
          const std::vector<std::string> expected = { "A", "B", "G", "F" };
 
@@ -1030,7 +1044,7 @@ TEST_CASE("Sorting")
          [&](auto& node) noexcept
       {
          tree.SortChildren(node,
-            [](auto& lhs, auto& rhs) noexcept
+            [] (auto& lhs, auto& rhs) noexcept
          {
             return lhs < rhs;
          });

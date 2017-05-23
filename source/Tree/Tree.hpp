@@ -245,14 +245,14 @@ public:
          return shouldRemove(node);
       });
 
-      const auto nodesRemoved = victims.size();
+      std::size_t bodyCount{ 0 };
 
       for (auto& node : victims)
       {
-         node.get().Detach();
+         bodyCount += node.get().Detach();
       }
 
-      return nodesRemoved;
+      return bodyCount;
    }
 
    /**
@@ -274,7 +274,7 @@ public:
    * remainder (or at least the vast majority) of subsequent operations on the tree involve
    * iteration and reading of data.
    *
-   * @tparam TraversalTag           One of the supported Traversal Tag types:
+   * @tparam TraversalTag           One of the supported Traversal types tags:
    *                                   @li PreOrderTraversal
    *                                   @li PostOrderTraversal
    *                                   @li LeafTraversal
@@ -583,54 +583,33 @@ public:
    * @brief Removes the TreeNode from the tree structure, updating all surrounding links
    * as appropriate.
    *
-   * @note This function does not actually reclaim the memory occupied by the doomed node, although
-   * that memory may be reused by subsequent node allocations. Once the tree that originally owned
-   * this object reaches the end of it's life, the memory will be reclaimed.
+   * @note This function does not actually reclaim the memory occupied by the doomed node.
+   * Once the tree that originally owned this object reaches the end of it's life, the memory will
+   * be reclaimed.
    */
-   void Detach() noexcept
+   std::size_t Detach() noexcept
    {
-      auto& nodes = m_tree->m_nodes;
+      DetachFromParentAndSiblings();
 
-      if (m_previousSiblingIndex != NONE && m_nextSiblingIndex != NONE)
+      if (m_childCount > 0)
       {
-         nodes[m_previousSiblingIndex].m_nextSiblingIndex = m_nextSiblingIndex;
-         nodes[m_nextSiblingIndex].m_previousSiblingIndex = m_previousSiblingIndex;
-      }
-      else if (m_previousSiblingIndex != NONE)
-      {
-         nodes[m_previousSiblingIndex].m_nextSiblingIndex = NONE;
-      }
-      else if (m_nextSiblingIndex != NONE)
-      {
-         nodes[m_nextSiblingIndex].m_previousSiblingIndex = NONE;
-      }
+         std::vector<std::reference_wrapper<Node>> victims;
 
-      if (m_parentIndex == NONE)
-      {
-         return;
-      }
+         std::copy(
+            Tree<DataType>::PostOrderIterator{ this },
+            Tree<DataType>::PostOrderIterator{ },
+            std::back_inserter(victims));
 
-      if (nodes[m_parentIndex].m_firstChildIndex == nodes[m_parentIndex].m_lastChildIndex)
-      {
-         nodes[m_parentIndex].m_firstChildIndex = NONE;
-         nodes[m_parentIndex].m_lastChildIndex = NONE;
-      }
-      else if (nodes[m_parentIndex].m_firstChildIndex == m_ownIndex)
-      {
-         assert(nodes[nodes[m_parentIndex].m_firstChildIndex].m_nextSiblingIndex != NONE);
+         for (auto& node : victims)
+         {
+            node.get().m_tree = nullptr;
+            node.get().m_ownIndex = NONE;
+         }
 
-         nodes[m_parentIndex].m_firstChildIndex =
-            nodes[nodes[m_parentIndex].m_firstChildIndex].m_nextSiblingIndex;
-      }
-      else if (nodes[m_parentIndex].m_lastChildIndex == m_ownIndex)
-      {
-         assert(nodes[nodes[m_parentIndex].m_lastChildIndex].m_previousSiblingIndex != NONE);
-
-         nodes[m_parentIndex].m_lastChildIndex =
-            nodes[nodes[m_parentIndex].m_lastChildIndex].m_previousSiblingIndex;
+         return victims.size();
       }
 
-      --(nodes[m_parentIndex].m_childCount);
+      return 1;
    }
 
    /**
@@ -836,6 +815,58 @@ public:
    }
 
 private:
+
+   /**
+   * @brief Detaches the node from its parent and siblings.
+   *
+   * @note This function leaves the relationship with its children intact. This is useful for
+   * further processing.
+   */
+   void DetachFromParentAndSiblings()
+   {
+      auto& nodes = m_tree->m_nodes;
+
+      if (m_previousSiblingIndex != NONE && m_nextSiblingIndex != NONE)
+      {
+         nodes[m_previousSiblingIndex].m_nextSiblingIndex = m_nextSiblingIndex;
+         nodes[m_nextSiblingIndex].m_previousSiblingIndex = m_previousSiblingIndex;
+      }
+      else if (m_previousSiblingIndex != NONE)
+      {
+         nodes[m_previousSiblingIndex].m_nextSiblingIndex = NONE;
+      }
+      else if (m_nextSiblingIndex != NONE)
+      {
+         nodes[m_nextSiblingIndex].m_previousSiblingIndex = NONE;
+      }
+
+      if (m_parentIndex == NONE)
+      {
+         return;
+      }
+
+      if (nodes[m_parentIndex].m_firstChildIndex == nodes[m_parentIndex].m_lastChildIndex)
+      {
+         nodes[m_parentIndex].m_firstChildIndex = NONE;
+         nodes[m_parentIndex].m_lastChildIndex = NONE;
+      }
+      else if (nodes[m_parentIndex].m_firstChildIndex == m_ownIndex)
+      {
+         assert(nodes[nodes[m_parentIndex].m_firstChildIndex].m_nextSiblingIndex != NONE);
+
+         nodes[m_parentIndex].m_firstChildIndex =
+            nodes[nodes[m_parentIndex].m_firstChildIndex].m_nextSiblingIndex;
+      }
+      else if (nodes[m_parentIndex].m_lastChildIndex == m_ownIndex)
+      {
+         assert(nodes[nodes[m_parentIndex].m_lastChildIndex].m_previousSiblingIndex != NONE);
+
+         nodes[m_parentIndex].m_lastChildIndex =
+            nodes[nodes[m_parentIndex].m_lastChildIndex].m_previousSiblingIndex;
+      }
+
+      --(nodes[m_parentIndex].m_childCount);
+   }
 
    /**
    * @brief Private constructor to be used by the Tree class when it creates new nodes and inserts
