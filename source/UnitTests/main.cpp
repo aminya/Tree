@@ -763,8 +763,8 @@ TEST_CASE("Selectively Delecting Nodes")
          REQUIRE(doomedNode->GetFirstChild() == nullptr);
          REQUIRE(doomedNode->GetLastChild() == nullptr);
 
-         const auto numberOfRemovedNodes = doomedNode->Detach();
-         REQUIRE(numberOfRemovedNodes == 1);
+         const auto numberOfDetachedNodes = doomedNode->Detach();
+         REQUIRE(numberOfDetachedNodes == 1);
 
          const std::vector<std::string> expected = { "A", "C", "E", "D", "B", "I", "G", "F" };
 
@@ -804,8 +804,8 @@ TEST_CASE("Selectively Delecting Nodes")
          REQUIRE(doomedNode->GetFirstChild() == nullptr);
          REQUIRE(doomedNode->GetLastChild() == nullptr);
 
-         const auto numberOfRemovedNodes = doomedNode->Detach();
-         REQUIRE(numberOfRemovedNodes == 1);
+         const auto numberOfDetachedNodes = doomedNode->Detach();
+         REQUIRE(numberOfDetachedNodes == 1);
 
          const std::vector<std::string> expected = { "A", "C", "D", "B", "H", "I", "G", "F" };
 
@@ -845,8 +845,8 @@ TEST_CASE("Selectively Delecting Nodes")
          REQUIRE(doomedNode->GetFirstChild() == nullptr);
          REQUIRE(doomedNode->GetLastChild() == nullptr);
 
-         const auto numberOfRemovedNodes = doomedNode->Detach();
-         REQUIRE(numberOfRemovedNodes == 1);
+         const auto numberOfDetachedNodes = doomedNode->Detach();
+         REQUIRE(numberOfDetachedNodes == 1);
 
          const std::vector<std::string> expected = { "A", "E", "D", "B", "H", "I", "G", "F" };
 
@@ -892,8 +892,8 @@ TEST_CASE("Selectively Delecting Nodes")
          const auto parentOfTarget = doomedNode->GetParent();
          const auto parentsChildCount = parentOfTarget->GetChildCount();
 
-         const auto numberOfRemovedNodes = doomedNode->Detach();
-         REQUIRE(numberOfRemovedNodes == 1);
+         const auto numberOfDetachedNodes = doomedNode->Detach();
+         REQUIRE(numberOfDetachedNodes == 1);
 
          const std::vector<std::string> expected = { "A", "C", "E", "D", "B", "H", "I", "G", "F" };
 
@@ -933,8 +933,8 @@ TEST_CASE("Selectively Delecting Nodes")
          REQUIRE(doomedNode->GetFirstChild() != nullptr);
          REQUIRE(doomedNode->GetFirstChild() != doomedNode->GetLastChild());
 
-         const auto numberOfRemovedNodes = doomedNode->Detach();
-         REQUIRE(numberOfRemovedNodes == 3);
+         const auto numberOfDetachedNodes = doomedNode->Detach();
+         REQUIRE(numberOfDetachedNodes == 3);
 
          const std::vector<std::string> expected = { "A", "B", "H", "I", "G", "F" };
 
@@ -966,13 +966,13 @@ TEST_CASE("Selectively Delecting Nodes")
 
          DESTRUCTION_COUNT = 0;
 
-         const auto numberOfRemovedNodes = tree.DetachNodeIf(std::begin(tree), std::end(tree),
+         const auto numberOfDetachedNodes = tree.DetachNodeIf(std::begin(tree), std::end(tree),
             [] (const auto& node)
          {
             return node.GetData().m_data.find("Delete Me") != std::string::npos;
          });
 
-         REQUIRE(numberOfRemovedNodes == 5);
+         REQUIRE(numberOfDetachedNodes == 5);
 
          const std::vector<std::string> expected = { "A", "B", "G", "F" };
 
@@ -989,8 +989,6 @@ TEST_CASE("Selectively Delecting Nodes")
       REQUIRE(DESTRUCTION_COUNT == treeSize);
    }
 }
-
-#if 0
 
 TEST_CASE("Sorting")
 {
@@ -1009,13 +1007,13 @@ TEST_CASE("Sorting")
       root.AppendChild("H");
 
       const auto comparator = [] (const auto& lhs, const auto& rhs) noexcept { return lhs < rhs; };
-      tree.SortChildren(head, comparator);
+      root.SortChildren(comparator);
 
-      const std::vector<std::string> expected = { "A", "B", "C", "D", "E", "F", "G", "H", };
+      const std::vector<std::string> expected = { "A", "B", "C", "D", "E", "F", "G", "H", "X" };
 
       std::vector<std::string> actual;
       std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
-         [] (const auto& node) noexcept { return node.GetData().m_data; });
+         [] (const auto& node) noexcept { return node.GetData(); });
 
       VerifyTraversal(expected, actual);
    }
@@ -1023,28 +1021,29 @@ TEST_CASE("Sorting")
    SECTION("An Entire Tree")
    {
       Tree<int> tree{ 999 };
-      auto& head = *tree.GetHead();
-      auto& firstChild = tree.AppendChild(634, head);
-      tree.AppendChild(34, firstChild);
-      tree.AppendChild(13, firstChild);
-      tree.AppendChild(89, firstChild);
-      tree.AppendChild(3, firstChild);
-      tree.AppendChild(1, firstChild);
-      tree.AppendChild(0, firstChild);
-      tree.AppendChild(-5, firstChild);
+      auto& root = *tree.GetRoot();
+      root.AppendChild(634);
 
-      tree.AppendChild(375, head);
-      tree.AppendChild(173, head);
-      tree.AppendChild(128, head);
+      auto* firstChild = root.GetFirstChild();
+      firstChild->AppendChild(34);
+      firstChild->AppendChild(13);
+      firstChild->AppendChild(89);
+      firstChild->AppendChild(3);
+      firstChild->AppendChild(1);
+      firstChild->AppendChild(0);
+      firstChild->AppendChild(-5);
+
+      root.AppendChild(375);
+      root.AppendChild(173);
+      root.AppendChild(128);
 
       const auto sizeBeforeSort = tree.Size();
 
       // Sort:
       std::for_each(std::begin(tree), std::end(tree),
-         [&](auto& node) noexcept
+         [&] (auto& node) noexcept
       {
-         tree.SortChildren(node,
-            [] (auto& lhs, auto& rhs) noexcept
+         node.SortChildren([] (auto& lhs, auto& rhs) noexcept
          {
             return lhs < rhs;
          });
@@ -1057,7 +1056,7 @@ TEST_CASE("Sorting")
 
       // Verify:
       std::for_each(std::begin(tree), std::end(tree),
-         [&](Tree<int>::const_reference node) noexcept
+         [&] (const auto& node) noexcept
       {
          if (!node.HasChildren())
          {
@@ -1081,5 +1080,3 @@ TEST_CASE("Sorting")
       REQUIRE(sortingError == false);
    }
 }
-
-#endif

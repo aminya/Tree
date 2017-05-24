@@ -218,7 +218,7 @@ public:
    * detached from the tree.
    *
    * @todo Rewrite this function to eliminate the need for the additional vector.
-   * @todo Add additional handling to deal with unreachable
+   * @todo Add additional handling to deal with unreachable nodes.
    *
    * @param[in] begin               An iterator pointing to the starting location.
    * @param[in] end                 An iterator pointing past the last node to iterate over.
@@ -286,7 +286,6 @@ public:
       using std::swap; //< Enable Argument Dependent Lookup (ADL)
 
       TraversalTag::Iterator<DataType> itr{ GetRoot() };
-
       for (std::size_t sinkIndex{ 0u }; sinkIndex < m_data.size(); ++sinkIndex, ++itr)
       {
          if (!itr)
@@ -318,163 +317,180 @@ public:
          m_nodes[sinkIndex].m_ownIndex = sinkIndex;
          m_nodes[sourceIndex].m_ownIndex = sourceIndex;
 
-         // Update source node's children to point to the new parent location:
-         {
-            if (source.m_childCount > 0)
-            {
-               auto childIndex = source.m_firstChildIndex;
-
-               // Handle the case where the source node's child is the sink node:
-               if (childIndex == sinkIndex)
-               {
-                  m_nodes[sinkIndex].m_firstChildIndex = sourceIndex;
-                  childIndex = m_nodes[sourceIndex].m_nextSiblingIndex;
-               }
-
-               while (childIndex != NONE)
-               {
-                  if (childIndex == sinkIndex)
-                  {
-                     childIndex = m_nodes[childIndex].m_nextSiblingIndex;
-                     continue;
-                  }
-
-                  m_nodes[childIndex].m_parentIndex = sinkIndex;
-                  childIndex = m_nodes[childIndex].m_nextSiblingIndex;
-               }
-            }
-
-            // Update source node's parent to point to the new child location:
-            if (source.m_parentIndex != NONE)
-            {
-               // Handle the case where the source is an immediate child of the sink:
-               if (source.m_parentIndex == sinkIndex)
-               {
-                  m_nodes[sinkIndex].m_parentIndex = sourceIndex;
-               }
-               else
-               {
-                  if (m_nodes[source.m_parentIndex].m_firstChildIndex == sourceIndex)
-                  {
-                     m_nodes[source.m_parentIndex].m_firstChildIndex = sinkIndex;
-                  }
-
-                  if (m_nodes[source.m_parentIndex].m_lastChildIndex == sourceIndex)
-                  {
-                     m_nodes[source.m_parentIndex].m_lastChildIndex = sinkIndex;
-                  }
-               }
-            }
-         }
-
-         // Update sink node's children to point to the new parent location:
-         {
-            if (sink.m_childCount > 0)
-            {
-               auto childIndex = sink.m_firstChildIndex;
-
-               // Handle the case where the sink node's child is the source node:
-               if (childIndex == sourceIndex)
-               {
-                  m_nodes[sourceIndex].m_firstChildIndex = sinkIndex;
-                  childIndex = m_nodes[sinkIndex].m_nextSiblingIndex;
-               }
-
-               while (childIndex != NONE)
-               {
-                  if (childIndex == sourceIndex)
-                  {
-                     childIndex = m_nodes[childIndex].m_nextSiblingIndex;
-                     continue;
-                  }
-
-                  m_nodes[childIndex].m_parentIndex = sourceIndex;
-                  childIndex = m_nodes[childIndex].m_nextSiblingIndex;
-               }
-            }
-
-            // Update node's parent to point to its child's new location:
-            if (sink.m_parentIndex != NONE)
-            {
-               // Handle the case where the source is an immediate child of the sink:
-               if (sink.m_parentIndex == sourceIndex)
-               {
-                  m_nodes[sourceIndex].m_parentIndex = sinkIndex;
-               }
-               else
-               {
-                  if (m_nodes[sink.m_parentIndex].m_firstChildIndex == sinkIndex)
-                  {
-                     m_nodes[sink.m_parentIndex].m_firstChildIndex = sourceIndex;
-                  }
-
-                  if (m_nodes[sink.m_parentIndex].m_lastChildIndex == sinkIndex)
-                  {
-                     m_nodes[sink.m_parentIndex].m_lastChildIndex = sourceIndex;
-                  }
-               }
-            }
-         }
-
-         // Update the source node's neighbors:
-         {
-            if (source.m_nextSiblingIndex != NONE)
-            {
-               if (source.m_nextSiblingIndex != sinkIndex)
-               {
-                  m_nodes[source.m_nextSiblingIndex].m_previousSiblingIndex = sinkIndex;
-               }
-               else
-               {
-                  m_nodes[sinkIndex].m_nextSiblingIndex = sourceIndex;
-               }
-            }
-
-            if (source.m_previousSiblingIndex != NONE)
-            {
-               if (source.m_previousSiblingIndex != sinkIndex)
-               {
-                  m_nodes[source.m_previousSiblingIndex].m_nextSiblingIndex = sinkIndex;
-               }
-               else
-               {
-                  m_nodes[sinkIndex].m_previousSiblingIndex = sourceIndex;
-               }
-            }
-         }
-
-         // Update the sink node's neighbors:
-         {
-            if (sink.m_nextSiblingIndex != NONE)
-            {
-               if (sink.m_nextSiblingIndex != sourceIndex)
-               {
-                  m_nodes[sink.m_nextSiblingIndex].m_previousSiblingIndex = sourceIndex;
-               }
-               else
-               {
-                  m_nodes[sourceIndex].m_nextSiblingIndex = sinkIndex;
-               }
-            }
-
-            if (sink.m_previousSiblingIndex != NONE)
-            {
-               if (sink.m_previousSiblingIndex != sourceIndex)
-               {
-                  m_nodes[sink.m_previousSiblingIndex].m_nextSiblingIndex = sourceIndex;
-               }
-               else
-               {
-                  m_nodes[sourceIndex].m_previousSiblingIndex = sinkIndex;
-               }
-            }
-         }
+         UpdateAncestryRelationships(source, sink, sourceIndex, sinkIndex);
+         UpdateSiblingRelationships(source, sink, sourceIndex, sinkIndex);
 
          itr.m_currentNode = &m_nodes[sinkIndex];
       }
    }
 
 private:
+
+   /**
+   * @brief Helper function to update the tree structure to reflect the fact that the
+   * source and sink nodes are swapping places in the underlying vector.
+   */
+   void UpdateAncestryRelationships(
+      const Node& source,
+      const Node& sink,
+      int sourceIndex,
+      int sinkIndex) noexcept
+   {
+      // Update source node's children to point to the new parent location:
+      if (source.m_childCount > 0)
+      {
+         auto childIndex = source.m_firstChildIndex;
+
+         if (childIndex == sinkIndex)
+         {
+            m_nodes[sinkIndex].m_firstChildIndex = sourceIndex;
+            childIndex = m_nodes[sourceIndex].m_nextSiblingIndex;
+         }
+
+         while (childIndex != NONE)
+         {
+            if (childIndex == sinkIndex)
+            {
+               childIndex = m_nodes[childIndex].m_nextSiblingIndex;
+               continue;
+            }
+
+            m_nodes[childIndex].m_parentIndex = sinkIndex;
+            childIndex = m_nodes[childIndex].m_nextSiblingIndex;
+         }
+      }
+
+      // Update source node's parent to point to the new child location:
+      if (source.m_parentIndex != NONE)
+      {
+         if (source.m_parentIndex == sinkIndex)
+         {
+            m_nodes[sinkIndex].m_parentIndex = sourceIndex;
+         }
+         else
+         {
+            if (m_nodes[source.m_parentIndex].m_firstChildIndex == sourceIndex)
+            {
+               m_nodes[source.m_parentIndex].m_firstChildIndex = sinkIndex;
+            }
+
+            if (m_nodes[source.m_parentIndex].m_lastChildIndex == sourceIndex)
+            {
+               m_nodes[source.m_parentIndex].m_lastChildIndex = sinkIndex;
+            }
+         }
+      }
+
+      // Update sink node's children to point to the new parent location:
+      if (sink.m_childCount > 0)
+      {
+         auto childIndex = sink.m_firstChildIndex;
+
+         if (childIndex == sourceIndex)
+         {
+            m_nodes[sourceIndex].m_firstChildIndex = sinkIndex;
+            childIndex = m_nodes[sinkIndex].m_nextSiblingIndex;
+         }
+
+         while (childIndex != NONE)
+         {
+            if (childIndex == sourceIndex)
+            {
+               childIndex = m_nodes[childIndex].m_nextSiblingIndex;
+               continue;
+            }
+
+            m_nodes[childIndex].m_parentIndex = sourceIndex;
+            childIndex = m_nodes[childIndex].m_nextSiblingIndex;
+         }
+      }
+
+      // Update node's parent to point to its child's new location:
+      if (sink.m_parentIndex != NONE)
+      {
+         if (sink.m_parentIndex == sourceIndex)
+         {
+            m_nodes[sourceIndex].m_parentIndex = sinkIndex;
+         }
+         else
+         {
+            if (m_nodes[sink.m_parentIndex].m_firstChildIndex == sinkIndex)
+            {
+               m_nodes[sink.m_parentIndex].m_firstChildIndex = sourceIndex;
+            }
+
+            if (m_nodes[sink.m_parentIndex].m_lastChildIndex == sinkIndex)
+            {
+               m_nodes[sink.m_parentIndex].m_lastChildIndex = sourceIndex;
+            }
+         }
+      }
+   }
+
+   /**
+   * @brief Helper function to update the tree structure to reflect the fact that the
+   * source and sink nodes are swapping places in the underlying vector.
+   */
+   void UpdateSiblingRelationships(
+      const Node& source,
+      const Node& sink,
+      int sourceIndex,
+      int sinkIndex) noexcept
+   {
+      // Update the source node's neighbors:
+      {
+         if (source.m_nextSiblingIndex != NONE)
+         {
+            if (source.m_nextSiblingIndex != sinkIndex)
+            {
+               m_nodes[source.m_nextSiblingIndex].m_previousSiblingIndex = sinkIndex;
+            }
+            else
+            {
+               m_nodes[sinkIndex].m_nextSiblingIndex = sourceIndex;
+            }
+         }
+
+         if (source.m_previousSiblingIndex != NONE)
+         {
+            if (source.m_previousSiblingIndex != sinkIndex)
+            {
+               m_nodes[source.m_previousSiblingIndex].m_nextSiblingIndex = sinkIndex;
+            }
+            else
+            {
+               m_nodes[sinkIndex].m_previousSiblingIndex = sourceIndex;
+            }
+         }
+      }
+
+      // Update the sink node's neighbors:
+      {
+         if (sink.m_nextSiblingIndex != NONE)
+         {
+            if (sink.m_nextSiblingIndex != sourceIndex)
+            {
+               m_nodes[sink.m_nextSiblingIndex].m_previousSiblingIndex = sourceIndex;
+            }
+            else
+            {
+               m_nodes[sourceIndex].m_nextSiblingIndex = sinkIndex;
+            }
+         }
+
+         if (sink.m_previousSiblingIndex != NONE)
+         {
+            if (sink.m_previousSiblingIndex != sourceIndex)
+            {
+               m_nodes[sink.m_previousSiblingIndex].m_nextSiblingIndex = sourceIndex;
+            }
+            else
+            {
+               m_nodes[sourceIndex].m_previousSiblingIndex = sinkIndex;
+            }
+         }
+      }
+   }
 
    std::vector<DataType> m_data;
    std::vector<Node> m_nodes;
@@ -483,7 +499,7 @@ private:
 };
 
 /**
-* @brief Represents the nodes that form the tree.
+* @brief The node that the tree is built out of.
 */
 template<typename DataType>
 class Tree<DataType>::Node
@@ -505,6 +521,7 @@ public:
    template<typename DatumType>
    Node* AppendChild(DatumType&& datum)
    {
+      assert(m_tree);
       assert(m_tree->m_data.size() == m_tree->m_nodes.size());
 
       m_tree->m_data.emplace_back(std::forward<DatumType>(datum));
@@ -516,6 +533,7 @@ public:
 
       if (m_lastChildIndex == NONE)
       {
+         assert(m_firstChildIndex == NONE);
          assert(m_childCount == 0);
 
          m_firstChildIndex = appendee.m_ownIndex;
@@ -547,6 +565,7 @@ public:
    template<typename DatumType>
    Node* PrependChild(DatumType&& datum)
    {
+      assert(m_tree);
       assert(m_tree->m_data.size() == m_tree->m_nodes.size());
 
       m_tree->m_data.emplace_back(std::forward<DatumType>(datum));
@@ -558,6 +577,7 @@ public:
 
       if (m_firstChildIndex == NONE)
       {
+         assert(m_lastChildIndex == NONE);
          assert(m_childCount == 0);
 
          m_firstChildIndex = prependee.m_ownIndex;
@@ -591,25 +611,26 @@ public:
    {
       DetachFromParentAndSiblings();
 
-      if (m_childCount > 0)
+      if (m_childCount == 0)
       {
-         std::vector<std::reference_wrapper<Node>> victims;
-
-         std::copy(
-            Tree<DataType>::PostOrderIterator{ this },
-            Tree<DataType>::PostOrderIterator{ },
-            std::back_inserter(victims));
-
-         for (auto& node : victims)
-         {
-            node.get().m_tree = nullptr;
-            node.get().m_ownIndex = NONE;
-         }
-
-         return victims.size();
+         return 1;
       }
 
-      return 1;
+      std::vector<std::reference_wrapper<Node>> victims;
+      victims.reserve(m_childCount);
+
+      std::copy(
+         Tree<DataType>::PostOrderIterator{ this },
+         Tree<DataType>::PostOrderIterator{ },
+         std::back_inserter(victims));
+
+      for (auto& node : victims)
+      {
+         node.get().m_tree = nullptr;
+         node.get().m_ownIndex = NONE;
+      }
+
+      return victims.size();
    }
 
    /**
@@ -814,7 +835,185 @@ public:
       swap(lhs.m_childCount, rhs.m_childCount);
    }
 
+   /**
+   * @brief SortChildren performs a merge sort of the direct descendants nodes.
+   *
+   * @param[in] comparator          A callable type to be used as the basis for the sorting
+   *                                comparison. This type should have the following signature:
+   *                                   [...] (const Tree<DataType>::Node& lhs,
+                                              const Tree<DataType>::Node& rhs) -> bool {...}
+   */
+   template<typename ComparatorType>
+   void SortChildren(
+      const ComparatorType& comparator) noexcept(noexcept(comparator))
+   {
+      if (m_childCount == 0)
+      {
+         return;
+      }
+
+      MergeSortChildren(m_firstChildIndex, comparator);
+   }
+
 private:
+
+   /**
+   * @brief Main private entry point into the merge sort implementation.
+   *
+   * @param[in] leftMostChildIndex  The index of the left-most child where sorting is to begin.
+   * @param[in] comparator          The predicate to be invoked in order to figure out which node
+   *                                is the lesser of the two.
+   */
+   template<typename ComparatorType>
+   void MergeSortChildren(
+      std::size_t& leftMostChildIndex,
+      const ComparatorType& comparator) noexcept(noexcept(comparator))
+   {
+      assert(m_tree);
+      auto& nodes = m_tree->m_nodes;
+
+      if (leftMostChildIndex == NONE || nodes[leftMostChildIndex].m_nextSiblingIndex == NONE)
+      {
+         return;
+      }
+
+      std::size_t lhs = NONE;
+      std::size_t rhs = NONE;
+
+      DivideList(leftMostChildIndex, lhs, rhs);
+
+      MergeSortChildren(lhs, comparator);
+      MergeSortChildren(rhs, comparator);
+
+      leftMostChildIndex = MergeSortedHalves(lhs, rhs, comparator);
+   }
+
+   /**
+   * @brief DivideList is a helper function that will divide the specified TreeNode list in two.
+   *
+   * @param[in] start               The first child in the sequence of consecutive children that
+   *                                is to be divided in half.
+   * @param[in, out] lhs            The index of the first child of the left subdivision.
+   * @param[in, out] rhs            The index of the first child of the right subdivision.
+   */
+   void DivideList(
+      std::size_t start,
+      std::size_t& lhs,
+      std::size_t& rhs) noexcept
+   {
+      assert(m_tree);
+      auto& nodes = m_tree->m_nodes;
+
+      auto tortoise = start;
+      auto hare = nodes[tortoise].m_nextSiblingIndex;
+
+      while (hare != NONE)
+      {
+         hare = nodes[hare].m_nextSiblingIndex;
+         if (hare != NONE)
+         {
+            tortoise = nodes[tortoise].m_nextSiblingIndex;
+            hare = nodes[hare].m_nextSiblingIndex;
+         }
+      }
+
+      lhs = start;
+      rhs = nodes[tortoise].m_nextSiblingIndex;
+
+      nodes[tortoise].m_nextSiblingIndex = NONE;
+   }
+
+   /**
+   * @brief Helper function to merge the two sorted halves back together again.
+   *
+   * @param[in, out] lhs            The index of the first child of the sorted left subdivision.
+   * @param[in, out] rhs            The index of the first child of the sorted right subdivision.
+   * @param[in] comparator          The predicate to be invoked in order to figure out which node
+   *                                is the lesser of the two.
+   *
+   * @returns The index of the first child in the sequence of merged and sorted children.
+   */
+   template<typename ComparatorType>
+   std::size_t MergeSortedHalves(
+      std::size_t& lhs,
+      std::size_t& rhs,
+      const ComparatorType& comparator) noexcept(noexcept(comparator))
+   {
+      assert(m_tree);
+      auto& nodes = m_tree->m_nodes;
+
+      auto head = NONE;
+      if (comparator(nodes[lhs], nodes[rhs]))
+      {
+         head = lhs;
+         lhs = nodes[lhs].m_nextSiblingIndex;
+      }
+      else
+      {
+         head = rhs;
+         rhs = nodes[rhs].m_nextSiblingIndex;
+      }
+
+      nodes[head].m_previousSiblingIndex = NONE;
+
+      auto tail = head;
+
+      while (lhs != NONE && rhs != NONE)
+      {
+         if (comparator(nodes[lhs], nodes[rhs]))
+         {
+            nodes[tail].m_nextSiblingIndex = lhs;
+            tail = nodes[tail].m_nextSiblingIndex;
+
+            lhs = nodes[lhs].m_nextSiblingIndex;
+
+            if (lhs != NONE)
+            {
+               nodes[lhs].m_previousSiblingIndex = NONE;
+            }
+         }
+         else
+         {
+            nodes[tail].m_nextSiblingIndex = rhs;
+            tail = nodes[tail].m_nextSiblingIndex;
+
+            rhs = nodes[tail].m_nextSiblingIndex;
+
+            if (rhs != NONE)
+            {
+               nodes[rhs].m_previousSiblingIndex = NONE;
+            }
+         }
+      }
+
+      while (lhs != NONE)
+      {
+         nodes[tail].m_nextSiblingIndex = lhs;
+         tail = nodes[tail].m_nextSiblingIndex;
+
+         lhs = nodes[lhs].m_nextSiblingIndex;
+
+         if (lhs != NONE)
+         {
+            nodes[lhs].m_previousSiblingIndex = NONE;
+         }
+      }
+
+      while (rhs != NONE)
+      {
+         nodes[tail].m_nextSiblingIndex = rhs;
+         tail = nodes[tail].m_nextSiblingIndex;
+
+         rhs = nodes[rhs].m_nextSiblingIndex;
+
+         if (rhs != NONE)
+         {
+            nodes[rhs].m_previousSiblingIndex = NONE;
+         }
+      }
+
+      return head;
+   }
 
    /**
    * @brief Detaches the node from its parent and siblings.
@@ -824,6 +1023,7 @@ private:
    */
    void DetachFromParentAndSiblings()
    {
+      assert(m_tree);
       auto& nodes = m_tree->m_nodes;
 
       if (m_previousSiblingIndex != NONE && m_nextSiblingIndex != NONE)
@@ -1149,7 +1349,7 @@ public:
       assert(traversingNode);
       m_currentNode = const_cast<Node*>(traversingNode);
 
-      // Commpute and set the ending node:
+      // Compute and set the ending node:
 
       if (node->GetNextSibling())
       {
@@ -1400,24 +1600,36 @@ public:
    }
 };
 
+/**
+* @brief Type tag for use with Tree<DataType>::OptimizeMemoryLayoutFor<...>.
+*/
 struct PreOrderTraversal
 {
    template<typename DataType>
    using Iterator = typename Tree<DataType>::PreOrderIterator;
 };
 
+/**
+* @brief Type tag for use with Tree<DataType>::OptimizeMemoryLayoutFor<...>.
+*/
 struct PostOrderTraversal
 {
    template<typename DataType>
    using Iterator = typename Tree<DataType>::PostOrderIterator;
 };
 
+/**
+* @brief Type tag for use with Tree<DataType>::OptimizeMemoryLayoutFor<...>.
+*/
 struct LeafTraversal
 {
    template<typename DataType>
    using Iterator = typename Tree<DataType>::LeafIterator;
 };
 
+/**
+* @brief Type tag for use with Tree<DataType>::OptimizeMemoryLayoutFor<...>.
+*/
 struct SiblingTraversal
 {
    template<typename DataType>
