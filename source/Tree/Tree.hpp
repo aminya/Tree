@@ -46,7 +46,7 @@ namespace
 * for those cases where the nature of the tree cannot be exploited to further increase operations.
 *
 * For increased cache-friendliness, this class also enables consumers to easily rearrange the
-* objects in the underlying vector so that everything is contiguous relative to a chosen traversal
+* data in the underlying vectors so that everything is contiguous relative to a chosen traversal
 * order.
 *
 * See the individual member functions for further documentation.
@@ -99,19 +99,31 @@ public:
    *
    * @todo Worry about this later.
    */
-   Tree(const Tree<DataType>& other) = delete;
+   Tree(const Tree<DataType>&) = delete;
 
    /**
    * @brief Assignment operator.
    *
    * @todo Worry about this later.
    */
-   Tree<DataType>& operator=(Tree<DataType> other) = delete;
+   Tree<DataType>& operator=(const Tree<DataType>&) = delete;
 
    /**
    * @returns A pointer to the head node.
    */
    Node* GetRoot() noexcept
+   {
+      assert(m_data.size() > 0 && m_nodes.size() > 0);
+      assert(m_data.size() == m_nodes.size());
+      assert(m_data.size() > m_rootIndex);
+
+      return &m_nodes[m_rootIndex];
+   }
+
+   /**
+   * @overload
+   */
+   const Node* GetRoot() const noexcept
    {
       assert(m_data.size() > 0 && m_nodes.size() > 0);
       assert(m_data.size() == m_nodes.size());
@@ -135,60 +147,54 @@ public:
    * @returns A post-order iterator that will iterator over all nodes in the tree, ending
    * at the root of the tree.
    */
-   typename Tree::PostOrderIterator begin() noexcept
+   typename Tree::PostOrderIterator begin() const noexcept
    {
       assert(m_data.size() > 0);
-      const auto iterator = Tree<DataType>::PostOrderIterator{ GetRoot() };
-      return iterator;
+      return Tree<DataType>::PostOrderIterator{ GetRoot() };
    }
 
    /**
    * @returns A post-order iterator that points "past the end" of the tree.
    */
-   typename Tree::PostOrderIterator end() noexcept
+   typename Tree::PostOrderIterator end() const noexcept
    {
-      const auto iterator = Tree<DataType>::PostOrderIterator{ };
-      return iterator;
+      return Tree<DataType>::PostOrderIterator{ };
    }
 
    /**
    * @returns A pre-order iterator that will iterate over all nodes in the tree, starting
    * at the root of the tree.
    */
-   typename Tree::PreOrderIterator beginPreOrder() noexcept
+   typename Tree::PreOrderIterator beginPreOrder() const noexcept
    {
       assert(m_data.size() > 0);
-      const auto iterator = Tree<DataType>::PreOrderIterator{ GetRoot() };
-      return iterator;
+      return Tree<DataType>::PreOrderIterator{ GetRoot() };
    }
 
    /**
    * @returns A pre-order iterator pointing "past the end" of the tree.
    */
-   typename Tree::PreOrderIterator endPreOrder() noexcept
+   typename Tree::PreOrderIterator endPreOrder() const noexcept
    {
-      const auto iterator = Tree<DataType>::PreOrderIterator{ };
-      return iterator;
+      return Tree<DataType>::PreOrderIterator{ };
    }
 
    /**
    * @returns A leaf iterator that will iterate over all leaf nodes in the tree, starting
    * with the left-most leaf in the tree.
    */
-   typename Tree::LeafIterator beginLeaf() noexcept
+   typename Tree::LeafIterator beginLeaf() const noexcept
    {
       assert(m_data.size() > 0);
-      const auto iterator = Tree<DataType>::LeafIterator{ GetRoot() };
-      return iterator;
+      return Tree<DataType>::LeafIterator{ GetRoot() };
    }
 
    /**
    * @returns A leaf iterator that points "past" the last leaf node in the tree.
    */
-   typename Tree::LeafIterator endLeaf() noexcept
+   typename Tree::LeafIterator endLeaf() const noexcept
    {
-      const auto iterator = Tree<DataType>::LeafIterator{ };
-      return iterator;
+      return Tree<DataType>::LeafIterator{ };
    }
 
    /**
@@ -196,10 +202,9 @@ public:
    *
    * @todo There is probably no test coverage for this function...
    */
-   typename Tree::SiblingIterator beginSibling(const Node& node) noexcept
+   typename Tree::SiblingIterator beginSibling(const Node& node) const noexcept
    {
-      const auto iterator = Tree<DataType>::SiblingIterator{ node };
-      return iterator;
+      return Tree<DataType>::SiblingIterator{ node };
    }
 
    /**
@@ -207,10 +212,9 @@ public:
    *
    * @todo There is probably no test coverage for this function...
    */
-   typename Tree::SiblingIterator endSibling() noexcept
+   typename Tree::SiblingIterator endSibling() const noexcept
    {
-      const auto iterator = Tree<DataType>::SiblingIterator{ };
-      return iterator;
+      return Tree<DataType>::SiblingIterator{ };
    }
 
    /**
@@ -232,7 +236,7 @@ public:
       typename IteratorType,
       typename PredicateType
    >
-   auto DetachNodeIf(
+   static auto DetachNodeIf(
       const IteratorType& begin,
       const IteratorType& end,
       const PredicateType& shouldRemove)
@@ -265,14 +269,13 @@ public:
 
    /**
    * @brief Swaps around the nodes in the underlying vectors so that all of the nodes are
-   * in the proper traversal order relative to the specified iterator.
+   * in the proper traversal order relative to the desired iteration sequence.
    *
    * By making sure that all nodes are contiguous (relative to a specified traversal order),
-   * the data structure should hopefully be able to take full advantage of cache locality.
+   * the processor should hopefully be able to take full advantage of cache locality.
    *
    * This function would ideally be called once the tree has been fully constructed, and the
-   * remainder (or at least the vast majority) of subsequent operations on the tree involve
-   * iteration and reading of data.
+   * majority of subsequent operations avoid modifying the tree's structure.
    *
    * @tparam TraversalTag           One of the supported Traversal types tags:
    *                                   @li PreOrderTraversal
@@ -516,7 +519,7 @@ public:
    *
    * @param[in] data                The underlying data to be stored in the new node.
    *
-   * @returns The newly appended node.
+   * @returns A pointer to the newly appended node.
    */
    template<typename DatumType>
    Node* AppendChild(DatumType&& datum)
@@ -528,20 +531,11 @@ public:
       m_tree->m_nodes.emplace_back(Node{ m_tree, m_tree->m_nodes.size() });
 
       Node& appendee = m_tree->m_nodes.back();
-
       appendee.m_parentIndex = m_ownIndex;
 
       if (m_lastChildIndex == NONE)
       {
-         assert(m_firstChildIndex == NONE);
-         assert(m_childCount == 0);
-
-         m_firstChildIndex = appendee.m_ownIndex;
-         m_lastChildIndex = m_firstChildIndex;
-
-         ++m_childCount;
-
-         return &m_tree->m_nodes[m_lastChildIndex];
+         return AddFirstChild(appendee);
       }
 
       auto& nodes = m_tree->m_nodes;
@@ -556,11 +550,25 @@ public:
    }
 
    /**
+   *
+   */
+   Node* AppendChild(const Node& node)
+   {
+      if (node.m_tree == m_tree)
+      {
+         assert(!"The node you're trying to add is already in this tree!");
+         return nullptr; //< Or should this throw instead?
+      }
+
+      // @todo
+   }
+
+   /**
    * @brief Constructs and prepends a new node as the first child of this node.
    *
    * @param[in] data                The underlying data to be stored in the new node.
    *
-   * @returns The newly prepended node.
+   * @returns A pointer to the newly prepended node.
    */
    template<typename DatumType>
    Node* PrependChild(DatumType&& datum)
@@ -572,20 +580,11 @@ public:
       m_tree->m_nodes.emplace_back(Node{ m_tree, m_tree->m_nodes.size() });
 
       Node& prependee = m_tree->m_nodes.back();
-
       prependee.m_parentIndex = m_ownIndex;
 
       if (m_firstChildIndex == NONE)
       {
-         assert(m_lastChildIndex == NONE);
-         assert(m_childCount == 0);
-
-         m_firstChildIndex = prependee.m_ownIndex;
-         m_lastChildIndex = m_firstChildIndex;
-
-         ++m_childCount;
-
-         return &m_tree->m_nodes[m_firstChildIndex];
+         return AddFirstChild(prependee);
       }
 
       auto& nodes = m_tree->m_nodes;
@@ -597,6 +596,20 @@ public:
       ++m_childCount;
 
       return &nodes[m_firstChildIndex];
+   }
+
+   /**
+   *
+   */
+   Node* PrependChild(const Node& node)
+   {
+      if (node.m_tree == m_tree)
+      {
+         assert(!"The node you're trying to add is already in this tree!");
+         return nullptr; //< Or should this throw instead?
+      }
+
+      // @todo
    }
 
    /**
@@ -836,7 +849,7 @@ public:
    }
 
    /**
-   * @brief SortChildren performs a merge sort of the direct descendants nodes.
+   * @brief Performs a merge sort of the node's children.
    *
    * @param[in] comparator          A callable type to be used as the basis for the sorting
    *                                comparison. This type should have the following signature:
@@ -844,15 +857,14 @@ public:
                                               const Tree<DataType>::Node& rhs) -> bool {...}
    */
    template<typename ComparatorType>
-   void SortChildren(
-      const ComparatorType& comparator) noexcept(noexcept(comparator))
+   void SortChildren(const ComparatorType& comparator) noexcept(noexcept(comparator))
    {
       if (m_childCount == 0)
       {
          return;
       }
 
-      MergeSortChildren(m_firstChildIndex, comparator);
+      MergeSort(m_firstChildIndex, comparator);
    }
 
 private:
@@ -860,12 +872,13 @@ private:
    /**
    * @brief Main private entry point into the merge sort implementation.
    *
-   * @param[in] leftMostChildIndex  The index of the left-most child where sorting is to begin.
-   * @param[in] comparator          The predicate to be invoked in order to figure out which node
-   *                                is the lesser of the two.
+   * @param[in, out] leftMostChildIndex   The index of the left-most child where sorting is to
+   *                                      begin.
+   * @param[in] comparator                The predicate to be invoked in order to figure out which
+   *                                      node is the lesser of the two.
    */
    template<typename ComparatorType>
-   void MergeSortChildren(
+   void MergeSort(
       std::size_t& leftMostChildIndex,
       const ComparatorType& comparator) noexcept(noexcept(comparator))
    {
@@ -877,13 +890,13 @@ private:
          return;
       }
 
-      std::size_t lhs = NONE;
-      std::size_t rhs = NONE;
+      auto lhs = NONE;
+      auto rhs = NONE;
 
-      DivideList(leftMostChildIndex, lhs, rhs);
+      DivideChildren(leftMostChildIndex, lhs, rhs);
 
-      MergeSortChildren(lhs, comparator);
-      MergeSortChildren(rhs, comparator);
+      MergeSort(lhs, comparator);
+      MergeSort(rhs, comparator);
 
       leftMostChildIndex = MergeSortedHalves(lhs, rhs, comparator);
    }
@@ -896,7 +909,7 @@ private:
    * @param[in, out] lhs            The index of the first child of the left subdivision.
    * @param[in, out] rhs            The index of the first child of the right subdivision.
    */
-   void DivideList(
+   void DivideChildren(
       std::size_t start,
       std::size_t& lhs,
       std::size_t& rhs) noexcept
@@ -934,7 +947,7 @@ private:
    * @returns The index of the first child in the sequence of merged and sorted children.
    */
    template<typename ComparatorType>
-   std::size_t MergeSortedHalves(
+   auto MergeSortedHalves(
       std::size_t& lhs,
       std::size_t& rhs,
       const ComparatorType& comparator) noexcept(noexcept(comparator))
@@ -1069,6 +1082,25 @@ private:
    }
 
    /**
+   * @brief Helper function to add the first child.
+   *
+   * @returns A pointer to the newly added node.
+   */
+   Node* AddFirstChild(const Node& node)
+   {
+      assert(m_firstChildIndex == NONE);
+      assert(m_lastChildIndex == NONE);
+      assert(m_childCount == 0);
+
+      m_firstChildIndex = node.m_ownIndex;
+      m_lastChildIndex = m_firstChildIndex;
+
+      ++m_childCount;
+
+      return &m_tree->m_nodes[m_firstChildIndex];
+   }
+
+   /**
    * @brief Private constructor to be used by the Tree class when it creates new nodes and inserts
    * them into the tree.
    */
@@ -1199,12 +1231,7 @@ protected:
    /**
    * Copy constructor.
    */
-   explicit Iterator(const Iterator& other) noexcept :
-      m_currentNode{ other.m_currentNode },
-      m_startingNode{ other.m_startingNode },
-      m_endingNode{ other.m_endingNode }
-   {
-   }
+   Iterator(const Iterator&) noexcept = default;
 
    /**
    * Constructs a iterator started at the specified node.
@@ -1227,7 +1254,6 @@ protected:
 template<typename DataType>
 class Tree<DataType>::PreOrderIterator final : public Tree<DataType>::Iterator
 {
-
 public:
    /**
    * Default constructor.

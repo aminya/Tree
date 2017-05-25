@@ -966,7 +966,8 @@ TEST_CASE("Selectively Delecting Nodes")
 
          DESTRUCTION_COUNT = 0;
 
-         const auto numberOfDetachedNodes = tree.DetachNodeIf(std::begin(tree), std::end(tree),
+         const auto numberOfDetachedNodes =
+            Tree<VerboseNode>::DetachNodeIf(std::begin(tree), std::end(tree),
             [] (const auto& node)
          {
             return node.GetData().m_data.find("Delete Me") != std::string::npos;
@@ -992,7 +993,7 @@ TEST_CASE("Selectively Delecting Nodes")
 
 TEST_CASE("Sorting")
 {
-   SECTION("One Generation of Children")
+   SECTION("Immediate Children")
    {
       Tree<std::string> tree{ "X" };
       auto& root = *tree.GetRoot();
@@ -1006,8 +1007,7 @@ TEST_CASE("Sorting")
       root.AppendChild("E");
       root.AppendChild("H");
 
-      const auto comparator = [] (const auto& lhs, const auto& rhs) noexcept { return lhs < rhs; };
-      root.SortChildren(comparator);
+      root.SortChildren([] (const auto& lhs, const auto& rhs) noexcept { return lhs < rhs; });
 
       const std::vector<std::string> expected = { "A", "B", "C", "D", "E", "F", "G", "H", "X" };
 
@@ -1018,65 +1018,43 @@ TEST_CASE("Sorting")
       VerifyTraversal(expected, actual);
    }
 
-   SECTION("An Entire Tree")
+   SECTION("A Larger Tree")
    {
-      Tree<int> tree{ 999 };
+      Tree<int> tree{ 666 };
       auto& root = *tree.GetRoot();
-      root.AppendChild(634);
+      root.AppendChild(37);
 
       auto* firstChild = root.GetFirstChild();
-      firstChild->AppendChild(34);
-      firstChild->AppendChild(13);
-      firstChild->AppendChild(89);
+      firstChild->AppendChild(6);
+      firstChild->AppendChild(8);
+      firstChild->AppendChild(2);
       firstChild->AppendChild(3);
       firstChild->AppendChild(1);
       firstChild->AppendChild(0);
       firstChild->AppendChild(-5);
 
-      root.AppendChild(375);
-      root.AppendChild(173);
-      root.AppendChild(128);
+      root.AppendChild(48);
+      root.AppendChild(17);
+      root.AppendChild(12);
 
       const auto sizeBeforeSort = tree.Size();
 
-      // Sort:
       std::for_each(std::begin(tree), std::end(tree),
-         [&] (auto& node) noexcept
+         [] (auto& node) noexcept
       {
-         node.SortChildren([] (auto& lhs, auto& rhs) noexcept
-         {
-            return lhs < rhs;
-         });
+         node.SortChildren([] (auto& lhs, auto& rhs) noexcept { return lhs < rhs; });
       });
 
       const auto sizeAfterSort = tree.Size();
 
-      bool sortingError = false;
-      int lastItem = -999;
-
-      // Verify:
-      std::for_each(std::begin(tree), std::end(tree),
-         [&] (const auto& node) noexcept
-      {
-         if (!node.HasChildren())
-         {
-            return;
-         }
-
-         auto child = node.GetFirstChild();
-         while (child)
-         {
-            if (child->GetData() < lastItem)
-            {
-               sortingError = true;
-               lastItem = child->GetData();
-            }
-
-            child = child->GetNextSibling();
-         }
-      });
-
       REQUIRE(sizeBeforeSort == sizeAfterSort);
-      REQUIRE(sortingError == false);
+
+      const std::vector<int> expected = { 12, 17, -5, 0, 1, 2, 3, 6, 8, 37, 48, 666 };
+
+      std::vector<int> actual;
+      std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
+         [] (const auto& node) noexcept { return node.GetData(); });
+
+      VerifyTraversal(expected, actual);
    }
 }
