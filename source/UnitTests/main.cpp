@@ -95,7 +95,7 @@ SCENARIO("Building a Basic Tree of Depth One")
 
       WHEN("A single node is appended to the root node")
       {
-         root.AppendChild(30);
+         tree.GetRoot()->AppendChild(30);
 
          THEN("The node should be properly integrated into the tree")
          {
@@ -179,7 +179,7 @@ TEST_CASE("Node Alterations")
    }
 }
 
-TEST_CASE("Prepending and Appending TreeNodes")
+TEST_CASE("Prepending and Appending Nodes")
 {
    Tree<int> tree{ 10 };
    auto& root = *tree.GetRoot();
@@ -1053,6 +1053,69 @@ TEST_CASE("Sorting")
 
       std::vector<int> actual;
       std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
+         [] (const auto& node) noexcept { return node.GetData(); });
+
+      VerifyTraversal(expected, actual);
+   }
+}
+
+TEST_CASE("Copying Nodes from One Tree to Another")
+{
+   Tree<std::string> numberTree{ "6" };
+   auto& rootOfNumberTree = *numberTree.GetRoot();
+
+   rootOfNumberTree.AppendChild("2")->AppendChild("1");
+   rootOfNumberTree.GetFirstChild()->AppendChild("4")->AppendChild("3");
+   rootOfNumberTree.GetFirstChild()->GetLastChild()->AppendChild("5");
+   rootOfNumberTree.AppendChild("7")->AppendChild("8")->AppendChild("9");
+
+   Tree<std::string> letterTree{ "F" };
+   auto& rootOfLetterTree = *letterTree.GetRoot();
+
+   rootOfLetterTree.AppendChild("B")->AppendChild("A");
+   rootOfLetterTree.GetFirstChild()->AppendChild("D")->AppendChild("C");
+   rootOfLetterTree.GetFirstChild()->GetLastChild()->AppendChild("E");
+   rootOfLetterTree.AppendChild("G")->AppendChild("I")->AppendChild("H");
+
+   SECTION("Appending Two Trees to a Third")
+   {
+      Tree<std::string> masterTree{ "master" };
+      auto& masterRoot = *masterTree.GetRoot();
+
+      masterRoot.AppendChild(*letterTree.GetRoot());
+      masterRoot.AppendChild(*numberTree.GetRoot());
+
+      const std::vector<std::string> expected
+      {
+         "A", "C", "E", "D", "B", "H", "I", "G", "F",
+         "1", "3", "5", "4", "2", "9", "8", "7", "6",
+         "master"
+      };
+
+      std::vector<std::string> actual;
+      std::transform(std::begin(masterTree), std::end(masterTree), std::back_inserter(actual),
+         [] (const auto& node) noexcept { return node.GetData(); });
+
+      VerifyTraversal(expected, actual);
+   }
+
+   SECTION("Prepending Two Trees to a Third")
+   {
+      Tree<std::string> masterTree{ "master" };
+      auto& masterRoot = *masterTree.GetRoot();
+
+      masterRoot.PrependChild(*letterTree.GetRoot());
+      masterRoot.PrependChild(*numberTree.GetRoot());
+
+      const std::vector<std::string> expected
+      {
+         "1", "3", "5", "4", "2", "9", "8", "7", "6",
+         "A", "C", "E", "D", "B", "H", "I", "G", "F",
+         "master"
+      };
+
+      std::vector<std::string> actual;
+      std::transform(std::begin(masterTree), std::end(masterTree), std::back_inserter(actual),
          [] (const auto& node) noexcept { return node.GetData(); });
 
       VerifyTraversal(expected, actual);

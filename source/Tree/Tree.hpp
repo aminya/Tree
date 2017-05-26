@@ -521,13 +521,12 @@ public:
    *
    * @returns A pointer to the newly appended node.
    */
-   template<typename DatumType>
-   Node* AppendChild(DatumType&& datum)
+   Node* AppendChild(DataType datum)
    {
       assert(m_tree);
       assert(m_tree->m_data.size() == m_tree->m_nodes.size());
 
-      m_tree->m_data.emplace_back(std::forward<DatumType>(datum));
+      m_tree->m_data.emplace_back(std::move(datum));
       m_tree->m_nodes.emplace_back(Node{ m_tree, m_tree->m_nodes.size() });
 
       Node& appendee = m_tree->m_nodes.back();
@@ -550,17 +549,57 @@ public:
    }
 
    /**
+   * @brief Appends an existing node (along with its children) to this node.
    *
+   * @note The source node must be from a different tree.
    */
-   Node* AppendChild(const Node& node)
+   void AppendChild(const Node& node)
    {
       if (node.m_tree == m_tree)
       {
          assert(!"The node you're trying to add is already in this tree!");
-         return nullptr; //< Or should this throw instead?
+         return;
       }
 
-      // @todo
+      auto* endOfTraversal = Tree<DataType>::PreOrderIterator{ &node }.m_endingNode;
+
+      auto* source = &node;
+      auto* sink = this;
+
+      Node* lastAppendee = nullptr;
+
+      while (source != endOfTraversal)
+      {
+         lastAppendee = sink->AppendChild(source->GetData());
+
+         if (source->HasChildren())
+         {
+            source = source->GetFirstChild();
+            sink = lastAppendee;
+         }
+         else if (source->GetNextSibling())
+         {
+            source = source->GetNextSibling();
+         }
+         else
+         {
+            while (source->GetParent() && !source->GetParent()->GetNextSibling())
+            {
+               source = source->GetParent();
+               sink = sink->GetParent();
+            }
+
+            if (source->GetParent())
+            {
+               source = source->GetParent()->GetNextSibling();
+               sink = sink->GetParent();
+            }
+            else
+            {
+               source = nullptr;
+            }
+         }
+      }
    }
 
    /**
@@ -570,13 +609,12 @@ public:
    *
    * @returns A pointer to the newly prepended node.
    */
-   template<typename DatumType>
-   Node* PrependChild(DatumType&& datum)
+   Node* PrependChild(DataType datum)
    {
       assert(m_tree);
       assert(m_tree->m_data.size() == m_tree->m_nodes.size());
 
-      m_tree->m_data.emplace_back(std::forward<DatumType>(datum));
+      m_tree->m_data.emplace_back(std::move(datum));
       m_tree->m_nodes.emplace_back(Node{ m_tree, m_tree->m_nodes.size() });
 
       Node& prependee = m_tree->m_nodes.back();
@@ -599,17 +637,64 @@ public:
    }
 
    /**
+   * @brief Appends an existing node (along with its children) to this node.
    *
+   * @note The source node must be from a different tree.
    */
-   Node* PrependChild(const Node& node)
+   void PrependChild(const Node& node)
    {
       if (node.m_tree == m_tree)
       {
          assert(!"The node you're trying to add is already in this tree!");
-         return nullptr; //< Or should this throw instead?
+         return;
       }
 
-      // @todo
+      auto* endOfTraversal = Tree<DataType>::PreOrderIterator{ &node }.m_endingNode;
+
+      auto* source = &node;
+      auto* sink = this;
+
+      Node* lastAppendee = nullptr;
+
+      while (source != endOfTraversal)
+      {
+         if (lastAppendee != nullptr)
+         {
+            lastAppendee = sink->AppendChild(source->GetData());
+         }
+         else
+         {
+            lastAppendee = sink->PrependChild(source->GetData());
+         }
+
+         if (source->HasChildren())
+         {
+            source = source->GetFirstChild();
+            sink = lastAppendee;
+         }
+         else if (source->GetNextSibling())
+         {
+            source = source->GetNextSibling();
+         }
+         else
+         {
+            while (source->GetParent() && !source->GetParent()->GetNextSibling())
+            {
+               source = source->GetParent();
+               sink = sink->GetParent();
+            }
+
+            if (source->GetParent())
+            {
+               source = source->GetParent()->GetNextSibling();
+               sink = sink->GetParent();
+            }
+            else
+            {
+               source = nullptr;
+            }
+         }
+      }
    }
 
    /**
@@ -617,8 +702,8 @@ public:
    * as appropriate.
    *
    * @note This function does not actually reclaim the memory occupied by the doomed node.
-   * Once the tree that originally owned this object reaches the end of it's life, the memory will
-   * be reclaimed.
+   * The memory will be reclaimed once the tree that the node was a part of prior to detachment
+   * reaches the end of its life.
    */
    std::size_t Detach() noexcept
    {
@@ -1135,6 +1220,7 @@ template<typename DataType>
 class Tree<DataType>::Iterator
 {
    friend class Tree;
+   friend class Node;
 
 public:
 
