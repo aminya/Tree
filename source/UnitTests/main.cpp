@@ -78,19 +78,18 @@ SCENARIO("Building a Basic Tree of Depth One")
    GIVEN("A Tree With a Root Node")
    {
       Tree<int> tree{ 10 };
-      auto& root = *tree.GetRoot();
 
       THEN("The root node should be properly initialized")
       {
          REQUIRE(tree.Size() == 1);
 
-         REQUIRE(root.GetData() == 10);
+         REQUIRE(tree.GetRoot()->GetData() == 10);
 
-         REQUIRE(!root.GetParent());
-         REQUIRE(!root.GetFirstChild());
-         REQUIRE(!root.GetLastChild());
-         REQUIRE(!root.GetNextSibling());
-         REQUIRE(!root.GetPreviousSibling());
+         REQUIRE(!tree.GetRoot()->GetParent());
+         REQUIRE(!tree.GetRoot()->GetFirstChild());
+         REQUIRE(!tree.GetRoot()->GetLastChild());
+         REQUIRE(!tree.GetRoot()->GetNextSibling());
+         REQUIRE(!tree.GetRoot()->GetPreviousSibling());
       }
 
       WHEN("A single node is appended to the root node")
@@ -101,52 +100,52 @@ SCENARIO("Building a Basic Tree of Depth One")
          {
             REQUIRE(tree.Size() == 2);
 
-            REQUIRE(*root.GetFirstChild()->GetParent() == root);
-            REQUIRE(*root.GetLastChild()->GetParent() == root);
+            REQUIRE(tree.GetRoot()->GetFirstChild()->GetParent() == tree.GetRoot());
+            REQUIRE(tree.GetRoot()->GetLastChild()->GetParent() == tree.GetRoot());
 
-            REQUIRE(root.GetFirstChild()->GetData() == 30);
-            REQUIRE(root.GetLastChild()->GetData() == 30);
-            REQUIRE(root.GetLastChild() == root.GetFirstChild());
+            REQUIRE(tree.GetRoot()->GetFirstChild()->GetData() == 30);
+            REQUIRE(tree.GetRoot()->GetLastChild()->GetData() == 30);
+            REQUIRE(tree.GetRoot()->GetLastChild() == tree.GetRoot()->GetFirstChild());
          }
 
          AND_WHEN("A second node is appended to the root node")
          {
-            root.AppendChild(40);
+            tree.GetRoot()->AppendChild(40);
 
             THEN("That node should be properly integrated into the tree")
             {
                REQUIRE(tree.Size() == 3);
 
-               REQUIRE(root.GetFirstChild()->GetData() == 30);
-               REQUIRE(root.GetFirstChild()->GetNextSibling() == root.GetLastChild());
+               REQUIRE(tree.GetRoot()->GetFirstChild()->GetData() == 30);
+               REQUIRE(tree.GetRoot()->GetFirstChild()->GetNextSibling() == tree.GetRoot()->GetLastChild());
 
-               REQUIRE(root.GetLastChild()->GetData() == 40);
-               REQUIRE(root.GetLastChild()->GetPreviousSibling() == root.GetFirstChild());
+               REQUIRE(tree.GetRoot()->GetLastChild()->GetData() == 40);
+               REQUIRE(tree.GetRoot()->GetLastChild()->GetPreviousSibling() == tree.GetRoot()->GetFirstChild());
 
-               REQUIRE(*root.GetLastChild()->GetParent() == root);
-               REQUIRE(root.GetFirstChild()->GetParent() == root.GetLastChild()->GetParent());
+               REQUIRE(tree.GetRoot()->GetLastChild()->GetParent() == tree.GetRoot());
+               REQUIRE(tree.GetRoot()->GetFirstChild()->GetParent() == tree.GetRoot()->GetLastChild()->GetParent());
 
-               REQUIRE(root.GetFirstChild()->GetNextSibling()->GetData() == 40);
-               REQUIRE(root.GetLastChild()->GetPreviousSibling()->GetData() == 30);
+               REQUIRE(tree.GetRoot()->GetFirstChild()->GetNextSibling()->GetData() == 40);
+               REQUIRE(tree.GetRoot()->GetLastChild()->GetPreviousSibling()->GetData() == 30);
             }
 
             AND_WHEN("A third node is prepended to the root node")
             {
-               root.PrependChild(20);
+               tree.GetRoot()->PrependChild(20);
 
                THEN("That node should be properly integrated into the tree")
                {
                   REQUIRE(tree.Size() == 4);
 
-                  REQUIRE(*root.GetFirstChild()->GetParent() == root);
+                  REQUIRE(tree.GetRoot()->GetFirstChild()->GetParent() == tree.GetRoot());
 
-                  REQUIRE(root.GetFirstChild()->GetData() == 20);
-                  REQUIRE(root.GetFirstChild()->GetNextSibling()->GetData() == 30);
-                  REQUIRE(root.GetFirstChild()->GetNextSibling()->GetNextSibling()->GetData() == 40);
+                  REQUIRE(tree.GetRoot()->GetFirstChild()->GetData() == 20);
+                  REQUIRE(tree.GetRoot()->GetFirstChild()->GetNextSibling()->GetData() == 30);
+                  REQUIRE(tree.GetRoot()->GetFirstChild()->GetNextSibling()->GetNextSibling()->GetData() == 40);
 
-                  REQUIRE(root.GetLastChild()->GetData() == 40);
-                  REQUIRE(root.GetLastChild()->GetPreviousSibling()->GetData() == 30);
-                  REQUIRE(root.GetLastChild()->GetPreviousSibling()->GetPreviousSibling()->GetData() == 20);
+                  REQUIRE(tree.GetRoot()->GetLastChild()->GetData() == 40);
+                  REQUIRE(tree.GetRoot()->GetLastChild()->GetPreviousSibling()->GetData() == 30);
+                  REQUIRE(tree.GetRoot()->GetLastChild()->GetPreviousSibling()->GetPreviousSibling()->GetData() == 20);
                }
             }
          }
@@ -157,32 +156,29 @@ SCENARIO("Building a Basic Tree of Depth One")
 TEST_CASE("Node Comparison Operations")
 {
    Tree<int> tree{ 10 };
-   auto& root = *tree.GetRoot();
 
    SECTION("Equality")
    {
-      REQUIRE(root == root);
+      REQUIRE(tree.GetRoot() == tree.GetRoot());
    }
 }
 
 TEST_CASE("Node Alterations")
 {
    Tree<std::string> tree{ "caps" };
-   auto& root = *tree.GetRoot();
 
    SECTION("Altering Data")
    {
-      auto& data = root.GetData();
+      auto& data = tree.GetRoot()->GetData();
       std::transform(std::begin(data), std::end(data), std::begin(data), ::toupper);
 
-      REQUIRE(root.GetData() == "CAPS");
+      REQUIRE(tree.GetRoot()->GetData() == "CAPS");
    }
 }
 
 TEST_CASE("Prepending and Appending Nodes")
 {
    Tree<int> tree{ 10 };
-   auto& root = *tree.GetRoot();
 
    const auto IsEachNodeValueLargerThanTheLast = [&] () noexcept
    {
@@ -198,58 +194,57 @@ TEST_CASE("Prepending and Appending Nodes")
 
    SECTION("Prepending Nodes")
    {
-      REQUIRE(root.GetChildCount() == 0);
-      REQUIRE(root.CountAllDescendants() == 0);
+      REQUIRE(tree.GetRoot()->GetChildCount() == 0);
+      REQUIRE(tree.GetRoot()->CountAllDescendants() == 0);
 
-      root.AppendChild(1);
-      root.AppendChild(2);
-      root.AppendChild(3);
-      root.AppendChild(4);
-      root.AppendChild(5);
-      root.AppendChild(6);
-      root.AppendChild(7);
-      root.AppendChild(8);
-      root.AppendChild(9);
+      tree.GetRoot()->AppendChild(1);
+      tree.GetRoot()->AppendChild(2);
+      tree.GetRoot()->AppendChild(3);
+      tree.GetRoot()->AppendChild(4);
+      tree.GetRoot()->AppendChild(5);
+      tree.GetRoot()->AppendChild(6);
+      tree.GetRoot()->AppendChild(7);
+      tree.GetRoot()->AppendChild(8);
+      tree.GetRoot()->AppendChild(9);
 
       const bool correctlyPrepended = IsEachNodeValueLargerThanTheLast();
       REQUIRE(correctlyPrepended);
 
-      REQUIRE(root.GetChildCount() == 9);
-      REQUIRE(root.CountAllDescendants() == 9);
+      REQUIRE(tree.GetRoot()->GetChildCount() == 9);
+      REQUIRE(tree.GetRoot()->CountAllDescendants() == 9);
    }
 
    SECTION("Appending Nodes")
    {
-      REQUIRE(root.GetChildCount() == 0);
-      REQUIRE(root.CountAllDescendants() == 0);
+      REQUIRE(tree.GetRoot()->GetChildCount() == 0);
+      REQUIRE(tree.GetRoot()->CountAllDescendants() == 0);
 
-      root.PrependChild(9);
-      root.PrependChild(8);
-      root.PrependChild(7);
-      root.PrependChild(6);
-      root.PrependChild(5);
-      root.PrependChild(4);
-      root.PrependChild(3);
-      root.PrependChild(2);
-      root.PrependChild(1);
+      tree.GetRoot()->PrependChild(9);
+      tree.GetRoot()->PrependChild(8);
+      tree.GetRoot()->PrependChild(7);
+      tree.GetRoot()->PrependChild(6);
+      tree.GetRoot()->PrependChild(5);
+      tree.GetRoot()->PrependChild(4);
+      tree.GetRoot()->PrependChild(3);
+      tree.GetRoot()->PrependChild(2);
+      tree.GetRoot()->PrependChild(1);
 
       const bool correctlyAppended = IsEachNodeValueLargerThanTheLast();
       REQUIRE(correctlyAppended);
 
-      REQUIRE(root.GetChildCount() == 9);
-      REQUIRE(root.CountAllDescendants() == 9);
+      REQUIRE(tree.GetRoot()->GetChildCount() == 9);
+      REQUIRE(tree.GetRoot()->CountAllDescendants() == 9);
    }
 }
 
 TEST_CASE("Node Counting")
 {
    Tree<std::string> tree{ "F" };
-   auto& root = *tree.GetRoot();
 
-   root.AppendChild("B")->AppendChild("A");
-   root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-   root.GetFirstChild()->GetLastChild()->AppendChild("E");
-   root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+   tree.GetRoot()->AppendChild("B")->AppendChild("A");
+   tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
+   tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
 
    SECTION("Tree Size")
    {
@@ -258,26 +253,25 @@ TEST_CASE("Node Counting")
 
    SECTION("Node Depth")
    {
-      REQUIRE(root.Depth() == 0);
-      REQUIRE(root.GetFirstChild()->Depth() == 1);
-      REQUIRE(root.GetFirstChild()->GetFirstChild()->Depth() == 2);
+      REQUIRE(tree.GetRoot()->Depth() == 0);
+      REQUIRE(tree.GetRoot()->GetFirstChild()->Depth() == 1);
+      REQUIRE(tree.GetRoot()->GetFirstChild()->GetFirstChild()->Depth() == 2);
    }
 
    SECTION("Descendent Count")
    {
-      REQUIRE(root.GetFirstChild()->CountAllDescendants() == 4);
+      REQUIRE(tree.GetRoot()->GetFirstChild()->CountAllDescendants() == 4);
    }
 }
 
 TEST_CASE("Forward Pre- and Post-Order Traversal of Simple Binary Tree")
 {
    Tree<std::string> tree{ "F" };
-   auto& root = *tree.GetRoot();
 
-   root.AppendChild("B")->AppendChild("A");
-   root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-   root.GetFirstChild()->GetLastChild()->AppendChild("E");
-   root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+   tree.GetRoot()->AppendChild("B")->AppendChild("A");
+   tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
+   tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
 
    SECTION("Pre-order Traversal")
    {
@@ -305,18 +299,17 @@ TEST_CASE("Forward Pre- and Post-Order Traversal of Simple Binary Tree")
 TEST_CASE("Partial Tree Iteration")
 {
    Tree<std::string> tree{ "F" };
-   auto& root = *tree.GetRoot();
 
-   root.AppendChild("B")->AppendChild("A");
-   root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-   root.GetFirstChild()->GetLastChild()->AppendChild("E");
-   root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+   tree.GetRoot()->AppendChild("B")->AppendChild("A");
+   tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
+   tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
 
    SECTION("Pre-Order Iteration")
    {
       const std::vector<std::string> expected = { "B", "A", "D", "C", "E" };
 
-      const auto begin = Tree<std::string>::PreOrderIterator{ root.GetFirstChild() };
+      const auto begin = Tree<std::string>::PreOrderIterator{ tree.GetRoot()->GetFirstChild() };
       const auto end = Tree<std::string>::PreOrderIterator{ };
 
       std::vector<std::string> actual;
@@ -330,7 +323,7 @@ TEST_CASE("Partial Tree Iteration")
    {
       const std::vector<std::string> expected = { "A", "C", "E", "D", "B" };
 
-      const auto begin = Tree<std::string>::PostOrderIterator{ root.GetFirstChild() };
+      const auto begin = Tree<std::string>::PostOrderIterator{ tree.GetRoot()->GetFirstChild() };
       const auto end = Tree<std::string>::PostOrderIterator{ };
 
       std::vector<std::string> actual;
@@ -344,18 +337,17 @@ TEST_CASE("Partial Tree Iteration")
 TEST_CASE("Partial Tree Iteration Corner Cases")
 {
    Tree<std::string> tree{ "F" };
-   auto& root = *tree.GetRoot();
 
-   root.AppendChild("B")->AppendChild("A");
-   root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-   root.GetFirstChild()->GetLastChild()->AppendChild("E");
-   root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+   tree.GetRoot()->AppendChild("B")->AppendChild("A");
+   tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
+   tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
 
    SECTION("Pre-Order Iteration")
    {
       const std::vector<std::string> expected = { "D", "C", "E" };
 
-      const auto* startingNode = root.GetFirstChild()->GetLastChild();
+      const auto* startingNode = tree.GetRoot()->GetFirstChild()->GetLastChild();
 
       const auto begin = Tree<std::string>::PreOrderIterator{ startingNode };
       const auto end = Tree<std::string>::PreOrderIterator{ };
@@ -371,7 +363,7 @@ TEST_CASE("Partial Tree Iteration Corner Cases")
    {
       const std::vector<std::string> expected = { "C", "E", "D" };
 
-      const auto* startingNode = root.GetFirstChild()->GetLastChild();
+      const auto* startingNode = tree.GetRoot()->GetFirstChild()->GetLastChild();
 
       const auto begin = Tree<std::string>::PostOrderIterator{ startingNode };
       const auto end = Tree<std::string>::PostOrderIterator{ };
@@ -387,7 +379,7 @@ TEST_CASE("Partial Tree Iteration Corner Cases")
    {
       const std::vector<std::string> expected = { "C", "E" };
 
-      const auto* startingNode = root.GetFirstChild()->GetLastChild();
+      const auto* startingNode = tree.GetRoot()->GetFirstChild()->GetLastChild();
 
       const auto begin = Tree<std::string>::LeafIterator{ startingNode };
       const auto end = Tree<std::string>::LeafIterator{ };
@@ -403,12 +395,11 @@ TEST_CASE("Partial Tree Iteration Corner Cases")
 TEST_CASE("STL Typedef Compliance")
 {
    Tree<std::string> tree{ "F" };
-   auto& root = *tree.GetRoot();
 
-   root.AppendChild("B")->AppendChild("A");
-   root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-   root.GetFirstChild()->GetLastChild()->AppendChild("E");
-   root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+   tree.GetRoot()->AppendChild("B")->AppendChild("A");
+   tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
+   tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
 
    SECTION("Standard Algorithms and Parameter Passing by value_type")
    {
@@ -447,18 +438,17 @@ TEST_CASE("STL Typedef Compliance")
 TEST_CASE("Leaf Iterator")
 {
    Tree<std::string> tree{ "F" };
-   auto& root = *tree.GetRoot();
 
-   root.AppendChild("B")->AppendChild("A");
-   root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-   root.GetFirstChild()->GetLastChild()->AppendChild("E");
-   root.AppendChild("G")->AppendChild("I")->AppendChild("H");
+   tree.GetRoot()->AppendChild("B")->AppendChild("A");
+   tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
+   tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
 
    SECTION("Forward Traversal")
    {
       const std::vector<std::string> expected = { "A", "C", "E", "H", };
 
-      const auto begin = Tree<std::string>::LeafIterator{ &root };
+      const auto begin = Tree<std::string>::LeafIterator{ tree.GetRoot() };
       const auto end = Tree<std::string>::LeafIterator{ };
 
       std::vector<std::string> actual;
@@ -472,7 +462,7 @@ TEST_CASE("Leaf Iterator")
    {
       const std::vector<std::string> expected = { "A", "C", "E" };
 
-      const auto begin = Tree<std::string>::LeafIterator{ root.GetFirstChild() };
+      const auto begin = Tree<std::string>::LeafIterator{ tree.GetRoot()->GetFirstChild() };
       const auto end = Tree<std::string>::LeafIterator{ };
 
       std::vector<std::string> actual;
@@ -497,22 +487,21 @@ TEST_CASE("Leaf Iterator")
 TEST_CASE("Sibling Iterator")
 {
    Tree<std::string> tree{ "IDK" };
-   auto& root = *tree.GetRoot();
 
-   root.AppendChild("B");
-   root.AppendChild("D");
-   root.AppendChild("A");
-   root.AppendChild("C");
-   root.AppendChild("F");
-   root.AppendChild("G");
-   root.AppendChild("E");
-   root.AppendChild("H");
+   tree.GetRoot()->AppendChild("B");
+   tree.GetRoot()->AppendChild("D");
+   tree.GetRoot()->AppendChild("A");
+   tree.GetRoot()->AppendChild("C");
+   tree.GetRoot()->AppendChild("F");
+   tree.GetRoot()->AppendChild("G");
+   tree.GetRoot()->AppendChild("E");
+   tree.GetRoot()->AppendChild("H");
 
    SECTION("Forward Traversal")
    {
       const std::vector<std::string> expected = { "B", "D", "A", "C", "F", "G", "E", "H", };
 
-      const auto begin = decltype(tree)::SiblingIterator{ root.GetFirstChild() };
+      const auto begin = decltype(tree)::SiblingIterator{ tree.GetRoot()->GetFirstChild() };
       const auto end = decltype(tree)::SiblingIterator{ };
 
       std::vector<std::string> actual;
@@ -528,13 +517,12 @@ TEST_CASE("Simple Memory Layout Optimization")
    SECTION("Leaf Iteration")
    {
       Tree<std::string> tree{ "F" };
-      auto& root = *tree.GetRoot();
 
-      root.PrependChild("E");
-      root.PrependChild("D");
-      root.PrependChild("C");
-      root.PrependChild("B");
-      root.PrependChild("A");
+      tree.GetRoot()->PrependChild("E");
+      tree.GetRoot()->PrependChild("D");
+      tree.GetRoot()->PrependChild("C");
+      tree.GetRoot()->PrependChild("B");
+      tree.GetRoot()->PrependChild("A");
 
       tree.OptimizeMemoryLayoutFor<LeafTraversal>();
 
@@ -550,11 +538,10 @@ TEST_CASE("Simple Memory Layout Optimization")
    SECTION("Pre-Order Iteration")
    {
       Tree<std::string> tree{ "B" };
-      auto& root = *tree.GetRoot();
 
-      root.AppendChild("D")->AppendChild("E");
-      root.GetFirstChild()->PrependChild("C");
-      root.PrependChild("A");
+      tree.GetRoot()->AppendChild("D")->AppendChild("E");
+      tree.GetRoot()->GetFirstChild()->PrependChild("C");
+      tree.GetRoot()->PrependChild("A");
 
       tree.OptimizeMemoryLayoutFor<PreOrderTraversal>();
 
@@ -569,11 +556,10 @@ TEST_CASE("Simple Memory Layout Optimization")
    SECTION("Post-Order Iteration")
    {
       Tree<std::string> tree{ "B" };
-      auto& root = *tree.GetRoot();
 
-      root.AppendChild("D")->AppendChild("E");
-      root.GetFirstChild()->PrependChild("C");
-      root.PrependChild("A");
+      tree.GetRoot()->AppendChild("D")->AppendChild("E");
+      tree.GetRoot()->GetFirstChild()->PrependChild("C");
+      tree.GetRoot()->PrependChild("A");
 
       tree.OptimizeMemoryLayoutFor<PostOrderTraversal>();
 
@@ -589,12 +575,11 @@ TEST_CASE("Simple Memory Layout Optimization")
 TEST_CASE("More Complex Memory Layout Optimization")
 {
    Tree<std::string> tree{ "F" };
-   auto& root = *tree.GetRoot();
 
-   root.AppendChild("B")->AppendChild("A");
-   root.AppendChild("G")->AppendChild("I")->AppendChild("H");
-   root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-   root.GetFirstChild()->GetLastChild()->AppendChild("E");
+   tree.GetRoot()->AppendChild("B")->AppendChild("A");
+   tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+   tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
 
    SECTION("Pre-Order Iteration")
    {
@@ -681,12 +666,11 @@ TEST_CASE("Tree and Node Destruction")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& root = *tree.GetRoot();
 
-         root.AppendChild("B")->AppendChild("A");
-         root.AppendChild("G")->AppendChild("I")->AppendChild("H");
-         root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-         root.GetFirstChild()->GetLastChild()->AppendChild("E");
+         tree.GetRoot()->AppendChild("B")->AppendChild("A");
+         tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+         tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+         tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
 
          DESTRUCTION_COUNT = 0u;
 
@@ -705,21 +689,20 @@ TEST_CASE("Selectively Delecting Nodes")
    {
       {
          Tree<VerboseNode> tree{ "0" };
-         auto& root = *tree.GetRoot();
 
-         root.AppendChild("1");
-         root.AppendChild("2");
-         root.AppendChild("3");
-         root.AppendChild("4");
-         root.AppendChild("5");
-         root.AppendChild("6");
-         root.AppendChild("7");
-         root.AppendChild("8");
-         root.AppendChild("9");
+         tree.GetRoot()->AppendChild("1");
+         tree.GetRoot()->AppendChild("2");
+         tree.GetRoot()->AppendChild("3");
+         tree.GetRoot()->AppendChild("4");
+         tree.GetRoot()->AppendChild("5");
+         tree.GetRoot()->AppendChild("6");
+         tree.GetRoot()->AppendChild("7");
+         tree.GetRoot()->AppendChild("8");
+         tree.GetRoot()->AppendChild("9");
 
          DESTRUCTION_COUNT = 0u;
 
-         auto* doomedNode = root.GetFirstChild()->GetNextSibling()->GetNextSibling();
+         auto* doomedNode = tree.GetRoot()->GetFirstChild()->GetNextSibling()->GetNextSibling();
          REQUIRE(doomedNode->GetData().m_data == "3");
 
          doomedNode->Detach();
@@ -744,12 +727,11 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& root = *tree.GetRoot();
 
-         root.AppendChild("B")->AppendChild("A");
-         root.AppendChild("G")->AppendChild("I")->AppendChild("H");
-         root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-         root.GetFirstChild()->GetLastChild()->AppendChild("E");
+         tree.GetRoot()->AppendChild("B")->AppendChild("A");
+         tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+         tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+         tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
 
          treeSize = tree.Size();
 
@@ -785,12 +767,11 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& root = *tree.GetRoot();
 
-         root.AppendChild("B")->AppendChild("A");
-         root.AppendChild("G")->AppendChild("I")->AppendChild("H");
-         root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-         root.GetFirstChild()->GetLastChild()->AppendChild("E");
+         tree.GetRoot()->AppendChild("B")->AppendChild("A");
+         tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+         tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+         tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
 
          treeSize = tree.Size();
 
@@ -826,12 +807,11 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& root = *tree.GetRoot();
 
-         root.AppendChild("B")->AppendChild("A");
-         root.AppendChild("G")->AppendChild("I")->AppendChild("H");
-         root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-         root.GetFirstChild()->GetLastChild()->AppendChild("E");
+         tree.GetRoot()->AppendChild("B")->AppendChild("A");
+         tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+         tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+         tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
 
          treeSize = tree.Size();
 
@@ -867,13 +847,12 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& root = *tree.GetRoot();
 
-         root.AppendChild("B")->AppendChild("A");
-         root.AppendChild("G")->AppendChild("I")->AppendChild("H");
-         root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-         root.GetFirstChild()->GetLastChild()->AppendChild("X");
-         root.GetFirstChild()->GetLastChild()->AppendChild("E");
+         tree.GetRoot()->AppendChild("B")->AppendChild("A");
+         tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+         tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+         tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("X");
+         tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
 
          treeSize = tree.Size();
 
@@ -914,12 +893,11 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& root = *tree.GetRoot();
 
-         root.AppendChild("B")->AppendChild("A");
-         root.AppendChild("G")->AppendChild("I")->AppendChild("H");
-         root.GetFirstChild()->AppendChild("D")->AppendChild("C");
-         root.GetFirstChild()->GetLastChild()->AppendChild("E");
+         tree.GetRoot()->AppendChild("B")->AppendChild("A");
+         tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+         tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+         tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
 
          treeSize = tree.Size();
 
@@ -955,12 +933,11 @@ TEST_CASE("Selectively Delecting Nodes")
 
       {
          Tree<VerboseNode> tree{ "F" };
-         auto& root = *tree.GetRoot();
 
-         root.AppendChild("B")->AppendChild("A");
-         root.AppendChild("G")->AppendChild("Delete Me (I)")->AppendChild("H");
-         root.GetFirstChild()->AppendChild("Delete Me (D)")->AppendChild("C");
-         root.GetFirstChild()->GetLastChild()->AppendChild("Delete Me (E)");
+         tree.GetRoot()->AppendChild("B")->AppendChild("A");
+         tree.GetRoot()->AppendChild("G")->AppendChild("Delete Me (I)")->AppendChild("H");
+         tree.GetRoot()->GetFirstChild()->AppendChild("Delete Me (D)")->AppendChild("C");
+         tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("Delete Me (E)");
 
          treeSize = tree.Size();
 
@@ -984,7 +961,7 @@ TEST_CASE("Selectively Delecting Nodes")
          VerifyTraversal(expected, actual);
 
          constexpr auto rootNode{ 1 };
-         REQUIRE(root.CountAllDescendants() == expected.size() - rootNode);
+         REQUIRE(tree.GetRoot()->CountAllDescendants() == expected.size() - rootNode);
       }
 
       REQUIRE(DESTRUCTION_COUNT == treeSize);
@@ -996,18 +973,17 @@ TEST_CASE("Sorting")
    SECTION("Immediate Children")
    {
       Tree<std::string> tree{ "X" };
-      auto& root = *tree.GetRoot();
 
-      root.AppendChild("B");
-      root.AppendChild("D");
-      root.AppendChild("A");
-      root.AppendChild("C");
-      root.AppendChild("F");
-      root.AppendChild("G");
-      root.AppendChild("E");
-      root.AppendChild("H");
+      tree.GetRoot()->AppendChild("B");
+      tree.GetRoot()->AppendChild("D");
+      tree.GetRoot()->AppendChild("A");
+      tree.GetRoot()->AppendChild("C");
+      tree.GetRoot()->AppendChild("F");
+      tree.GetRoot()->AppendChild("G");
+      tree.GetRoot()->AppendChild("E");
+      tree.GetRoot()->AppendChild("H");
 
-      root.SortChildren([] (const auto& lhs, const auto& rhs) noexcept { return lhs < rhs; });
+      tree.GetRoot()->SortChildren([] (const auto& lhs, const auto& rhs) noexcept { return lhs < rhs; });
 
       const std::vector<std::string> expected = { "A", "B", "C", "D", "E", "F", "G", "H", "X" };
 
@@ -1021,21 +997,19 @@ TEST_CASE("Sorting")
    SECTION("A Larger Tree")
    {
       Tree<int> tree{ 666 };
-      auto& root = *tree.GetRoot();
-      root.AppendChild(37);
+      tree.GetRoot()->AppendChild(37);
 
-      auto* firstChild = root.GetFirstChild();
-      firstChild->AppendChild(6);
-      firstChild->AppendChild(8);
-      firstChild->AppendChild(2);
-      firstChild->AppendChild(3);
-      firstChild->AppendChild(1);
-      firstChild->AppendChild(0);
-      firstChild->AppendChild(-5);
+      tree.GetRoot()->GetFirstChild()->AppendChild(6);
+      tree.GetRoot()->GetFirstChild()->AppendChild(8);
+      tree.GetRoot()->GetFirstChild()->AppendChild(2);
+      tree.GetRoot()->GetFirstChild()->AppendChild(3);
+      tree.GetRoot()->GetFirstChild()->AppendChild(1);
+      tree.GetRoot()->GetFirstChild()->AppendChild(0);
+      tree.GetRoot()->GetFirstChild()->AppendChild(-5);
 
-      root.AppendChild(48);
-      root.AppendChild(17);
-      root.AppendChild(12);
+      tree.GetRoot()->AppendChild(48);
+      tree.GetRoot()->AppendChild(17);
+      tree.GetRoot()->AppendChild(12);
 
       const auto sizeBeforeSort = tree.Size();
 
@@ -1062,28 +1036,25 @@ TEST_CASE("Sorting")
 TEST_CASE("Copying Nodes from One Tree to Another")
 {
    Tree<std::string> numberTree{ "6" };
-   auto& rootOfNumberTree = *numberTree.GetRoot();
 
-   rootOfNumberTree.AppendChild("2")->AppendChild("1");
-   rootOfNumberTree.GetFirstChild()->AppendChild("4")->AppendChild("3");
-   rootOfNumberTree.GetFirstChild()->GetLastChild()->AppendChild("5");
-   rootOfNumberTree.AppendChild("7")->AppendChild("8")->AppendChild("9");
+   numberTree.GetRoot()->AppendChild("2")->AppendChild("1");
+   numberTree.GetRoot()->GetFirstChild()->AppendChild("4")->AppendChild("3");
+   numberTree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("5");
+   numberTree.GetRoot()->AppendChild("7")->AppendChild("8")->AppendChild("9");
 
    Tree<std::string> letterTree{ "F" };
-   auto& rootOfLetterTree = *letterTree.GetRoot();
 
-   rootOfLetterTree.AppendChild("B")->AppendChild("A");
-   rootOfLetterTree.GetFirstChild()->AppendChild("D")->AppendChild("C");
-   rootOfLetterTree.GetFirstChild()->GetLastChild()->AppendChild("E");
-   rootOfLetterTree.AppendChild("G")->AppendChild("I")->AppendChild("H");
+   letterTree.GetRoot()->AppendChild("B")->AppendChild("A");
+   letterTree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+   letterTree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
+   letterTree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
 
    SECTION("Appending Two Trees to a Third")
    {
       Tree<std::string> masterTree{ "master" };
-      auto& masterRoot = *masterTree.GetRoot();
 
-      masterRoot.AppendChild(*letterTree.GetRoot());
-      masterRoot.AppendChild(*numberTree.GetRoot());
+      masterTree.GetRoot()->AppendChild(*letterTree.GetRoot());
+      masterTree.GetRoot()->AppendChild(*numberTree.GetRoot());
 
       const std::vector<std::string> expected
       {
@@ -1102,10 +1073,9 @@ TEST_CASE("Copying Nodes from One Tree to Another")
    SECTION("Prepending Two Trees to a Third")
    {
       Tree<std::string> masterTree{ "master" };
-      auto& masterRoot = *masterTree.GetRoot();
 
-      masterRoot.PrependChild(*letterTree.GetRoot());
-      masterRoot.PrependChild(*numberTree.GetRoot());
+      masterTree.GetRoot()->PrependChild(*letterTree.GetRoot());
+      masterTree.GetRoot()->PrependChild(*numberTree.GetRoot());
 
       const std::vector<std::string> expected
       {

@@ -88,22 +88,9 @@ namespace
    */
    void PruneEmptyFilesAndDirectories(Tree<FileInfo>& tree)
    {
-      std::vector<Tree<FileInfo>::Node*> toBeDeleted;
-
-      for (auto&& node : tree)
-      {
-         if (node->size == 0)
-         {
-            toBeDeleted.emplace_back(&node);
-         }
-      }
-
-      const size_t nodesRemoved = toBeDeleted.size();
-
-      for (auto* node : toBeDeleted)
-      {
-         node->DeleteFromTree();
-      }
+      const auto nodesRemoved =
+         Tree<FileInfo>::DetachNodeIf(std::begin(tree), std::end(tree),
+         [] (const auto& node ) noexcept { return node.GetData().size == 0; });
 
       std::cout << "Number of Sizeless Files Removed: " << nodesRemoved << std::endl;
    }
@@ -127,7 +114,7 @@ namespace
          FileInfo& parentInfo = parent->GetData();
          if (parentInfo.type == FileType::DIRECTORY)
          {
-            parentInfo.size += node->size;
+            parentInfo.size += node.GetData().size;
          }
       }
    }
@@ -140,7 +127,7 @@ namespace
    * @returns A pair of vectors containing partitioned, scannable files. The first element in the
    * pair contains the directories, and the second element contains the regular files.
    */
-   std::pair<std::vector<NodeAndPath>, std::vector<NodeAndPath>>
+   std::pair<std::vector<TreeAndPath>, std::vector<TreeAndPath>>
       CreateTaskItems(const std::experimental::filesystem::path& path)
    {
       std::error_code errorCode;
@@ -151,10 +138,10 @@ namespace
          return{};
       }
 
-      std::vector<NodeAndPath> directoriesToProcess;
-      std::vector<NodeAndPath> filesToProcess;
+      std::vector<TreeAndPath> directoriesToProcess;
+      std::vector<TreeAndPath> filesToProcess;
 
-      const auto end = std::experimental::filesystem::directory_iterator{};
+      const auto end = std::experimental::filesystem::directory_iterator{ };
       while (itr != end)
       {
          const auto path = itr->path();
@@ -173,9 +160,9 @@ namespace
             fileType
          };
 
-         NodeAndPath nodeAndPath
+         TreeAndPath nodeAndPath
          {
-            std::make_unique<Tree<FileInfo>::Node>(std::move(fileInfo)),
+            std::make_unique<Tree<FileInfo>>(std::move(fileInfo)),
             std::move(path)
          };
 
@@ -201,21 +188,20 @@ namespace
    * @param[out] fileTree          The tree into which the scan results should be inserted.
    */
    void BuildFinalTree(
-      ThreadSafeQueue<NodeAndPath>& queue,
+      ThreadSafeQueue<TreeAndPath>& queue,
       Tree<FileInfo>& fileTree)
    {
       while (!queue.IsEmpty())
       {
-         NodeAndPath nodeAndPath{};
-         const auto successfullyPopped = queue.TryPop(nodeAndPath);
+         TreeAndPath treeAndPath{ };
+         const auto successfullyPopped = queue.TryPop(treeAndPath);
          if (!successfullyPopped)
          {
             assert(false);
             break;
          }
 
-         //fileTree.GetHead()->AppendChild(*nodeAndPath.node);
-         nodeAndPath.node.release();
+         fileTree.GetRoot()->AppendChild(*treeAndPath.tree->GetRoot());
       }
    }
 }
@@ -225,7 +211,7 @@ DriveScanner::DriveScanner(const std::experimental::filesystem::path& path) :
 {
 }
 
-std::shared_ptr<Tree<FileInfo>> DriveScanner::CreateTreeAndRootNode()
+std::unique_ptr<Tree<FileInfo>> DriveScanner::CreateTreeAndRootNode()
 {
    assert(std::experimental::filesystem::is_directory(m_rootPath));
    if (!std::experimental::filesystem::is_directory(m_rootPath))
@@ -241,14 +227,14 @@ std::shared_ptr<Tree<FileInfo>> DriveScanner::CreateTreeAndRootNode()
       FileType::DIRECTORY
    };
 
-   return std::make_shared<Tree<FileInfo>>(fileInfo);
+   return std::make_unique<Tree<FileInfo>>(fileInfo);
 }
 
 void DriveScanner::ProcessFile(
    const std::experimental::filesystem::path& path,
    Tree<FileInfo>::Node& treeNode) noexcept
 {
-   std::uintmax_t fileSize = ComputeFileSize(path);
+   const auto fileSize = ComputeFileSize(path);
 
    if (fileSize == 0)
    {
@@ -263,7 +249,7 @@ void DriveScanner::ProcessFile(
       FileType::REGULAR
    };
 
-   //treeNode.AppendChild(fileInfo);
+   treeNode.AppendChild(fileInfo);
 }
 
 void DriveScanner::ProcessDirectory(
@@ -313,7 +299,7 @@ void DriveScanner::ProcessDirectory(
          FileType::DIRECTORY
       };
 
-      //treeNode.AppendChild(directoryInfo);
+      treeNode.AppendChild(directoryInfo);
 
       auto itr = std::experimental::filesystem::directory_iterator{ path };
       IterateOverDirectoryAndScan(itr, *treeNode.GetLastChild());
@@ -324,7 +310,7 @@ void DriveScanner::IterateOverDirectoryAndScan(
    std::experimental::filesystem::directory_iterator& itr,
    Tree<FileInfo>::Node& treeNode) noexcept
 {
-   const auto end = std::experimental::filesystem::directory_iterator{};
+   const auto end = std::experimental::filesystem::directory_iterator{ };
    while (itr != end)
    {
       ProcessDirectory(itr->path(), treeNode);
@@ -334,13 +320,13 @@ void DriveScanner::IterateOverDirectoryAndScan(
 }
 
 void DriveScanner::ProcessQueue(
-   ThreadSafeQueue<NodeAndPath>& taskQueue,
-   ThreadSafeQueue<NodeAndPath>& resultsQueue) noexcept
+   ThreadSafeQueue<TreeAndPath>& taskQueue,
+   ThreadSafeQueue<TreeAndPath>& resultsQueue) noexcept
 {
    while (!taskQueue.IsEmpty())
    {
-      NodeAndPath nodeAndPath{};
-      const auto successfullyPopped = taskQueue.TryPop(nodeAndPath);
+      TreeAndPath treeAndPath{ };
+      const auto successfullyPopped = taskQueue.TryPop(treeAndPath);
       if (!successfullyPopped)
       {
          assert(false);
@@ -348,17 +334,17 @@ void DriveScanner::ProcessQueue(
       }
 
       IterateOverDirectoryAndScan(
-         std::experimental::filesystem::directory_iterator{ nodeAndPath.path },
-         *nodeAndPath.node);
+         std::experimental::filesystem::directory_iterator{ treeAndPath.path },
+         *treeAndPath.tree->GetRoot());
 
       {
          std::lock_guard<std::mutex> lock{ streamMutex };
          IgnoreUnused(lock);
 
-         std::wcout << "Finished scanning: \"" << nodeAndPath.path.wstring() << "\"" << std::endl;
+         std::wcout << "Finished scanning: \"" << treeAndPath.path.wstring() << "\"" << std::endl;
       }
 
-      resultsQueue.Emplace(std::move(nodeAndPath));
+      resultsQueue.Emplace(std::move(treeAndPath));
    }
 
    std::lock_guard<std::mutex> lock{ streamMutex };
@@ -377,11 +363,11 @@ void DriveScanner::Start()
 
    Stopwatch<std::chrono::seconds>([&]() noexcept
    {
-      std::pair<std::vector<NodeAndPath>, std::vector<NodeAndPath>> directoriesAndFiles =
+      std::pair<std::vector<TreeAndPath>, std::vector<TreeAndPath>> directoriesAndFiles =
          CreateTaskItems(m_rootPath);
 
-      ThreadSafeQueue<NodeAndPath> resultQueue;
-      ThreadSafeQueue<NodeAndPath> taskQueue;
+      ThreadSafeQueue<TreeAndPath> resultQueue;
+      ThreadSafeQueue<TreeAndPath> taskQueue;
 
       for (auto&& directory : directoriesAndFiles.first)
       {
@@ -394,12 +380,12 @@ void DriveScanner::Start()
 
       for (auto i{ 0u }; i < numberOfThreads; ++i)
       {
-         scanningThreads.emplace_back(std::thread{ [&]() noexcept { ProcessQueue(taskQueue, resultQueue); } });
+         scanningThreads.emplace_back([&]() noexcept { ProcessQueue(taskQueue, resultQueue); });
       }
 
       for (auto&& file : directoriesAndFiles.second)
       {
-         ProcessFile(file.path, *m_theTree->GetHead());
+         ProcessFile(file.path, *m_theTree->GetRoot());
       }
 
       for (auto&& thread : scanningThreads)

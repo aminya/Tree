@@ -9,8 +9,8 @@
 template<typename Type>
 class ThreadSafeQueue
 {
-   static_assert(std::is_move_assignable<Type>::value, "Type has to be move-assignable.");
-   static_assert(std::is_move_constructible<Type>::value, "Type has to be move-constructible.");
+   //static_assert(std::is_move_assignable<Type>::value, "Type has to be move-assignable.");
+   //static_assert(std::is_move_constructible<Type>::value, "Type has to be move-constructible.");
 
 public:
 

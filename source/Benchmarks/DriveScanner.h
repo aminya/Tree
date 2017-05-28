@@ -15,21 +15,21 @@
 /**
 * @brief The NodeAndPath struct
 */
-struct NodeAndPath
+struct TreeAndPath
 {
-   std::unique_ptr<Tree<FileInfo>::Node> node;
+   std::unique_ptr<Tree<FileInfo>> tree;
    std::experimental::filesystem::path path;
 
-   NodeAndPath(
-      decltype(node) node,
+   TreeAndPath(
+      decltype(tree) tree,
       decltype(path) path)
       :
-      node{ std::move(node) },
+      tree{ std::move(tree) },
       path{ std::move(path) }
    {
    }
 
-   NodeAndPath() = default;
+   TreeAndPath() = default;
 };
 
 template<typename Type>
@@ -51,13 +51,13 @@ public:
    */
    void Start();
 
-   std::shared_ptr<Tree<FileInfo>> m_theTree{ nullptr };
+   std::unique_ptr<Tree<FileInfo>> m_theTree{ nullptr };
 
 private:
 
    void ProcessQueue(
-      ThreadSafeQueue<NodeAndPath>& taskQueue,
-      ThreadSafeQueue<NodeAndPath>& resultsQueue) noexcept;
+      ThreadSafeQueue<TreeAndPath>& taskQueue,
+      ThreadSafeQueue<TreeAndPath>& resultsQueue) noexcept;
 
    /**
    * @brief Helper function to process a single file.
@@ -91,7 +91,7 @@ private:
       std::experimental::filesystem::directory_iterator& itr,
       Tree<FileInfo>::Node& treeNode) noexcept;
 
-   std::shared_ptr<Tree<FileInfo>> CreateTreeAndRootNode();
+   std::unique_ptr<Tree<FileInfo>> CreateTreeAndRootNode();
 
    const std::experimental::filesystem::path m_rootPath;
 };

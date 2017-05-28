@@ -74,10 +74,10 @@ public:
    */
    Tree()
    {
-      m_data.reserve(128);
+      //m_data.reserve(128);
       m_data.emplace_back(DataType{ });
 
-      m_nodes.reserve(128);
+      //m_nodes.reserve(128);
       m_nodes.emplace_back(Node{ this, /* ownIndex = */ 0 });
    }
 
@@ -87,10 +87,10 @@ public:
    template<typename DatumType>
    Tree(DatumType&& datum)
    {
-      m_data.reserve(128);
+      //m_data.reserve(128);
       m_data.emplace_back(std::forward<DatumType>(datum));
 
-      m_nodes.reserve(128);
+      //m_nodes.reserve(128);
       m_nodes.emplace_back(Node{ this, /* ownIndex = */ 0 });
    }
 
@@ -517,6 +517,10 @@ public:
    /**
    * @brief Constructs and appends a new node as the last child of this node.
    *
+   * @warning Since the Tree class stores nodes in a vector, calls to this function may result
+   * in a reallocation of the vector's buffer. If that happens, all pointers and references to
+   * existing nodes will be invalidated!
+   *
    * @param[in] data                The underlying data to be stored in the new node.
    *
    * @returns A pointer to the newly appended node.
@@ -526,26 +530,36 @@ public:
       assert(m_tree);
       assert(m_tree->m_data.size() == m_tree->m_nodes.size());
 
-      m_tree->m_data.emplace_back(std::move(datum));
-      m_tree->m_nodes.emplace_back(Node{ m_tree, m_tree->m_nodes.size() });
+      auto& tree = *m_tree;
+      const auto ownIndex = m_ownIndex;
 
-      Node& appendee = m_tree->m_nodes.back();
-      appendee.m_parentIndex = m_ownIndex;
+      tree.m_data.emplace_back(std::move(datum));
+      tree.m_nodes.emplace_back(Node{ &tree, tree.m_nodes.size() });
 
-      if (m_lastChildIndex == NONE)
+      Node& appendee = tree.m_nodes.back();
+      appendee.m_parentIndex = ownIndex;
+
+      auto& nodes = tree.m_nodes;
+      auto& firstChildIndex = nodes[ownIndex].m_firstChildIndex;
+      auto& lastChildIndex = nodes[ownIndex].m_lastChildIndex;
+
+      if (lastChildIndex == NONE)
       {
-         return AddFirstChild(appendee);
+         firstChildIndex = appendee.m_ownIndex;
+         lastChildIndex = firstChildIndex;
+
+         ++nodes[ownIndex].m_childCount;
+
+         return &nodes[appendee.m_ownIndex];
       }
 
-      auto& nodes = m_tree->m_nodes;
+      nodes[lastChildIndex].m_nextSiblingIndex = appendee.m_ownIndex;
+      nodes[nodes[lastChildIndex].m_nextSiblingIndex].m_previousSiblingIndex = lastChildIndex;
+      lastChildIndex = nodes[lastChildIndex].m_nextSiblingIndex;
 
-      nodes[m_lastChildIndex].m_nextSiblingIndex = appendee.m_ownIndex;
-      nodes[nodes[m_lastChildIndex].m_nextSiblingIndex].m_previousSiblingIndex = m_lastChildIndex;
-      m_lastChildIndex = nodes[m_lastChildIndex].m_nextSiblingIndex;
+      ++nodes[ownIndex].m_childCount;
 
-      ++m_childCount;
-
-      return &nodes[m_lastChildIndex];
+      return &nodes[lastChildIndex];
    }
 
    /**
@@ -561,21 +575,24 @@ public:
          return;
       }
 
-      auto* endOfTraversal = Tree<DataType>::PreOrderIterator{ &node }.m_endingNode;
+      auto endItr = Tree<DataType>::PreOrderIterator{ &node };
+      auto endIndex = endItr.m_endingNode ? endItr.m_endingNode->GetIndex() : NONE;
 
       auto* source = &node;
-      auto* sink = this;
+      auto sinkIndex = m_ownIndex;
 
-      Node* lastAppendee = nullptr;
+      auto& nodes = m_tree->m_nodes;
 
-      while (source != endOfTraversal)
+      auto lastAppendeeIndex = NONE;
+
+      while (source && source->GetIndex() != endIndex)
       {
-         lastAppendee = sink->AppendChild(source->GetData());
+         lastAppendeeIndex = nodes[sinkIndex].AppendChild(source->GetData())->GetIndex();
 
          if (source->HasChildren())
          {
             source = source->GetFirstChild();
-            sink = lastAppendee;
+            sinkIndex = nodes[lastAppendeeIndex].GetIndex();
          }
          else if (source->GetNextSibling())
          {
@@ -586,13 +603,13 @@ public:
             while (source->GetParent() && !source->GetParent()->GetNextSibling())
             {
                source = source->GetParent();
-               sink = sink->GetParent();
+               sinkIndex = nodes[sinkIndex].GetParent()->GetIndex();
             }
 
             if (source->GetParent())
             {
                source = source->GetParent()->GetNextSibling();
-               sink = sink->GetParent();
+               sinkIndex = nodes[sinkIndex].GetParent()->GetIndex();
             }
             else
             {
@@ -605,6 +622,10 @@ public:
    /**
    * @brief Constructs and prepends a new node as the first child of this node.
    *
+   * @warning Since the Tree class stores nodes in a vector, calls to this function may result
+   * in a reallocation of the vector's buffer. If that happens, all pointers and references to
+   * existing nodes will be invalidated!
+   *
    * @param[in] data                The underlying data to be stored in the new node.
    *
    * @returns A pointer to the newly prepended node.
@@ -614,26 +635,36 @@ public:
       assert(m_tree);
       assert(m_tree->m_data.size() == m_tree->m_nodes.size());
 
-      m_tree->m_data.emplace_back(std::move(datum));
-      m_tree->m_nodes.emplace_back(Node{ m_tree, m_tree->m_nodes.size() });
+      auto& tree = *m_tree;
+      const auto ownIndex = m_ownIndex;
 
-      Node& prependee = m_tree->m_nodes.back();
-      prependee.m_parentIndex = m_ownIndex;
+      tree.m_data.emplace_back(std::move(datum));
+      tree.m_nodes.emplace_back(Node{ &tree, tree.m_nodes.size() });
 
-      if (m_firstChildIndex == NONE)
+      Node& prependee = tree.m_nodes.back();
+      prependee.m_parentIndex = ownIndex;
+
+      auto& nodes = tree.m_nodes;
+      auto& firstChildIndex = nodes[ownIndex].m_firstChildIndex;
+      auto& lastChildIndex = nodes[ownIndex].m_lastChildIndex;
+
+      if (firstChildIndex == NONE)
       {
-         return AddFirstChild(prependee);
+         firstChildIndex = prependee.m_ownIndex;
+         lastChildIndex = firstChildIndex;
+
+         ++nodes[ownIndex].m_childCount;
+
+         return &nodes[prependee.m_ownIndex];
       }
 
-      auto& nodes = m_tree->m_nodes;
+      nodes[firstChildIndex].m_previousSiblingIndex = prependee.m_ownIndex;
+      nodes[nodes[firstChildIndex].m_previousSiblingIndex].m_nextSiblingIndex = firstChildIndex;
+      firstChildIndex = nodes[firstChildIndex].m_previousSiblingIndex;
 
-      nodes[m_firstChildIndex].m_previousSiblingIndex = prependee.m_ownIndex;
-      nodes[nodes[m_firstChildIndex].m_previousSiblingIndex].m_nextSiblingIndex = m_firstChildIndex;
-      m_firstChildIndex = nodes[m_firstChildIndex].m_previousSiblingIndex;
+      ++nodes[ownIndex].m_childCount;
 
-      ++m_childCount;
-
-      return &nodes[m_firstChildIndex];
+      return &nodes[firstChildIndex];
    }
 
    /**
@@ -649,28 +680,31 @@ public:
          return;
       }
 
-      auto* endOfTraversal = Tree<DataType>::PreOrderIterator{ &node }.m_endingNode;
+      auto endItr = Tree<DataType>::PreOrderIterator{ &node };
+      auto endIndex = endItr.m_endingNode ? endItr.m_endingNode->GetIndex() : NONE;
 
       auto* source = &node;
-      auto* sink = this;
+      auto sinkIndex = m_ownIndex;
 
-      Node* lastAppendee = nullptr;
+      auto& nodes = m_tree->m_nodes;
 
-      while (source != endOfTraversal)
+      auto lastAppendeeIndex = NONE;
+
+      while (source && source->GetIndex() != endIndex)
       {
-         if (lastAppendee != nullptr)
+         if (lastAppendeeIndex != NONE)
          {
-            lastAppendee = sink->AppendChild(source->GetData());
+            lastAppendeeIndex = nodes[sinkIndex].AppendChild(source->GetData())->GetIndex();
          }
          else
          {
-            lastAppendee = sink->PrependChild(source->GetData());
+            lastAppendeeIndex = nodes[sinkIndex].PrependChild(source->GetData())->GetIndex();
          }
 
          if (source->HasChildren())
          {
             source = source->GetFirstChild();
-            sink = lastAppendee;
+            sinkIndex = nodes[lastAppendeeIndex].GetIndex();
          }
          else if (source->GetNextSibling())
          {
@@ -681,13 +715,13 @@ public:
             while (source->GetParent() && !source->GetParent()->GetNextSibling())
             {
                source = source->GetParent();
-               sink = sink->GetParent();
+               sinkIndex = nodes[sinkIndex].GetParent()->GetIndex();
             }
 
             if (source->GetParent())
             {
                source = source->GetParent()->GetNextSibling();
-               sink = sink->GetParent();
+               sinkIndex = nodes[sinkIndex].GetParent()->GetIndex();
             }
             else
             {
@@ -1167,22 +1201,11 @@ private:
    }
 
    /**
-   * @brief Helper function to add the first child.
    *
-   * @returns A pointer to the newly added node.
    */
-   Node* AddFirstChild(const Node& node)
+   auto GetIndex() const
    {
-      assert(m_firstChildIndex == NONE);
-      assert(m_lastChildIndex == NONE);
-      assert(m_childCount == 0);
-
-      m_firstChildIndex = node.m_ownIndex;
-      m_lastChildIndex = m_firstChildIndex;
-
-      ++m_childCount;
-
-      return &m_tree->m_nodes[m_firstChildIndex];
+      return m_ownIndex;
    }
 
    /**
