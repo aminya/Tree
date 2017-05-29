@@ -114,7 +114,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="TreeUtilities.hpp" />
-    <ClInclude Include="Tree.hpp" />
+    <ClInclude Include="VectorTree.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

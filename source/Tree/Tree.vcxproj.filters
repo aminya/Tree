@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Tree.hpp">
+    <ClInclude Include="TreeUtilities.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TreeUtilities.hpp">
+    <ClInclude Include="VectorTree.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

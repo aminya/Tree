@@ -1,8 +1,8 @@
-#include "Tree.hpp"
+#include "VectorTree.hpp"
 
 int main()
 {
-   Tree<int> tree;
+   VectorTree<int> tree;
 
    return 0;
 }

@@ -3,7 +3,7 @@
 #define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do this in one cpp file
 #include "Catch.hpp"
 
-#include "../Tree/Tree.hpp"
+#include "../Tree/VectorTree.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -77,7 +77,7 @@ SCENARIO("Building a Basic Tree of Depth One")
 {
    GIVEN("A Tree With a Root Node")
    {
-      Tree<int> tree{ 10 };
+      VectorTree<int> tree{ 10 };
 
       THEN("The root node should be properly initialized")
       {
@@ -117,13 +117,16 @@ SCENARIO("Building a Basic Tree of Depth One")
                REQUIRE(tree.Size() == 3);
 
                REQUIRE(tree.GetRoot()->GetFirstChild()->GetData() == 30);
-               REQUIRE(tree.GetRoot()->GetFirstChild()->GetNextSibling() == tree.GetRoot()->GetLastChild());
+               REQUIRE(tree.GetRoot()->GetFirstChild()->GetNextSibling() ==
+                  tree.GetRoot()->GetLastChild());
 
                REQUIRE(tree.GetRoot()->GetLastChild()->GetData() == 40);
-               REQUIRE(tree.GetRoot()->GetLastChild()->GetPreviousSibling() == tree.GetRoot()->GetFirstChild());
+               REQUIRE(tree.GetRoot()->GetLastChild()->GetPreviousSibling() ==
+                  tree.GetRoot()->GetFirstChild());
 
                REQUIRE(tree.GetRoot()->GetLastChild()->GetParent() == tree.GetRoot());
-               REQUIRE(tree.GetRoot()->GetFirstChild()->GetParent() == tree.GetRoot()->GetLastChild()->GetParent());
+               REQUIRE(tree.GetRoot()->GetFirstChild()->GetParent() ==
+                  tree.GetRoot()->GetLastChild()->GetParent());
 
                REQUIRE(tree.GetRoot()->GetFirstChild()->GetNextSibling()->GetData() == 40);
                REQUIRE(tree.GetRoot()->GetLastChild()->GetPreviousSibling()->GetData() == 30);
@@ -155,7 +158,7 @@ SCENARIO("Building a Basic Tree of Depth One")
 
 TEST_CASE("Node Comparison Operations")
 {
-   Tree<int> tree{ 10 };
+   VectorTree<int> tree{ 10 };
 
    SECTION("Equality")
    {
@@ -165,7 +168,7 @@ TEST_CASE("Node Comparison Operations")
 
 TEST_CASE("Node Alterations")
 {
-   Tree<std::string> tree{ "caps" };
+   VectorTree<std::string> tree{ "caps" };
 
    SECTION("Altering Data")
    {
@@ -178,14 +181,14 @@ TEST_CASE("Node Alterations")
 
 TEST_CASE("Prepending and Appending Nodes")
 {
-   Tree<int> tree{ 10 };
+   VectorTree<int> tree{ 10 };
 
    const auto IsEachNodeValueLargerThanTheLast = [&] () noexcept
    {
       int lastValue = -1;
 
       return std::all_of(std::begin(tree), std::end(tree),
-         [&] (Tree<int>::const_reference node) noexcept
+         [&] (VectorTree<int>::const_reference node) noexcept
       {
          const auto& data = node.GetData();
          return data > lastValue;
@@ -239,7 +242,7 @@ TEST_CASE("Prepending and Appending Nodes")
 
 TEST_CASE("Node Counting")
 {
-   Tree<std::string> tree{ "F" };
+   VectorTree<std::string> tree{ "F" };
 
    tree.GetRoot()->AppendChild("B")->AppendChild("A");
    tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
@@ -266,7 +269,7 @@ TEST_CASE("Node Counting")
 
 TEST_CASE("Forward Pre- and Post-Order Traversal of Simple Binary Tree")
 {
-   Tree<std::string> tree{ "F" };
+   VectorTree<std::string> tree{ "F" };
 
    tree.GetRoot()->AppendChild("B")->AppendChild("A");
    tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
@@ -298,7 +301,7 @@ TEST_CASE("Forward Pre- and Post-Order Traversal of Simple Binary Tree")
 
 TEST_CASE("Partial Tree Iteration")
 {
-   Tree<std::string> tree{ "F" };
+   VectorTree<std::string> tree{ "F" };
 
    tree.GetRoot()->AppendChild("B")->AppendChild("A");
    tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
@@ -309,8 +312,8 @@ TEST_CASE("Partial Tree Iteration")
    {
       const std::vector<std::string> expected = { "B", "A", "D", "C", "E" };
 
-      const auto begin = Tree<std::string>::PreOrderIterator{ tree.GetRoot()->GetFirstChild() };
-      const auto end = Tree<std::string>::PreOrderIterator{ };
+      const auto begin = VectorTree<std::string>::PreOrderIterator{ tree.GetRoot()->GetFirstChild() };
+      const auto end = VectorTree<std::string>::PreOrderIterator{ };
 
       std::vector<std::string> actual;
       std::transform(begin, end, std::back_inserter(actual),
@@ -323,8 +326,8 @@ TEST_CASE("Partial Tree Iteration")
    {
       const std::vector<std::string> expected = { "A", "C", "E", "D", "B" };
 
-      const auto begin = Tree<std::string>::PostOrderIterator{ tree.GetRoot()->GetFirstChild() };
-      const auto end = Tree<std::string>::PostOrderIterator{ };
+      const auto begin = VectorTree<std::string>::PostOrderIterator{ tree.GetRoot()->GetFirstChild() };
+      const auto end = VectorTree<std::string>::PostOrderIterator{ };
 
       std::vector<std::string> actual;
       std::transform(begin, end, std::back_inserter(actual),
@@ -336,7 +339,7 @@ TEST_CASE("Partial Tree Iteration")
 
 TEST_CASE("Partial Tree Iteration Corner Cases")
 {
-   Tree<std::string> tree{ "F" };
+   VectorTree<std::string> tree{ "F" };
 
    tree.GetRoot()->AppendChild("B")->AppendChild("A");
    tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
@@ -349,8 +352,8 @@ TEST_CASE("Partial Tree Iteration Corner Cases")
 
       const auto* startingNode = tree.GetRoot()->GetFirstChild()->GetLastChild();
 
-      const auto begin = Tree<std::string>::PreOrderIterator{ startingNode };
-      const auto end = Tree<std::string>::PreOrderIterator{ };
+      const auto begin = VectorTree<std::string>::PreOrderIterator{ startingNode };
+      const auto end = VectorTree<std::string>::PreOrderIterator{ };
 
       std::vector<std::string> actual;
       std::transform(begin, end, std::back_inserter(actual),
@@ -365,8 +368,8 @@ TEST_CASE("Partial Tree Iteration Corner Cases")
 
       const auto* startingNode = tree.GetRoot()->GetFirstChild()->GetLastChild();
 
-      const auto begin = Tree<std::string>::PostOrderIterator{ startingNode };
-      const auto end = Tree<std::string>::PostOrderIterator{ };
+      const auto begin = VectorTree<std::string>::PostOrderIterator{ startingNode };
+      const auto end = VectorTree<std::string>::PostOrderIterator{ };
 
       std::vector<std::string> actual;
       std::transform(begin, end, std::back_inserter(actual),
@@ -381,8 +384,8 @@ TEST_CASE("Partial Tree Iteration Corner Cases")
 
       const auto* startingNode = tree.GetRoot()->GetFirstChild()->GetLastChild();
 
-      const auto begin = Tree<std::string>::LeafIterator{ startingNode };
-      const auto end = Tree<std::string>::LeafIterator{ };
+      const auto begin = VectorTree<std::string>::LeafIterator{ startingNode };
+      const auto end = VectorTree<std::string>::LeafIterator{ };
 
       std::vector<std::string> actual;
       std::transform(begin, end, std::back_inserter(actual),
@@ -394,7 +397,7 @@ TEST_CASE("Partial Tree Iteration Corner Cases")
 
 TEST_CASE("STL Typedef Compliance")
 {
-   Tree<std::string> tree{ "F" };
+   VectorTree<std::string> tree{ "F" };
 
    tree.GetRoot()->AppendChild("B")->AppendChild("A");
    tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
@@ -404,7 +407,7 @@ TEST_CASE("STL Typedef Compliance")
    SECTION("Standard Algorithms and Parameter Passing by value_type")
    {
       const auto count = std::count_if(std::begin(tree), std::end(tree),
-         [] (Tree<std::string>::value_type node)
+         [] (VectorTree<std::string>::value_type node)
       {
          return (node.GetData() == "A");
       });
@@ -415,7 +418,7 @@ TEST_CASE("STL Typedef Compliance")
    SECTION("Standard Algorithms and Parameter Passing by reference")
    {
       const auto count = std::count_if(std::begin(tree), std::end(tree),
-         [] (Tree<std::string>::reference node)
+         [] (VectorTree<std::string>::reference node)
       {
          return (node.GetData() == "C");
       });
@@ -426,7 +429,7 @@ TEST_CASE("STL Typedef Compliance")
    SECTION("Standard Algorithms and Parameter Passing by const_reference")
    {
       const auto count = std::count_if(std::begin(tree), std::end(tree),
-         [] (Tree<std::string>::const_reference node)
+         [] (VectorTree<std::string>::const_reference node)
       {
          return (node.GetData() == "D");
       });
@@ -437,7 +440,7 @@ TEST_CASE("STL Typedef Compliance")
 
 TEST_CASE("Leaf Iterator")
 {
-   Tree<std::string> tree{ "F" };
+   VectorTree<std::string> tree{ "F" };
 
    tree.GetRoot()->AppendChild("B")->AppendChild("A");
    tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
@@ -448,8 +451,8 @@ TEST_CASE("Leaf Iterator")
    {
       const std::vector<std::string> expected = { "A", "C", "E", "H", };
 
-      const auto begin = Tree<std::string>::LeafIterator{ tree.GetRoot() };
-      const auto end = Tree<std::string>::LeafIterator{ };
+      const auto begin = VectorTree<std::string>::LeafIterator{ tree.GetRoot() };
+      const auto end = VectorTree<std::string>::LeafIterator{ };
 
       std::vector<std::string> actual;
       std::transform(begin, end, std::back_inserter(actual),
@@ -462,8 +465,8 @@ TEST_CASE("Leaf Iterator")
    {
       const std::vector<std::string> expected = { "A", "C", "E" };
 
-      const auto begin = Tree<std::string>::LeafIterator{ tree.GetRoot()->GetFirstChild() };
-      const auto end = Tree<std::string>::LeafIterator{ };
+      const auto begin = VectorTree<std::string>::LeafIterator{ tree.GetRoot()->GetFirstChild() };
+      const auto end = VectorTree<std::string>::LeafIterator{ };
 
       std::vector<std::string> actual;
       std::transform(begin, end, std::back_inserter(actual),
@@ -478,7 +481,7 @@ TEST_CASE("Leaf Iterator")
 
       std::vector<std::string> actual;
       std::transform(tree.beginLeaf(), tree.endLeaf(), std::back_inserter(actual),
-         [] (Tree<std::string>::const_reference node) { return node.GetData(); });
+         [] (VectorTree<std::string>::const_reference node) { return node.GetData(); });
 
       VerifyTraversal(expected, actual);
    }
@@ -486,7 +489,7 @@ TEST_CASE("Leaf Iterator")
 
 TEST_CASE("Sibling Iterator")
 {
-   Tree<std::string> tree{ "IDK" };
+   VectorTree<std::string> tree{ "IDK" };
 
    tree.GetRoot()->AppendChild("B");
    tree.GetRoot()->AppendChild("D");
@@ -516,7 +519,7 @@ TEST_CASE("Simple Memory Layout Optimization")
 {
    SECTION("Leaf Iteration")
    {
-      Tree<std::string> tree{ "F" };
+      VectorTree<std::string> tree{ "F" };
 
       tree.GetRoot()->PrependChild("E");
       tree.GetRoot()->PrependChild("D");
@@ -537,7 +540,7 @@ TEST_CASE("Simple Memory Layout Optimization")
 
    SECTION("Pre-Order Iteration")
    {
-      Tree<std::string> tree{ "B" };
+      VectorTree<std::string> tree{ "B" };
 
       tree.GetRoot()->AppendChild("D")->AppendChild("E");
       tree.GetRoot()->GetFirstChild()->PrependChild("C");
@@ -555,7 +558,7 @@ TEST_CASE("Simple Memory Layout Optimization")
 
    SECTION("Post-Order Iteration")
    {
-      Tree<std::string> tree{ "B" };
+      VectorTree<std::string> tree{ "B" };
 
       tree.GetRoot()->AppendChild("D")->AppendChild("E");
       tree.GetRoot()->GetFirstChild()->PrependChild("C");
@@ -574,7 +577,7 @@ TEST_CASE("Simple Memory Layout Optimization")
 
 TEST_CASE("More Complex Memory Layout Optimization")
 {
-   Tree<std::string> tree{ "F" };
+   VectorTree<std::string> tree{ "F" };
 
    tree.GetRoot()->AppendChild("B")->AppendChild("A");
    tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
@@ -665,7 +668,7 @@ TEST_CASE("Tree and Node Destruction")
       CONSTRUCTION_COUNT = 0u;
 
       {
-         Tree<VerboseNode> tree{ "F" };
+         VectorTree<VerboseNode> tree{ "F" };
 
          tree.GetRoot()->AppendChild("B")->AppendChild("A");
          tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
@@ -688,7 +691,7 @@ TEST_CASE("Selectively Delecting Nodes")
    SECTION("Removing One of Many Siblings")
    {
       {
-         Tree<VerboseNode> tree{ "0" };
+         VectorTree<VerboseNode> tree{ "0" };
 
          tree.GetRoot()->AppendChild("1");
          tree.GetRoot()->AppendChild("2");
@@ -726,7 +729,7 @@ TEST_CASE("Selectively Delecting Nodes")
       std::size_t treeSize = 0u;
 
       {
-         Tree<VerboseNode> tree{ "F" };
+         VectorTree<VerboseNode> tree{ "F" };
 
          tree.GetRoot()->AppendChild("B")->AppendChild("A");
          tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
@@ -766,7 +769,7 @@ TEST_CASE("Selectively Delecting Nodes")
       std::size_t treeSize = 0u;
 
       {
-         Tree<VerboseNode> tree{ "F" };
+         VectorTree<VerboseNode> tree{ "F" };
 
          tree.GetRoot()->AppendChild("B")->AppendChild("A");
          tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
@@ -806,7 +809,7 @@ TEST_CASE("Selectively Delecting Nodes")
       size_t treeSize = 0;
 
       {
-         Tree<VerboseNode> tree{ "F" };
+         VectorTree<VerboseNode> tree{ "F" };
 
          tree.GetRoot()->AppendChild("B")->AppendChild("A");
          tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
@@ -846,7 +849,7 @@ TEST_CASE("Selectively Delecting Nodes")
       size_t treeSize = 0;
 
       {
-         Tree<VerboseNode> tree{ "F" };
+         VectorTree<VerboseNode> tree{ "F" };
 
          tree.GetRoot()->AppendChild("B")->AppendChild("A");
          tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
@@ -892,7 +895,7 @@ TEST_CASE("Selectively Delecting Nodes")
       size_t treeSize = 0;
 
       {
-         Tree<VerboseNode> tree{ "F" };
+         VectorTree<VerboseNode> tree{ "F" };
 
          tree.GetRoot()->AppendChild("B")->AppendChild("A");
          tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
@@ -932,7 +935,7 @@ TEST_CASE("Selectively Delecting Nodes")
       size_t treeSize = 0;
 
       {
-         Tree<VerboseNode> tree{ "F" };
+         VectorTree<VerboseNode> tree{ "F" };
 
          tree.GetRoot()->AppendChild("B")->AppendChild("A");
          tree.GetRoot()->AppendChild("G")->AppendChild("Delete Me (I)")->AppendChild("H");
@@ -944,7 +947,7 @@ TEST_CASE("Selectively Delecting Nodes")
          DESTRUCTION_COUNT = 0;
 
          const auto numberOfDetachedNodes =
-            Tree<VerboseNode>::DetachNodeIf(std::begin(tree), std::end(tree),
+            VectorTree<VerboseNode>::DetachNodeIf(std::begin(tree), std::end(tree),
             [] (const auto& node)
          {
             return node.GetData().m_data.find("Delete Me") != std::string::npos;
@@ -972,7 +975,7 @@ TEST_CASE("Sorting")
 {
    SECTION("Immediate Children")
    {
-      Tree<std::string> tree{ "X" };
+      VectorTree<std::string> tree{ "X" };
 
       tree.GetRoot()->AppendChild("B");
       tree.GetRoot()->AppendChild("D");
@@ -983,7 +986,8 @@ TEST_CASE("Sorting")
       tree.GetRoot()->AppendChild("E");
       tree.GetRoot()->AppendChild("H");
 
-      tree.GetRoot()->SortChildren([] (const auto& lhs, const auto& rhs) noexcept { return lhs < rhs; });
+      tree.GetRoot()->SortChildren(
+         [] (const auto& lhs, const auto& rhs) noexcept { return lhs < rhs; });
 
       const std::vector<std::string> expected = { "A", "B", "C", "D", "E", "F", "G", "H", "X" };
 
@@ -996,7 +1000,7 @@ TEST_CASE("Sorting")
 
    SECTION("A Larger Tree")
    {
-      Tree<int> tree{ 666 };
+      VectorTree<int> tree{ 666 };
       tree.GetRoot()->AppendChild(37);
 
       tree.GetRoot()->GetFirstChild()->AppendChild(6);
@@ -1035,14 +1039,14 @@ TEST_CASE("Sorting")
 
 TEST_CASE("Copying Nodes from One Tree to Another")
 {
-   Tree<std::string> numberTree{ "6" };
+   VectorTree<std::string> numberTree{ "6" };
 
    numberTree.GetRoot()->AppendChild("2")->AppendChild("1");
    numberTree.GetRoot()->GetFirstChild()->AppendChild("4")->AppendChild("3");
    numberTree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("5");
    numberTree.GetRoot()->AppendChild("7")->AppendChild("8")->AppendChild("9");
 
-   Tree<std::string> letterTree{ "F" };
+   VectorTree<std::string> letterTree{ "F" };
 
    letterTree.GetRoot()->AppendChild("B")->AppendChild("A");
    letterTree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
@@ -1051,7 +1055,7 @@ TEST_CASE("Copying Nodes from One Tree to Another")
 
    SECTION("Appending Two Trees to a Third")
    {
-      Tree<std::string> masterTree{ "master" };
+      VectorTree<std::string> masterTree{ "master" };
 
       masterTree.GetRoot()->AppendChild(*letterTree.GetRoot());
       masterTree.GetRoot()->AppendChild(*numberTree.GetRoot());
@@ -1072,7 +1076,7 @@ TEST_CASE("Copying Nodes from One Tree to Another")
 
    SECTION("Prepending Two Trees to a Third")
    {
-      Tree<std::string> masterTree{ "master" };
+      VectorTree<std::string> masterTree{ "master" };
 
       masterTree.GetRoot()->PrependChild(*letterTree.GetRoot());
       masterTree.GetRoot()->PrependChild(*numberTree.GetRoot());

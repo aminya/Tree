@@ -8,7 +8,7 @@
 #include <sstream>
 #include <string>
 
-#include "Tree.hpp"
+#include "VectorTree.hpp"
 
 namespace
 {
@@ -30,7 +30,7 @@ namespace
 namespace TreeUtilities
 {
    template<typename NodeType>
-   void OutputToDotFile(const Tree<NodeType>& tree, const std::string& fileName)
+   void OutputToDotFile(const VectorTree<NodeType>& tree, const std::string& fileName)
    {
       std::stringstream graphStream;
 
@@ -44,9 +44,9 @@ namespace TreeUtilities
       graphStream << "\n" << "   // Node Declarations:\n";
 
       std::for_each(
-         Tree<NodeType>::PreOrderIterator{ head },
-         Tree<NodeType>::PreOrderIterator{ },
-         [&](Tree<NodeType>::const_reference node)
+         VectorTree<NodeType>::PreOrderIterator{ head },
+         VectorTree<NodeType>::PreOrderIterator{ },
+         [&](VectorTree<NodeType>::const_reference node)
       {
          const auto nodeLabel = std::to_string(reinterpret_cast<size_t>(&node));
          const auto& data = node.GetData();
@@ -57,9 +57,9 @@ namespace TreeUtilities
       graphStream << "\n" << "   // Edge Declarations:\n";
 
       std::for_each(
-         Tree<NodeType>::PreOrderIterator{ head },
-         Tree<NodeType>::PreOrderIterator{ },
-         [&](Tree<NodeType>::const_reference node)
+         VectorTree<NodeType>::PreOrderIterator{ head },
+         VectorTree<NodeType>::PreOrderIterator{ },
+         [&](VectorTree<NodeType>::const_reference node)
       {
          const auto* parent = node.GetParent();
          if (!parent)
