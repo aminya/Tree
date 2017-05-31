@@ -52,7 +52,7 @@ namespace
 * See the individual member functions for further documentation.
 */
 template<typename DataType>
-class VectorTree
+class FlatTree
 {
 public:
 
@@ -72,7 +72,7 @@ public:
    /**
    * @brief Default constructor.
    */
-   VectorTree()
+   FlatTree()
    {
       m_data.emplace_back(DataType{ });
       m_nodes.emplace_back(Node{ this, /* ownIndex = */ 0 });
@@ -82,7 +82,7 @@ public:
    * @brief Constructs a new tree with the provided data encapsulated in a new node.
    */
    template<typename DatumType>
-   VectorTree(DatumType&& datum)
+   FlatTree(DatumType&& datum)
    {
       m_data.emplace_back(std::forward<DatumType>(datum));
       m_nodes.emplace_back(Node{ this, /* ownIndex = */ 0 });
@@ -93,14 +93,14 @@ public:
    *
    * @todo Worry about this later.
    */
-   VectorTree(const VectorTree<DataType>&) = delete;
+   FlatTree(const FlatTree<DataType>&) = delete;
 
    /**
    * @brief Assignment operator.
    *
    * @todo Worry about this later.
    */
-   VectorTree<DataType>& operator=(const VectorTree<DataType>&) = delete;
+   FlatTree<DataType>& operator=(const FlatTree<DataType>&) = delete;
 
    /**
    * @brief Reserves space for the specified number of nodes in the underlying vectors.
@@ -166,56 +166,56 @@ public:
    * @returns A post-order iterator that will iterator over all nodes in the tree, ending
    * at the root of the tree.
    */
-   typename VectorTree::PostOrderIterator begin() const noexcept
+   typename FlatTree::PostOrderIterator begin() const noexcept
    {
       assert(m_data.size() > 0);
-      return VectorTree<DataType>::PostOrderIterator{ GetRoot() };
+      return FlatTree<DataType>::PostOrderIterator{ GetRoot() };
    }
 
    /**
    * @returns A post-order iterator that points "past the end" of the tree.
    */
-   typename VectorTree::PostOrderIterator end() const noexcept
+   typename FlatTree::PostOrderIterator end() const noexcept
    {
-      return VectorTree<DataType>::PostOrderIterator{ };
+      return FlatTree<DataType>::PostOrderIterator{ };
    }
 
    /**
    * @returns A pre-order iterator that will iterate over all nodes in the tree, starting
    * at the root of the tree.
    */
-   typename VectorTree::PreOrderIterator beginPreOrder() const noexcept
+   typename FlatTree::PreOrderIterator beginPreOrder() const noexcept
    {
       assert(m_data.size() > 0);
 
-      return VectorTree<DataType>::PreOrderIterator{ GetRoot() };
+      return FlatTree<DataType>::PreOrderIterator{ GetRoot() };
    }
 
    /**
    * @returns A pre-order iterator pointing "past the end" of the tree.
    */
-   typename VectorTree::PreOrderIterator endPreOrder() const noexcept
+   typename FlatTree::PreOrderIterator endPreOrder() const noexcept
    {
-      return VectorTree<DataType>::PreOrderIterator{ };
+      return FlatTree<DataType>::PreOrderIterator{ };
    }
 
    /**
    * @returns A leaf iterator that will iterate over all leaf nodes in the tree, starting
    * with the left-most leaf in the tree.
    */
-   typename VectorTree::LeafIterator beginLeaf() const noexcept
+   typename FlatTree::LeafIterator beginLeaf() const noexcept
    {
       assert(m_data.size() > 0);
 
-      return VectorTree<DataType>::LeafIterator{ GetRoot() };
+      return FlatTree<DataType>::LeafIterator{ GetRoot() };
    }
 
    /**
    * @returns A leaf iterator that points "past" the last leaf node in the tree.
    */
-   typename VectorTree::LeafIterator endLeaf() const noexcept
+   typename FlatTree::LeafIterator endLeaf() const noexcept
    {
-      return VectorTree<DataType>::LeafIterator{ };
+      return FlatTree<DataType>::LeafIterator{ };
    }
 
    /**
@@ -223,9 +223,9 @@ public:
    *
    * @todo There is probably no test coverage for this function...
    */
-   typename VectorTree::SiblingIterator beginSibling(const Node& node) const noexcept
+   typename FlatTree::SiblingIterator beginSibling(const Node& node) const noexcept
    {
-      return VectorTree<DataType>::SiblingIterator{ node };
+      return FlatTree<DataType>::SiblingIterator{ node };
    }
 
    /**
@@ -233,9 +233,9 @@ public:
    *
    * @todo There is probably no test coverage for this function...
    */
-   typename VectorTree::SiblingIterator endSibling() const noexcept
+   typename FlatTree::SiblingIterator endSibling() const noexcept
    {
-      return VectorTree<DataType>::SiblingIterator{ };
+      return FlatTree<DataType>::SiblingIterator{ };
    }
 
    /**
@@ -341,11 +341,44 @@ public:
          m_nodes[sinkIndex].m_ownIndex = sinkIndex;
          m_nodes[sourceIndex].m_ownIndex = sourceIndex;
 
-         UpdateAncestryRelationships(source, sink, sourceIndex, sinkIndex);
          UpdateSiblingRelationships(source, sink, sourceIndex, sinkIndex);
+         UpdateAncestryRelationships(source, sink, sourceIndex, sinkIndex);
 
          itr.m_currentNode = &m_nodes[sinkIndex];
       }
+   }
+
+   /**
+   *
+   */
+   void FuzzTestOptimizer(
+      std::size_t sourceIndex,
+      std::size_t sinkIndex)
+   {
+      if (sourceIndex == sinkIndex)
+      {
+         return;
+      }
+      else if (sourceIndex == m_rootIndex)
+      {
+         m_rootIndex = sinkIndex;
+      }
+      else if (sinkIndex == m_rootIndex)
+      {
+         m_rootIndex = sourceIndex;
+      }
+
+      const auto source = m_nodes[sourceIndex];
+      const auto sink = m_nodes[sinkIndex];
+
+      std::swap(m_data[sinkIndex], m_data[sourceIndex]);
+      std::swap(m_nodes[sinkIndex], m_nodes[sourceIndex]);
+
+      m_nodes[sinkIndex].m_ownIndex = sinkIndex;
+      m_nodes[sourceIndex].m_ownIndex = sourceIndex;
+
+      UpdateSiblingRelationships(source, sink, sourceIndex, sinkIndex);
+      UpdateAncestryRelationships(source, sink, sourceIndex, sinkIndex);
    }
 
 private:
@@ -365,6 +398,7 @@ private:
       {
          auto childIndex = source.m_firstChildIndex;
 
+         // If the source's first child happens to be the sink:
          if (childIndex == sinkIndex)
          {
             m_nodes[sinkIndex].m_firstChildIndex = sourceIndex;
@@ -375,11 +409,69 @@ private:
          {
             if (childIndex == sinkIndex)
             {
+               // If the source's last child happens to be the sink:
+               if (source.m_lastChildIndex == sinkIndex)
+               {
+                  m_nodes[sinkIndex].m_lastChildIndex = sourceIndex;
+               }
+
                childIndex = m_nodes[childIndex].m_nextSiblingIndex;
                continue;
             }
 
             m_nodes[childIndex].m_parentIndex = sinkIndex;
+            childIndex = m_nodes[childIndex].m_nextSiblingIndex;
+         }
+      }
+
+      // Update sink's parent to point to its child's new location:
+      if (sink.m_parentIndex != NONE)
+      {
+         if (sink.m_parentIndex == sourceIndex)
+         {
+            m_nodes[sourceIndex].m_parentIndex = sinkIndex;
+         }
+         else
+         {
+            if (m_nodes[sink.m_parentIndex].m_firstChildIndex == sinkIndex)
+            {
+               m_nodes[sink.m_parentIndex].m_firstChildIndex = sourceIndex;
+            }
+
+            if (m_nodes[sink.m_parentIndex].m_lastChildIndex == sinkIndex)
+            {
+               m_nodes[sink.m_parentIndex].m_lastChildIndex = sourceIndex;
+            }
+         }
+      }
+
+      // Update sink node's children to point to the new parent location:
+      if (sink.m_childCount > 0)
+      {
+         auto childIndex = sink.m_firstChildIndex;
+
+         // If the sink's first child happens to be the source:
+         if (childIndex == sourceIndex)
+         {
+            m_nodes[sourceIndex].m_firstChildIndex = sinkIndex;
+            childIndex = m_nodes[sinkIndex].m_nextSiblingIndex;
+         }
+
+         while (childIndex != NONE)
+         {
+            if (childIndex == sourceIndex)
+            {
+               // If the sink's last child happens to be the source:
+               if (sink.m_lastChildIndex == sourceIndex)
+               {
+                  m_nodes[sourceIndex].m_lastChildIndex = sinkIndex;
+               }
+
+               childIndex = m_nodes[childIndex].m_nextSiblingIndex;
+               continue;
+            }
+
+            m_nodes[childIndex].m_parentIndex = sourceIndex;
             childIndex = m_nodes[childIndex].m_nextSiblingIndex;
          }
       }
@@ -404,51 +496,6 @@ private:
             }
          }
       }
-
-      // Update sink node's children to point to the new parent location:
-      if (sink.m_childCount > 0)
-      {
-         auto childIndex = sink.m_firstChildIndex;
-
-         if (childIndex == sourceIndex)
-         {
-            m_nodes[sourceIndex].m_firstChildIndex = sinkIndex;
-            childIndex = m_nodes[sinkIndex].m_nextSiblingIndex;
-         }
-
-         while (childIndex != NONE)
-         {
-            if (childIndex == sourceIndex)
-            {
-               childIndex = m_nodes[childIndex].m_nextSiblingIndex;
-               continue;
-            }
-
-            m_nodes[childIndex].m_parentIndex = sourceIndex;
-            childIndex = m_nodes[childIndex].m_nextSiblingIndex;
-         }
-      }
-
-      // Update node's parent to point to its child's new location:
-      if (sink.m_parentIndex != NONE)
-      {
-         if (sink.m_parentIndex == sourceIndex)
-         {
-            m_nodes[sourceIndex].m_parentIndex = sinkIndex;
-         }
-         else
-         {
-            if (m_nodes[sink.m_parentIndex].m_firstChildIndex == sinkIndex)
-            {
-               m_nodes[sink.m_parentIndex].m_firstChildIndex = sourceIndex;
-            }
-
-            if (m_nodes[sink.m_parentIndex].m_lastChildIndex == sinkIndex)
-            {
-               m_nodes[sink.m_parentIndex].m_lastChildIndex = sourceIndex;
-            }
-         }
-      }
    }
 
    /**
@@ -462,56 +509,52 @@ private:
       std::size_t sinkIndex) noexcept
    {
       // Update the source node's neighbors:
+      if (source.m_nextSiblingIndex != NONE)
       {
-         if (source.m_nextSiblingIndex != NONE)
+         if (source.m_nextSiblingIndex != sinkIndex)
          {
-            if (source.m_nextSiblingIndex != sinkIndex)
-            {
-               m_nodes[source.m_nextSiblingIndex].m_previousSiblingIndex = sinkIndex;
-            }
-            else
-            {
-               m_nodes[sinkIndex].m_nextSiblingIndex = sourceIndex;
-            }
+            m_nodes[source.m_nextSiblingIndex].m_previousSiblingIndex = sinkIndex;
          }
-
-         if (source.m_previousSiblingIndex != NONE)
+         else
          {
-            if (source.m_previousSiblingIndex != sinkIndex)
-            {
-               m_nodes[source.m_previousSiblingIndex].m_nextSiblingIndex = sinkIndex;
-            }
-            else
-            {
-               m_nodes[sinkIndex].m_previousSiblingIndex = sourceIndex;
-            }
+            m_nodes[sinkIndex].m_nextSiblingIndex = sourceIndex;
+         }
+      }
+
+      if (source.m_previousSiblingIndex != NONE)
+      {
+         if (source.m_previousSiblingIndex != sinkIndex)
+         {
+            m_nodes[source.m_previousSiblingIndex].m_nextSiblingIndex = sinkIndex;
+         }
+         else
+         {
+            m_nodes[sinkIndex].m_previousSiblingIndex = sourceIndex;
          }
       }
 
       // Update the sink node's neighbors:
+      if (sink.m_nextSiblingIndex != NONE)
       {
-         if (sink.m_nextSiblingIndex != NONE)
+         if (sink.m_nextSiblingIndex != sourceIndex)
          {
-            if (sink.m_nextSiblingIndex != sourceIndex)
-            {
-               m_nodes[sink.m_nextSiblingIndex].m_previousSiblingIndex = sourceIndex;
-            }
-            else
-            {
-               m_nodes[sourceIndex].m_nextSiblingIndex = sinkIndex;
-            }
+            m_nodes[sink.m_nextSiblingIndex].m_previousSiblingIndex = sourceIndex;
          }
-
-         if (sink.m_previousSiblingIndex != NONE)
+         else
          {
-            if (sink.m_previousSiblingIndex != sourceIndex)
-            {
-               m_nodes[sink.m_previousSiblingIndex].m_nextSiblingIndex = sourceIndex;
-            }
-            else
-            {
-               m_nodes[sourceIndex].m_previousSiblingIndex = sinkIndex;
-            }
+            m_nodes[sourceIndex].m_nextSiblingIndex = sinkIndex;
+         }
+      }
+
+      if (sink.m_previousSiblingIndex != NONE)
+      {
+         if (sink.m_previousSiblingIndex != sourceIndex)
+         {
+            m_nodes[sink.m_previousSiblingIndex].m_nextSiblingIndex = sourceIndex;
+         }
+         else
+         {
+            m_nodes[sourceIndex].m_previousSiblingIndex = sinkIndex;
          }
       }
    }
@@ -526,9 +569,9 @@ private:
 * @brief The node that the tree is built out of.
 */
 template<typename DataType>
-class VectorTree<DataType>::Node
+class FlatTree<DataType>::Node
 {
-   friend class VectorTree;
+   friend class FlatTree;
 
 public:
    using value_type = DataType;
@@ -596,7 +639,7 @@ public:
          return;
       }
 
-      auto endItr = VectorTree<DataType>::PreOrderIterator{ &node };
+      auto endItr = FlatTree<DataType>::PreOrderIterator{ &node };
       auto endIndex = endItr.m_endingNode ? endItr.m_endingNode->GetIndex() : NONE;
 
       auto* source = &node;
@@ -701,7 +744,7 @@ public:
          return;
       }
 
-      auto endItr = VectorTree<DataType>::PreOrderIterator{ &node };
+      auto endItr = FlatTree<DataType>::PreOrderIterator{ &node };
       auto endIndex = endItr.m_endingNode ? endItr.m_endingNode->GetIndex() : NONE;
 
       auto* source = &node;
@@ -789,8 +832,8 @@ public:
       victims.reserve(m_childCount);
 
       std::copy(
-         VectorTree<DataType>::PostOrderIterator{ this },
-         VectorTree<DataType>::PostOrderIterator{ },
+         FlatTree<DataType>::PostOrderIterator{ this },
+         FlatTree<DataType>::PostOrderIterator{ },
          std::back_inserter(victims));
 
       for (auto& node : victims)
@@ -824,8 +867,8 @@ public:
    auto CountAllDescendants() const noexcept
    {
       const auto nodeCount = std::count_if(
-         VectorTree<DataType>::PostOrderIterator{ this },
-         VectorTree<DataType>::PostOrderIterator{ },
+         FlatTree<DataType>::PostOrderIterator{ this },
+         FlatTree<DataType>::PostOrderIterator{ },
          [] (const auto&) noexcept
       {
          return true;
@@ -1242,7 +1285,7 @@ private:
    * them into the tree.
    */
    Node(
-      VectorTree* tree,
+      FlatTree* tree,
       std::size_t ownIndex)
       :
       m_tree{ tree },
@@ -1250,7 +1293,7 @@ private:
    {
    }
 
-   VectorTree* m_tree{ nullptr };
+   FlatTree* m_tree{ nullptr };
 
    std::size_t m_ownIndex{ NONE };
    std::size_t m_parentIndex{ NONE };
@@ -1269,9 +1312,9 @@ private:
 * will derive from. This class can only instantiated by derived types.
 */
 template<typename DataType>
-class VectorTree<DataType>::Iterator
+class FlatTree<DataType>::Iterator
 {
-   friend class VectorTree;
+   friend class FlatTree;
    friend class Node;
 
 public:
@@ -1390,7 +1433,7 @@ protected:
 * @brief The PreOrderIterator class
 */
 template<typename DataType>
-class VectorTree<DataType>::PreOrderIterator final : public VectorTree<DataType>::Iterator
+class FlatTree<DataType>::PreOrderIterator final : public FlatTree<DataType>::Iterator
 {
 public:
    /**
@@ -1435,7 +1478,7 @@ public:
    /**
    * Prefix increment operator.
    */
-   typename VectorTree::PreOrderIterator& operator++() noexcept
+   typename FlatTree::PreOrderIterator& operator++() noexcept
    {
       assert(m_currentNode);
       auto* traversingNode = m_currentNode;
@@ -1472,7 +1515,7 @@ public:
    /**
    * Postfix increment operator.
    */
-   typename VectorTree::PreOrderIterator operator++(int) noexcept
+   typename FlatTree::PreOrderIterator operator++(int) noexcept
    {
       const auto result = *this;
       ++(*this);
@@ -1485,7 +1528,7 @@ public:
 * @brief The PostOrderIterator class
 */
 template<typename DataType>
-class VectorTree<DataType>::PostOrderIterator final : public VectorTree<DataType>::Iterator
+class FlatTree<DataType>::PostOrderIterator final : public FlatTree<DataType>::Iterator
 {
 public:
 
@@ -1534,7 +1577,7 @@ public:
    /**
    * Prefix increment operator.
    */
-   typename VectorTree::PostOrderIterator& operator++() noexcept
+   typename FlatTree::PostOrderIterator& operator++() noexcept
    {
       assert(m_currentNode);
       auto* traversingNode = m_currentNode;
@@ -1570,7 +1613,7 @@ public:
    /**
    * Postfix increment operator.
    */
-   typename VectorTree::PostOrderIterator operator++(int) noexcept
+   typename FlatTree::PostOrderIterator operator++(int) noexcept
    {
       const auto result = *this;
       ++(*this);
@@ -1587,7 +1630,7 @@ private:
 * @brief The LeafIterator class
 */
 template<typename DataType>
-class VectorTree<DataType>::LeafIterator final : public VectorTree<DataType>::Iterator
+class FlatTree<DataType>::LeafIterator final : public FlatTree<DataType>::Iterator
 {
 public:
 
@@ -1658,7 +1701,7 @@ public:
    /**
    * Prefix increment operator.
    */
-   typename VectorTree::LeafIterator& operator++() noexcept
+   typename FlatTree::LeafIterator& operator++() noexcept
    {
       assert(m_currentNode);
 
@@ -1709,7 +1752,7 @@ public:
    /**
    * Postfix increment operator.
    */
-   typename VectorTree::LeafIterator operator++(int) noexcept
+   typename FlatTree::LeafIterator operator++(int) noexcept
    {
       const auto result = *this;
       ++(*this);
@@ -1722,7 +1765,7 @@ public:
 * @brief The SiblingIterator class
 */
 template<typename DataType>
-class VectorTree<DataType>::SiblingIterator final : public VectorTree<DataType>::Iterator
+class FlatTree<DataType>::SiblingIterator final : public FlatTree<DataType>::Iterator
 {
 public:
 
@@ -1742,7 +1785,7 @@ public:
    /**
    * Prefix increment operator.
    */
-   typename VectorTree::SiblingIterator& operator++() noexcept
+   typename FlatTree::SiblingIterator& operator++() noexcept
    {
       if (m_currentNode)
       {
@@ -1755,7 +1798,7 @@ public:
    /**
    * Postfix increment operator.
    */
-   typename VectorTree::SiblingIterator operator++(int) noexcept
+   typename FlatTree::SiblingIterator operator++(int) noexcept
    {
       const auto result = *this;
       ++(*this);
@@ -1770,7 +1813,7 @@ public:
 struct PreOrderTraversal
 {
    template<typename DataType>
-   using Iterator = typename VectorTree<DataType>::PreOrderIterator;
+   using Iterator = typename FlatTree<DataType>::PreOrderIterator;
 };
 
 /**
@@ -1779,7 +1822,7 @@ struct PreOrderTraversal
 struct PostOrderTraversal
 {
    template<typename DataType>
-   using Iterator = typename VectorTree<DataType>::PostOrderIterator;
+   using Iterator = typename FlatTree<DataType>::PostOrderIterator;
 };
 
 /**
@@ -1788,7 +1831,7 @@ struct PostOrderTraversal
 struct LeafTraversal
 {
    template<typename DataType>
-   using Iterator = typename VectorTree<DataType>::LeafIterator;
+   using Iterator = typename FlatTree<DataType>::LeafIterator;
 };
 
 /**
@@ -1797,7 +1840,7 @@ struct LeafTraversal
 struct SiblingTraversal
 {
    template<typename DataType>
-   using Iterator = typename VectorTree<DataType>::SiblingIterator;
+   using Iterator = typename FlatTree<DataType>::SiblingIterator;
 };
 
 #if _WIN64
@@ -1808,10 +1851,10 @@ struct SiblingTraversal
 
 #ifdef X86
 static_assert(
-   sizeof(VectorTree<int>::Node) <= 32,
+   sizeof(FlatTree<int>::Node) <= 32,
    "Two Node instances will no longer fit on a typical cache line.");
 #elif defined(X64)
 static_assert(
-   sizeof(VectorTree<int>::Node) <= 64,
+   sizeof(FlatTree<int>::Node) <= 64,
    "A single Node instance will not fit on a typical cache line.");
 #endif

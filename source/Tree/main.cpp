@@ -1,8 +1,8 @@
-#include "VectorTree.hpp"
+#include "FlatTree.hpp"
 
 int main()
 {
-   VectorTree<int> tree;
+   FlatTree<int> tree;
 
    return 0;
 }

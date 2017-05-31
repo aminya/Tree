@@ -86,10 +86,10 @@ namespace
    *
    * @param[in, out] tree           The tree to be pruned.
    */
-   void PruneEmptyFilesAndDirectories(VectorTree<FileInfo>& tree)
+   void PruneEmptyFilesAndDirectories(FlatTree<FileInfo>& tree)
    {
       const auto nodesRemoved =
-         VectorTree<FileInfo>::DetachNodeIf(std::begin(tree), std::end(tree),
+         FlatTree<FileInfo>::DetachNodeIf(std::begin(tree), std::end(tree),
          [] (const auto& node ) noexcept { return node.GetData().size == 0; });
 
       std::cout << "Number of Sizeless Files Removed: " << nodesRemoved << std::endl;
@@ -101,11 +101,11 @@ namespace
    *
    * @param[in, out] tree          The tree whose nodes need their directory sizes computed.
    */
-   void ComputeDirectorySizes(VectorTree<FileInfo>& tree)
+   void ComputeDirectorySizes(FlatTree<FileInfo>& tree)
    {
       for (auto&& node : tree)
       {
-         VectorTree<FileInfo>::Node* parent = node.GetParent();
+         FlatTree<FileInfo>::Node* parent = node.GetParent();
          if (!parent)
          {
             return;
@@ -162,7 +162,7 @@ namespace
 
          TreeAndPath nodeAndPath
          {
-            std::make_unique<VectorTree<FileInfo>>(std::move(fileInfo)),
+            std::make_unique<FlatTree<FileInfo>>(std::move(fileInfo)),
             std::move(path)
          };
 
@@ -189,7 +189,7 @@ namespace
    */
    void BuildFinalTree(
       ThreadSafeQueue<TreeAndPath>& queue,
-      VectorTree<FileInfo>& fileTree)
+      FlatTree<FileInfo>& fileTree)
    {
       while (!queue.IsEmpty())
       {
@@ -211,7 +211,7 @@ DriveScanner::DriveScanner(const std::experimental::filesystem::path& path) :
 {
 }
 
-std::unique_ptr<VectorTree<FileInfo>> DriveScanner::CreateTreeAndRootNode()
+std::unique_ptr<FlatTree<FileInfo>> DriveScanner::CreateTreeAndRootNode()
 {
    assert(std::experimental::filesystem::is_directory(m_rootPath));
    if (!std::experimental::filesystem::is_directory(m_rootPath))
@@ -227,12 +227,12 @@ std::unique_ptr<VectorTree<FileInfo>> DriveScanner::CreateTreeAndRootNode()
       FileType::DIRECTORY
    };
 
-   return std::make_unique<VectorTree<FileInfo>>(fileInfo);
+   return std::make_unique<FlatTree<FileInfo>>(fileInfo);
 }
 
 void DriveScanner::ProcessFile(
    const std::experimental::filesystem::path& path,
-   VectorTree<FileInfo>::Node& treeNode) noexcept
+   FlatTree<FileInfo>::Node& treeNode) noexcept
 {
    const auto fileSize = ComputeFileSize(path);
 
@@ -254,7 +254,7 @@ void DriveScanner::ProcessFile(
 
 void DriveScanner::ProcessDirectory(
    const std::experimental::filesystem::path& path,
-   VectorTree<FileInfo>::Node& treeNode) noexcept
+   FlatTree<FileInfo>::Node& treeNode) noexcept
 {
    bool isRegularFile = false;
    try
@@ -309,7 +309,7 @@ void DriveScanner::ProcessDirectory(
 
 void DriveScanner::IterateOverDirectoryAndScan(
    std::experimental::filesystem::directory_iterator& itr,
-   VectorTree<FileInfo>::Node& treeNode) noexcept
+   FlatTree<FileInfo>::Node& treeNode) noexcept
 {
    auto& tree = treeNode.GetTree();
    auto index = treeNode.GetIndex();
@@ -401,5 +401,5 @@ void DriveScanner::Start()
    }, "Scanned Drive in ");
 
    ComputeDirectorySizes(*m_theTree);
-   PruneEmptyFilesAndDirectories(*m_theTree);
+   //PruneEmptyFilesAndDirectories(*m_theTree);
 }

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 
-#include "../Tree/VectorTree.hpp"
+#include "../Tree/FlatTree.hpp"
 
 #include "DriveScanner.h"
 #include "Stopwatch.hpp"
@@ -15,86 +15,112 @@ int main()
    DriveScanner scanner{ std::experimental::filesystem::path{ "C:\\" } };
    scanner.Start();
 
-   std::uintmax_t treeSize{ 0 };
+   std::cout << "\n";
 
    { // Pre-Order Traversal:
-      const auto traversalTime = Stopwatch<std::chrono::milliseconds>([&] () noexcept
+      std::uintmax_t treeSize{ 0 };
+      std::uintmax_t totalBytes{ 0 };
+
+      const auto traversalTime = Stopwatch<std::chrono::milliseconds>([&]() noexcept
       {
-         treeSize = std::count_if(
+         std::for_each(
             scanner.m_theTree->beginPreOrder(),
             scanner.m_theTree->endPreOrder(),
-            [] (const auto&) noexcept
+            [&] (const auto& node) noexcept
          {
-            return true;
+            treeSize += 1;
+            totalBytes += node.GetData().size;
          });
       }).GetElapsedTime();
 
+      std::cout << totalBytes << " bytes on disk!\n";
+
       std::cout
-         << "\nPre-order-traversed " << treeSize << " nodes in "
+         << "Pre-order-traversed " << treeSize << " nodes in "
          << traversalTime.count() << " milliseconds (or "
          << treeSize / traversalTime.count() << " nodes/ms)." << std::endl;
    }
 
    { // Post-Order Traversal:
+      std::uintmax_t treeSize{ 0 };
+      std::uintmax_t totalBytes{ 0 };
+
       const auto traversalTime = Stopwatch<std::chrono::milliseconds>([&] () noexcept
       {
-         treeSize = std::count_if(
+         std::for_each(
             std::begin(*scanner.m_theTree),
             std::end(*scanner.m_theTree),
-            [] (const auto&) noexcept
+            [&] (const auto& node) noexcept
          {
-            return true;
+            treeSize += 1;
+            totalBytes += node.GetData().size;
          });
       }).GetElapsedTime();
 
+      std::cout << totalBytes << " bytes on disk!\n";
+
       std::cout
-         << "\nPost-order-traversed " << treeSize << " nodes in "
+         << "Post-order-traversed " << treeSize << " nodes in "
          << traversalTime.count() << " milliseconds (or "
          << treeSize / traversalTime.count() << " nodes/ms)." << std::endl;
    }
 
-#if 0
+   std::cout << "\n";
+
    Stopwatch<std::chrono::milliseconds>([&]()
    {
       scanner.m_theTree->OptimizeMemoryLayoutFor<PreOrderTraversal>();
    }, "Optimized Layout in ");
 
+   std::cout << "\n";
+
    { // Pre-Order Traversal:
+      std::uintmax_t treeSize{ 0 };
+      std::uintmax_t totalBytes{ 0 };
+
       const auto traversalTime = Stopwatch<std::chrono::milliseconds>([&]() noexcept
       {
-         treeSize = std::count_if(
+         std::for_each(
             scanner.m_theTree->beginPreOrder(),
             scanner.m_theTree->endPreOrder(),
-            [](const auto&) noexcept
+            [&] (const auto& node) noexcept
          {
-            return true;
+            treeSize += 1;
+            totalBytes += node.GetData().size;
          });
       }).GetElapsedTime();
 
+      std::cout << totalBytes << " bytes on disk!\n";
+
       std::cout
-         << "\nPre-order-traversed " << treeSize << " nodes in "
+         << "Pre-order-traversed " << treeSize << " nodes in "
          << traversalTime.count() << " milliseconds (or "
          << treeSize / traversalTime.count() << " nodes/ms)." << std::endl;
    }
 
    { // Post-Order Traversal:
+      std::uintmax_t treeSize{ 0 };
+      std::uintmax_t totalBytes{ 0 };
+
       const auto traversalTime = Stopwatch<std::chrono::milliseconds>([&]() noexcept
       {
-         treeSize = std::count_if(
+         std::for_each(
             std::begin(*scanner.m_theTree),
             std::end(*scanner.m_theTree),
-            [](const auto&) noexcept
+            [&] (const auto& node) noexcept
          {
-            return true;
+            treeSize += 1;
+            totalBytes += node.GetData().size;
          });
       }).GetElapsedTime();
 
+      std::cout << totalBytes << " bytes on disk!\n";
+
       std::cout
-         << "\nPost-order-traversed " << treeSize << " nodes in "
+         << "Post-order-traversed " << treeSize << " nodes in "
          << traversalTime.count() << " milliseconds (or "
          << treeSize / traversalTime.count() << " nodes/ms)." << std::endl;
    }
-#endif
 
    std::cout << std::endl;
 

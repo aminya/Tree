@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include "../Tree/VectorTree.hpp"
+#include "../Tree/FlatTree.hpp"
 
 #include "FileInfo.hpp"
 
@@ -17,7 +17,7 @@
 */
 struct TreeAndPath
 {
-   std::unique_ptr<VectorTree<FileInfo>> tree;
+   std::unique_ptr<FlatTree<FileInfo>> tree;
    std::experimental::filesystem::path path;
 
    TreeAndPath(
@@ -51,7 +51,7 @@ public:
    */
    void Start();
 
-   std::unique_ptr<VectorTree<FileInfo>> m_theTree{ nullptr };
+   std::unique_ptr<FlatTree<FileInfo>> m_theTree{ nullptr };
 
 private:
 
@@ -69,7 +69,7 @@ private:
    */
    void ProcessFile(
       const std::experimental::filesystem::path& path,
-      VectorTree<FileInfo>::Node& treeNode) noexcept;
+      FlatTree<FileInfo>::Node& treeNode) noexcept;
 
    /**
    * @brief Performs a recursive depth-first exploration of the file system.
@@ -79,7 +79,7 @@ private:
    */
    void ProcessDirectory(
       const std::experimental::filesystem::path& path,
-      VectorTree<FileInfo>::Node& fileNode) noexcept;
+      FlatTree<FileInfo>::Node& fileNode) noexcept;
 
    /**
    * @brief Helper function to facilitate exception-free iteration over a directory.
@@ -89,9 +89,9 @@ private:
    */
    void IterateOverDirectoryAndScan(
       std::experimental::filesystem::directory_iterator& itr,
-      VectorTree<FileInfo>::Node& treeNode) noexcept;
+      FlatTree<FileInfo>::Node& treeNode) noexcept;
 
-   std::unique_ptr<VectorTree<FileInfo>> CreateTreeAndRootNode();
+   std::unique_ptr<FlatTree<FileInfo>> CreateTreeAndRootNode();
 
    const std::experimental::filesystem::path m_rootPath;
 };
