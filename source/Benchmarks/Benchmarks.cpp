@@ -7,8 +7,36 @@
 #include "DriveScanner.h"
 #include "Stopwatch.hpp"
 
+#include <numeric>
+
+namespace
+{
+   template<
+      typename ChronoType,
+      typename LambdaType
+   >
+   auto RunTrials(LambdaType&& lambda)
+   {
+      std::vector<ChronoType> elapsedTimes;
+      elapsedTimes.reserve(1'000);
+
+      for (auto index{ 0u }; index < elapsedTimes.capacity(); ++index)
+      {
+         const auto clock = Stopwatch<ChronoType>([&]() noexcept { lambda(); });
+         elapsedTimes.emplace_back(clock.GetElapsedTime());
+      }
+
+      const auto sum = std::accumulate(std::begin(elapsedTimes), std::end(elapsedTimes), 0ull,
+         [](auto total, auto current) noexcept { return total + current.count(); });
+
+      return sum / elapsedTimes.size();
+   }
+}
+
 int main()
 {
+   using ChronoType = std::chrono::microseconds;
+
    std::cout.imbue(std::locale{ "" });
    std::cout << "Scanning Drive to Create a Large Tree...\n" << std::endl;
 
@@ -17,112 +45,119 @@ int main()
 
    std::cout << "\n";
 
-   { // Pre-Order Traversal:
+   const auto preOrderTraversal = [&]() noexcept
+   {
       std::uintmax_t treeSize{ 0 };
       std::uintmax_t totalBytes{ 0 };
 
-      const auto traversalTime = Stopwatch<std::chrono::milliseconds>([&]() noexcept
+      std::for_each(
+         scanner.m_theTree->beginPreOrder(),
+         scanner.m_theTree->endPreOrder(),
+         [&](const auto& node) noexcept
       {
-         std::for_each(
-            scanner.m_theTree->beginPreOrder(),
-            scanner.m_theTree->endPreOrder(),
-            [&] (const auto& node) noexcept
+         treeSize += 1;
+
+         if (node.GetData().type == FileType::REGULAR)
          {
-            treeSize += 1;
             totalBytes += node.GetData().size;
-         });
-      }).GetElapsedTime();
+         }
+      });
+   };
 
-      std::cout << totalBytes << " bytes on disk!\n";
-
-      std::cout
-         << "Pre-order-traversed " << treeSize << " nodes in "
-         << traversalTime.count() << " milliseconds (or "
-         << treeSize / traversalTime.count() << " nodes/ms)." << std::endl;
-   }
-
-   { // Post-Order Traversal:
+   const auto postOrderTraversal = [&]() noexcept
+   {
       std::uintmax_t treeSize{ 0 };
       std::uintmax_t totalBytes{ 0 };
 
-      const auto traversalTime = Stopwatch<std::chrono::milliseconds>([&] () noexcept
+      std::for_each(
+         std::begin(*scanner.m_theTree),
+         std::end(*scanner.m_theTree),
+         [&](const auto& node) noexcept
       {
-         std::for_each(
-            std::begin(*scanner.m_theTree),
-            std::end(*scanner.m_theTree),
-            [&] (const auto& node) noexcept
+         treeSize += 1;
+
+         if (node.GetData().type == FileType::REGULAR)
          {
-            treeSize += 1;
             totalBytes += node.GetData().size;
-         });
-      }).GetElapsedTime();
+         }
+      });
+   };
 
-      std::cout << totalBytes << " bytes on disk!\n";
+   const auto averagePreOrderTimeWithoutOptimization = RunTrials<ChronoType>(preOrderTraversal);
 
-      std::cout
-         << "Post-order-traversed " << treeSize << " nodes in "
-         << traversalTime.count() << " milliseconds (or "
-         << treeSize / traversalTime.count() << " nodes/ms)." << std::endl;
-   }
+   std::cout
+      << "Average Pre-Order Before Optimization: " << averagePreOrderTimeWithoutOptimization
+      << " " << StopwatchInternals::TypeName<ChronoType>::value << "\n";
+
+   const auto averagePostOrderTimeWithoutOptimization = RunTrials<ChronoType>(postOrderTraversal);
+
+   std::cout
+      << "Average Post-Order Before Optimization: " << averagePostOrderTimeWithoutOptimization
+      << " " << StopwatchInternals::TypeName<ChronoType>::value << "\n";
 
    std::cout << "\n";
 
-   Stopwatch<std::chrono::milliseconds>([&]()
+   Stopwatch<ChronoType>([&]() noexcept
    {
-      scanner.m_theTree->OptimizeMemoryLayoutFor<PreOrderTraversal>();
+      scanner.m_theTree->OptimizeMemoryLayoutFor<PostOrderTraversal>();
    }, "Optimized Layout in ");
 
    std::cout << "\n";
 
-   { // Pre-Order Traversal:
-      std::uintmax_t treeSize{ 0 };
-      std::uintmax_t totalBytes{ 0 };
+   const auto averagePreOrderTimeAfterOptimization = RunTrials<ChronoType>(preOrderTraversal);
 
-      const auto traversalTime = Stopwatch<std::chrono::milliseconds>([&]() noexcept
-      {
-         std::for_each(
-            scanner.m_theTree->beginPreOrder(),
-            scanner.m_theTree->endPreOrder(),
-            [&] (const auto& node) noexcept
-         {
-            treeSize += 1;
-            totalBytes += node.GetData().size;
-         });
-      }).GetElapsedTime();
+   std::cout
+      << "Average Pre-Order After Optimization: " << averagePreOrderTimeAfterOptimization
+      << " " << StopwatchInternals::TypeName<ChronoType>::value << "\n";
 
-      std::cout << totalBytes << " bytes on disk!\n";
+   const auto averagePostOrderTimeAfterOptimization = RunTrials<ChronoType>(postOrderTraversal);
 
-      std::cout
-         << "Pre-order-traversed " << treeSize << " nodes in "
-         << traversalTime.count() << " milliseconds (or "
-         << treeSize / traversalTime.count() << " nodes/ms)." << std::endl;
-   }
+   std::cout
+      << "Average Post-Order After Optimization: " << averagePostOrderTimeAfterOptimization
+      << " " << StopwatchInternals::TypeName<ChronoType>::value << "\n";
 
+   std::cout << "\n";
+
+#if 0
    { // Post-Order Traversal:
       std::uintmax_t treeSize{ 0 };
       std::uintmax_t totalBytes{ 0 };
 
-      const auto traversalTime = Stopwatch<std::chrono::milliseconds>([&]() noexcept
+      const auto traversalTime = Stopwatch<ChronoType>([&]() noexcept
       {
+         const auto& underlyingVector = scanner.m_theTree->GetDataAsVector();
+
          std::for_each(
-            std::begin(*scanner.m_theTree),
-            std::end(*scanner.m_theTree),
-            [&] (const auto& node) noexcept
+            std::begin(underlyingVector),
+            std::end(underlyingVector),
+            [&] (const auto& file) noexcept
          {
             treeSize += 1;
-            totalBytes += node.GetData().size;
+
+            if (file.type == FileType::REGULAR)
+            {
+               totalBytes += file.size;
+            }
          });
-      }).GetElapsedTime();
+      });
 
-      std::cout << totalBytes << " bytes on disk!\n";
-
-      std::cout
-         << "Post-order-traversed " << treeSize << " nodes in "
-         << traversalTime.count() << " milliseconds (or "
-         << treeSize / traversalTime.count() << " nodes/ms)." << std::endl;
+      if (traversalTime.GetElapsedTime().count() > 0)
+      {
+         std::cout
+            << "Linear traversal " << treeSize << " nodes in "
+            << traversalTime.GetElapsedTime().count() << " "
+            << traversalTime.GetUnitsAsCharacterArray() << " (or "
+            << treeSize / traversalTime.GetElapsedTime().count() << " nodes/unit of time)."
+            << std::endl;
+      }
+      else
+      {
+         std::cout << "Too fast to register!" << std::endl;
+      }
    }
+#endif
 
-   std::cout << std::endl;
+   std::cout << std::flush;
 
    return 0;
 }
