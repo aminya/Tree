@@ -17,7 +17,7 @@
 */
 struct NodeAndPath
 {
-   std::unique_ptr<Node<FileInfo>> node;
+   std::unique_ptr<Tree<FileInfo>::Node> node;
    std::experimental::filesystem::path path;
 
    NodeAndPath(
@@ -51,7 +51,7 @@ public:
    */
    void Start();
 
-   std::shared_ptr<Tree<FileInfo>> m_theTree{ nullptr };
+   std::shared_ptr<Tree<FileInfo>> m_fileTree{ nullptr };
 
 private:
 
@@ -69,7 +69,7 @@ private:
    */
    void ProcessFile(
       const std::experimental::filesystem::path& path,
-      Node<FileInfo>& Node) noexcept;
+      Tree<FileInfo>::Node& node) noexcept;
 
    /**
    * @brief Performs a recursive depth-first exploration of the file system.
@@ -79,7 +79,7 @@ private:
    */
    void ProcessDirectory(
       const std::experimental::filesystem::path& path,
-      Node<FileInfo>& fileNode) noexcept;
+      Tree<FileInfo>::Node& fileNode) noexcept;
 
    /**
    * @brief Helper function to facilitate exception-free iteration over a directory.
@@ -89,7 +89,7 @@ private:
    */
    void IterateOverDirectoryAndScan(
       std::experimental::filesystem::directory_iterator& itr,
-      Node<FileInfo>& Node) noexcept;
+      Tree<FileInfo>::Node& node) noexcept;
 
    std::shared_ptr<Tree<FileInfo>> CreateTreeAndRootNode();
 

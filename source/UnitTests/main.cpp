@@ -75,11 +75,11 @@ namespace
 
 TEST_CASE("Node Construction and Assignment")
 {
-   const Node<std::string> node{ "Bar" };
+   const Tree<std::string>::Node node{ "Bar" };
 
    SECTION("Default Construction")
    {
-      const Node<std::string> default{};
+      const Tree<std::string>::Node default{};
       const std::string emptyString;
 
       REQUIRE(default.GetChildCount() == 0);
@@ -93,7 +93,7 @@ TEST_CASE("Node Construction and Assignment")
 
    SECTION("Copy Construction")
    {
-      const Node<std::string> copy{ node };
+      const Tree<std::string>::Node copy{ node };
 
       REQUIRE(copy.GetData() == node.GetData());
       REQUIRE(&copy.GetData() != &node.GetData());
@@ -101,7 +101,7 @@ TEST_CASE("Node Construction and Assignment")
 
    SECTION("Assignment Operator")
    {
-      const Node<std::string> copy = node;
+      const Tree<std::string>::Node copy = node;
 
       REQUIRE(copy.GetData() == node.GetData());
    }
@@ -109,8 +109,8 @@ TEST_CASE("Node Construction and Assignment")
 
 TEST_CASE("Node Comparison Operations")
 {
-   const Node<int> ten{ 10 };
-   const Node<int> twenty{ 20 };
+   const Tree<int>::Node ten{ 10 };
+   const Tree<int>::Node twenty{ 20 };
 
    SECTION("Less Than")
    {
@@ -147,7 +147,7 @@ TEST_CASE("Node Comparison Operations")
 
 TEST_CASE("Node Alterations")
 {
-   Node<std::string> node{ "Bar" };
+   Tree<std::string>::Node node{ "Bar" };
    REQUIRE(node.GetData() == "Bar");
 
    SECTION("Altering Data")
@@ -237,8 +237,8 @@ TEST_CASE("Node Counting")
 
 TEST_CASE("Node::Iterators")
 {
-   const Node<std::string> node{ "Test" };
-   const auto sharedNode = std::make_shared<Node<std::string>>(node);
+   const Tree<std::string>::Node node{ "Test" };
+   const auto sharedNode = std::make_shared<Tree<std::string>::Node>(node);
    const auto constItr = Tree<std::string>::PostOrderIterator(sharedNode.get());
 
    auto nonConstItr = Tree<std::string>::PostOrderIterator(sharedNode.get());
@@ -292,6 +292,7 @@ TEST_CASE("Node::Iterators")
 TEST_CASE("Forward Pre- and Post-Order Traversal of Simple Binary Tree")
 {
    Tree<std::string> tree{ "F" };
+
    tree.GetRoot()->AppendChild("B")->AppendChild("A");
    tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
    tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
@@ -604,7 +605,7 @@ TEST_CASE("Sorting")
 
 TEST_CASE("Node Copying")
 {
-   Node<std::string> node{ "Node" };
+   Tree<std::string>::Node node{ "Node" };
 
    const auto copy = node;
 
@@ -995,7 +996,7 @@ TEST_CASE("Selectively Delecting Nodes")
          // that took place during the construction of the tree.
          DESTRUCTION_COUNT = 0;
 
-         std::vector<Node<VerboseNode>*> toBeDeleted;
+         std::vector<Tree<VerboseNode>::Node*> toBeDeleted;
 
          for (auto&& node : tree)
          {
