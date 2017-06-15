@@ -30,76 +30,76 @@
 #include <type_traits>
 
 template<typename DataType> class Tree;
-template<typename DataType> class TreeNode;
+template<typename DataType> class Node;
 
 /**
-* @returns True if the data encapsulated in the left-hand side TreeNode is less than
-* the data encapsulated in the right-hand side TreeNode.
+* @returns True if the data encapsulated in the left-hand side Node is less than
+* the data encapsulated in the right-hand side Node.
 */
 template<typename DataType>
-constexpr inline bool operator<(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
+constexpr inline bool operator<(const Node<DataType>& lhs, const Node<DataType>& rhs)
 {
    return lhs.GetData() < rhs.GetData();
 }
 
 /**
-* @returns True if the data encapsulated in the left-hand side TreeNode is less than 
-* or equal to the data encapsulated in the right-hand side TreeNode.
+* @returns True if the data encapsulated in the left-hand side Node is less than 
+* or equal to the data encapsulated in the right-hand side Node.
 */
 template<typename DataType>
-constexpr inline bool operator<=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
+constexpr inline bool operator<=(const Node<DataType>& lhs, const Node<DataType>& rhs)
 {
    return !(lhs.GetData() > rhs.GetData());
 }
 
 /**
-* @returns True if the data encapsulated in the left-hand side TreeNode is greater than
-* the data encapsulated in the right-hand side TreeNode.
+* @returns True if the data encapsulated in the left-hand side Node is greater than
+* the data encapsulated in the right-hand side Node.
 */
 template<typename DataType>
-constexpr inline bool operator>(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
+constexpr inline bool operator>(const Node<DataType>& lhs, const Node<DataType>& rhs)
 {
    return rhs.GetData() < lhs.GetData();
 }
 
 /**
-* @returns True if the data encapsulated in the left-hand side TreeNode is greater than
-* or equal to the data encapsulated in the right-hand side TreeNode.
+* @returns True if the data encapsulated in the left-hand side Node is greater than
+* or equal to the data encapsulated in the right-hand side Node.
 */
 template<typename DataType>
-constexpr inline bool operator>=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
+constexpr inline bool operator>=(const Node<DataType>& lhs, const Node<DataType>& rhs)
 {
    return !(lhs.GetData() < rhs.GetData());
 }
 
 /**
-* @returns True if the data encapsulated in the left-hand side TreeNode is equal to
-* the data encapsulated in the right-hand side TreeNode.
+* @returns True if the data encapsulated in the left-hand side Node is equal to
+* the data encapsulated in the right-hand side Node.
 */
 template<typename DataType>
-constexpr inline bool operator==(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
+constexpr inline bool operator==(const Node<DataType>& lhs, const Node<DataType>& rhs)
 {
    return lhs.GetData() == rhs.GetData();
 }
 
 /**
-* @returns True if the data encapsulated in the left-hand side TreeNode is not equal
-* to the data encapsulated in the right-hand side TreeNode.
+* @returns True if the data encapsulated in the left-hand side Node is not equal
+* to the data encapsulated in the right-hand side Node.
 */
 template<typename DataType>
-constexpr inline bool operator!=(const TreeNode<DataType>& lhs, const TreeNode<DataType>& rhs)
+constexpr inline bool operator!=(const Node<DataType>& lhs, const Node<DataType>& rhs)
 {
    return !(lhs.GetData() == rhs.GetData());
 }
 
 /**
-* The TreeNode class represents the nodes that make up the Tree.
+* The Node class represents the nodes that make up the Tree.
 *
 * Each node has a pointer to its parent, its first and last child, its previous and next
 * sibling, and, of course, to the data it encapsulates.
 */
 template<typename DataType>
-class TreeNode
+class Node
 {
 public:
    typedef DataType           value_type;
@@ -107,28 +107,28 @@ public:
    typedef const DataType&    const_reference;
 
    /**
-   * @brief TreeNode default constructs a new TreeNode. All outgoing links from this new node will
+   * @brief Node default constructs a new Node. All outgoing links from this new node will
    * initialized to a nullptr.
    */
-   constexpr TreeNode() noexcept = default;
+   constexpr Node() noexcept = default;
 
    /**
-   * @brief TreeNode constructs a new TreeNode encapsulating the specified data. All outgoing links
+   * @brief Node constructs a new Node encapsulating the specified data. All outgoing links
    * from the node will be initialized to nullptr.
    */
-   TreeNode(DataType data)
+   Node(DataType data)
       noexcept(std::is_nothrow_move_constructible_v<DataType>) :
       m_data{ std::move(data) }
    {
    }
 
    /**
-   * @brief TreeNode performs a copy-construction of the specified TreeNode.
+   * @brief Node performs a copy-construction of the specified Node.
    *
-   * The nodes in the TreeNode are deep-copied, while the data contained in the tree is
+   * The nodes in the Node are deep-copied, while the data contained in the tree is
    * shallow-copied.
    */
-   TreeNode(const TreeNode<DataType>& other)
+   Node(const Node<DataType>& other)
       noexcept(std::is_nothrow_copy_constructible_v<DataType>) :
       m_data{ other.m_data }
    {
@@ -136,9 +136,9 @@ public:
    }
 
    /**
-   * @brief Destroys the TreeNode and all TreeNodes under it.
+   * @brief Destroys the Node and all Nodes under it.
    */
-   ~TreeNode()
+   ~Node()
    {
       DetachFromTree();
 
@@ -155,8 +155,8 @@ public:
 
       assert(m_firstChild && m_lastChild);
 
-      TreeNode<DataType>* childNode = m_firstChild;
-      TreeNode<DataType>* nextNode = nullptr;
+      Node<DataType>* childNode = m_firstChild;
+      Node<DataType>* nextNode = nullptr;
 
       while (childNode != nullptr)
       {
@@ -175,7 +175,7 @@ public:
    /**
    * @brief Assignment operator.
    */
-   TreeNode<DataType>& operator=(TreeNode<DataType> other)
+   Node<DataType>& operator=(Node<DataType> other)
       noexcept(noexcept(swap(*this, other)))
    {
       swap(*this, other);
@@ -185,7 +185,7 @@ public:
    /**
    * @brief Swaps all member variables of the left-hand side with that of the right-hand side.
    */
-   friend void swap(TreeNode<DataType>& lhs, TreeNode<DataType>& rhs)
+   friend void swap(Node<DataType>& lhs, Node<DataType>& rhs)
       noexcept(noexcept(swap(lhs.m_data, rhs.m_data)))
    {
       // Enable Argument Dependent Lookup (ADL):
@@ -202,7 +202,7 @@ public:
    }
 
    /**
-   * @brief Detaches and then deletes the TreeNode from the Tree it's part of.
+   * @brief Detaches and then deletes the Node from the Tree it's part of.
    */
    inline void DeleteFromTree() noexcept
    {
@@ -244,13 +244,13 @@ public:
    }
 
    /**
-   * @brief PrependChild will prepend the specified TreeNode as the first child of the TreeNode.
+   * @brief PrependChild will prepend the specified Node as the first child of the Node.
    *
-   * @param[in] child               The new TreeNode to set as the first child of the TreeNode.
+   * @param[in] child               The new Node to set as the first child of the Node.
    *
    * @returns A pointer to the newly appended child.
    */
-   inline TreeNode<DataType>* PrependChild(TreeNode<DataType>& child) noexcept
+   inline Node<DataType>* PrependChild(Node<DataType>& child) noexcept
    {
       child.m_parent = this;
 
@@ -271,36 +271,36 @@ public:
    }
 
    /**
-   * @brief PrependChild will construct and prepend a new TreeNode as the first child of the
-   * TreeNode.
+   * @brief PrependChild will construct and prepend a new Node as the first child of the
+   * Node.
    *
-   * @param[in] data                The underlying data to be stored in the new TreeNode.
+   * @param[in] data                The underlying data to be stored in the new Node.
    *
-   * @returns The newly prepended TreeNode.
+   * @returns The newly prepended Node.
    */
-   inline TreeNode<DataType>* PrependChild(const DataType& data)
+   inline Node<DataType>* PrependChild(const DataType& data)
    {
-      const auto* newNode = new TreeNode<DataType>(data);
+      const auto* newNode = new Node<DataType>(data);
       return PrependChild(*newNode);
    }
 
    /**
    * @overload
    */
-   inline TreeNode<DataType>* PrependChild(DataType&& data)
+   inline Node<DataType>* PrependChild(DataType&& data)
    {
-      auto* const newNode = new TreeNode<DataType>(std::move(data));
+      auto* const newNode = new Node<DataType>(std::move(data));
       return PrependChild(*newNode);
    }
 
    /**
-   * @brief AppendChild will append the specified TreeNode as a child of the TreeNode.
+   * @brief AppendChild will append the specified Node as a child of the Node.
    *
-   * @param[in] child               The new TreeNode to set as the last child of the TreeNode.
+   * @param[in] child               The new Node to set as the last child of the Node.
    *
    * @returns A pointer to the newly appended child.
    */
-   inline TreeNode<DataType>* AppendChild(TreeNode<DataType>& child) noexcept
+   inline Node<DataType>* AppendChild(Node<DataType>& child) noexcept
    {
       child.m_parent = this;
 
@@ -321,29 +321,29 @@ public:
    }
 
    /**
-   * @brief AppendChild will construct and append a new TreeNode as the last child of the TreeNode.
+   * @brief AppendChild will construct and append a new Node as the last child of the Node.
    *
-   * @param[in] data                The underlying data to be stored in the new TreeNode.
+   * @param[in] data                The underlying data to be stored in the new Node.
    *
-   * @returns The newly appended TreeNode.
+   * @returns The newly appended Node.
    */
-   inline TreeNode<DataType>* AppendChild(const DataType& data)
+   inline Node<DataType>* AppendChild(const DataType& data)
    {
-      auto* const newNode = new TreeNode<DataType>(data);
+      auto* const newNode = new Node<DataType>(data);
       return AppendChild(*newNode);
    }
 
    /**
    * @overload
    */
-   inline TreeNode<DataType>* AppendChild(DataType&& data)
+   inline Node<DataType>* AppendChild(DataType&& data)
    {
-      auto* const newNode = new TreeNode<DataType>(std::move(data));
+      auto* const newNode = new Node<DataType>(std::move(data));
       return AppendChild(*newNode);
    }
 
    /**
-   * @returns The underlying data stored in the TreeNode.
+   * @returns The underlying data stored in the Node.
    */
    inline DataType& GetData() noexcept
    {
@@ -359,41 +359,41 @@ public:
    }
 
    /**
-   * @returns A pointer to the TreeNode's parent, if it exists; nullptr otherwise.
+   * @returns A pointer to the Node's parent, if it exists; nullptr otherwise.
    */
-   inline constexpr TreeNode<DataType>* const GetParent() const noexcept
+   inline constexpr Node<DataType>* const GetParent() const noexcept
    {
       return m_parent;
    }
 
    /**
-   * @returns A pointer to the TreeNode's first child.
+   * @returns A pointer to the Node's first child.
    */
-   inline constexpr TreeNode<DataType>* const GetFirstChild() const noexcept
+   inline constexpr Node<DataType>* const GetFirstChild() const noexcept
    {
       return m_firstChild;
    }
 
    /**
-   * @returns A pointer to the TreeNode's last child.
+   * @returns A pointer to the Node's last child.
    */
-   inline constexpr TreeNode<DataType>* const GetLastChild() const noexcept
+   inline constexpr Node<DataType>* const GetLastChild() const noexcept
    {
       return m_lastChild;
    }
 
    /**
-   * @returns A pointer to the TreeNode's next sibling.
+   * @returns A pointer to the Node's next sibling.
    */
-   inline constexpr TreeNode<DataType>* const GetNextSibling() const noexcept
+   inline constexpr Node<DataType>* const GetNextSibling() const noexcept
    {
       return m_nextSibling;
    }
 
    /**
-   * @returns A pointer to the TreeNode's previous sibling.
+   * @returns A pointer to the Node's previous sibling.
    */
-   inline constexpr TreeNode<DataType>* const GetPreviousSibling() const noexcept
+   inline constexpr Node<DataType>* const GetPreviousSibling() const noexcept
    {
       return m_previousSibling;
    }
@@ -438,8 +438,8 @@ public:
    * @param[in] comparator          A callable type to be used as the basis for the sorting
    *                                comparison. This type should be equivalent to:
    *                                   bool comparator(
-   *                                      const TreeNode<DataType>& lhs,
-   *                                      const TreeNode<DataType>& rhs);
+   *                                      const Node<DataType>& lhs,
+   *                                      const Node<DataType>& rhs);
    */
    template<typename ComparatorType>
    void SortChildren(
@@ -459,13 +459,13 @@ private:
    /**
    * @brief MergeSort is the main entry point into the merge sort implementation.
    *
-   * @param[in] list                The first TreeNode in the list to be sorted.
+   * @param[in] list                The first Node in the list to be sorted.
    * @param[in] comparator          The comparator function to be called to figure out which node
    *                                is the lesser of the two.
    */
    template<typename ComparatorType>
    void MergeSort(
-      TreeNode<DataType>*& list,
+      Node<DataType>*& list,
       const ComparatorType& comparator)
       noexcept(noexcept(comparator))
    {
@@ -474,11 +474,11 @@ private:
          return;
       }
 
-      TreeNode<DataType>* head = list;
-      TreeNode<DataType>* lhs = nullptr;
-      TreeNode<DataType>* rhs = nullptr;
+      Node<DataType>* root = list;
+      Node<DataType>* lhs = nullptr;
+      Node<DataType>* rhs = nullptr;
 
-      DivideList(head, lhs, rhs);
+      DivideList(root, lhs, rhs);
 
       assert(lhs);
       assert(rhs);
@@ -490,24 +490,24 @@ private:
    }
 
    /**
-   * @brief DivideList is a helper function that will divide the specified TreeNode list in two.
+   * @brief DivideList is a helper function that will divide the specified Node list in two.
    *
-   * @param[in] head                The head of the TreeNode list to be divided in two.
-   * @param[out] lhs                The first TreeNode of the left hand side list.
-   * @param[out] rhs                The first TreeNode of the right hand side list.
+   * @param[in] root                The root of the Node list to be divided in two.
+   * @param[out] lhs                The first Node of the left hand side list.
+   * @param[out] rhs                The first Node of the right hand side list.
    */
    void DivideList(
-      TreeNode<DataType>* head,
-      TreeNode<DataType>*& lhs,
-      TreeNode<DataType>*& rhs) noexcept
+      Node<DataType>* root,
+      Node<DataType>*& lhs,
+      Node<DataType>*& rhs) noexcept
    {
-      if (!head || !head->m_nextSibling)
+      if (!root || !root->m_nextSibling)
       {
          return;
       }
 
-      TreeNode<DataType>* tortoise = head;
-      TreeNode<DataType>* hare = head->m_nextSibling;
+      Node<DataType>* tortoise = root;
+      Node<DataType>* hare = root->m_nextSibling;
 
       while (hare)
       {
@@ -519,7 +519,7 @@ private:
          }
       }
 
-      lhs = head;
+      lhs = root;
       rhs = tortoise->m_nextSibling;
 
       tortoise->m_nextSibling = nullptr;
@@ -531,16 +531,16 @@ private:
    * @param[in] lhs                 The first node of the sorted left half.
    * @param[in] rhs                 The first node of the sorted right half.
    *
-   * @returns The first node of the merged TreeNode list.
+   * @returns The first node of the merged Node list.
    */
    template<typename ComparatorType>
-   TreeNode<DataType>* MergeSortedHalves(
-      TreeNode<DataType>*& lhs,
-      TreeNode<DataType>*& rhs,
+   Node<DataType>* MergeSortedHalves(
+      Node<DataType>*& lhs,
+      Node<DataType>*& rhs,
       const ComparatorType& comparator)
       noexcept(noexcept(comparator))
    {
-      TreeNode<DataType>* result = nullptr;
+      Node<DataType>* result = nullptr;
       if (comparator(*lhs, *rhs))
       {
          result = lhs;
@@ -554,7 +554,7 @@ private:
 
       result->m_previousSibling = nullptr;
 
-      TreeNode<DataType>* tail = result;
+      Node<DataType>* tail = result;
 
       while (lhs && rhs)
       {
@@ -616,11 +616,11 @@ private:
    /**
    * @brief AddFirstChild is a helper function to make it easier to add the first descendant.
    *
-   * @param[in] child               The TreeNode to be added as a child.
+   * @param[in] child               The Node to be added as a child.
    *
    * @returns The newly added node.
    */
-   inline TreeNode<DataType>* AddFirstChild(TreeNode<DataType>& child) noexcept
+   inline Node<DataType>* AddFirstChild(Node<DataType>& child) noexcept
    {
       assert(m_childCount == 0);
 
@@ -633,13 +633,13 @@ private:
    }
 
    /**
-   * @brief Helper function to recursively copy the specified |source| TreeNode and all its
+   * @brief Helper function to recursively copy the specified |source| Node and all its
    * descendants.
    *
-   * @param[in] source              The TreeNode to copy information from.
-   * @param[out] sink               The TreeNode to place a copy of the information into.
+   * @param[in] source              The Node to copy information from.
+   * @param[out] sink               The Node to place a copy of the information into.
    */
-   void Copy(const TreeNode<DataType>& source, TreeNode<DataType>& sink)
+   void Copy(const Node<DataType>& source, Node<DataType>& sink)
    {
       if (!source.HasChildren())
       {
@@ -665,15 +665,15 @@ private:
    }
 
    /**
-   * @brief Removes the TreeNode from the tree structure, updating all surrounding links
+   * @brief Removes the Node from the tree structure, updating all surrounding links
    * as appropriate.
    *
    * @note This function does not actually delete the node.
    *
-   * @returns A pointer to the detached TreeNode. This returned TreeNode can safely be deleted
+   * @returns A pointer to the detached Node. This returned Node can safely be deleted
    * once detached.
    */
-   TreeNode<DataType>* DetachFromTree() noexcept
+   Node<DataType>* DetachFromTree() noexcept
    {
       if (m_previousSibling && m_nextSibling)
       {
@@ -715,11 +715,11 @@ private:
       return this;
    }
 
-   TreeNode<DataType>* m_parent{ nullptr };
-   TreeNode<DataType>* m_firstChild{ nullptr };
-   TreeNode<DataType>* m_lastChild{ nullptr };
-   TreeNode<DataType>* m_previousSibling{ nullptr };
-   TreeNode<DataType>* m_nextSibling{ nullptr };
+   Node<DataType>* m_parent{ nullptr };
+   Node<DataType>* m_firstChild{ nullptr };
+   Node<DataType>* m_lastChild{ nullptr };
+   Node<DataType>* m_previousSibling{ nullptr };
+   Node<DataType>* m_nextSibling{ nullptr };
 
    DataType m_data{ };
 
@@ -729,15 +729,15 @@ private:
 };
 
 /**
-* The Tree class declares a basic tree, built on top of templatized TreeNode nodes.
+* The Tree class declares a basic tree, built on top of templatized Node nodes.
 *
-* Each tree consists of a simple head TreeNode and nothing else.
+* Each tree consists of a simple root Node and nothing else.
 */
 template<typename DataType>
 class Tree
 {
 public:
-   friend class TreeNode<DataType>;
+   friend class Node<DataType>;
 
    class Iterator;
    class PreOrderIterator;
@@ -746,24 +746,24 @@ public:
    class SiblingIterator;
 
    // Typedefs needed for STL compliance:
-   typedef TreeNode<DataType>                value_type;
-   typedef TreeNode<DataType>&               reference;
-   typedef const TreeNode<DataType>&         const_reference;
+   typedef Node<DataType>                value_type;
+   typedef Node<DataType>&               reference;
+   typedef const Node<DataType>&         const_reference;
 
    /**
    * @brief Default constructor.
    */
    Tree() :
-      m_head{ new TreeNode<DataType>{ } }
+      m_root{ new Node<DataType>{ } }
    {
    }
 
    /**
    * @brief Tree constructs a new Tree with the provided data encapsulated in a new
-   * TreeNode.
+   * Node.
    */
    Tree(DataType data) :
-      m_head{ new TreeNode<DataType>{ data } }
+      m_root{ new Node<DataType>{ data } }
    {
    }
 
@@ -771,7 +771,7 @@ public:
    * @brief Copy constructor.
    */
    Tree(const Tree<DataType>& other) :
-      m_head{ new TreeNode<DataType>{ *other.m_head } }
+      m_root{ new Node<DataType>{ *other.m_root } }
    {
    }
 
@@ -789,29 +789,29 @@ public:
    * @brief Swaps all member variables of the left-hand side with that of the right-hand side.
    */
    friend void swap(Tree<DataType>& lhs, Tree<DataType>& rhs)
-      noexcept(noexcept(swap(lhs.m_head, rhs.m_head)))
+      noexcept(noexcept(swap(lhs.m_root, rhs.m_root)))
    {
       // Enable Argument Dependent Lookup (ADL):
       using std::swap;
 
-      swap(lhs.m_head, rhs.m_head);
+      swap(lhs.m_root, rhs.m_root);
    }
 
    /**
-   * @brief Deletes the head TreeNode, which, in turn, will trigger a deletion of every
-   * TreeNode in the Tree.
+   * @brief Deletes the root Node, which, in turn, will trigger a deletion of every
+   * Node in the Tree.
    */
    ~Tree()
    {
-      delete m_head;
+      delete m_root;
    }
 
    /**
-   * @returns A pointer to the head TreeNode.
+   * @returns A pointer to the root Node.
    */
-   inline TreeNode<DataType>* GetHead() const noexcept
+   inline Node<DataType>* GetRoot() const noexcept
    {
-      return m_head;
+      return m_root;
    }
 
    /**
@@ -832,13 +832,13 @@ public:
    }
 
    /**
-   * @returns The zero-indexed depth of the TreeNode in its Tree.
+   * @returns The zero-indexed depth of the Node in its Tree.
    */
-   static unsigned int Depth(TreeNode<DataType> node) noexcept
+   static unsigned int Depth(Node<DataType> node) noexcept
    {
       unsigned int depth = 0;
 
-      TreeNode<DataType>* nodePtr = &node;
+      Node<DataType>* nodePtr = &node;
       while (nodePtr->GetParent())
       {
          ++depth;
@@ -849,11 +849,11 @@ public:
    }
 
    /**
-   * @returns A pre-order iterator that will iterate over all TreeNodes in the tree.
+   * @returns A pre-order iterator that will iterate over all Nodes in the tree.
    */
    inline typename Tree::PreOrderIterator beginPreOrder() const noexcept
    {
-      const auto iterator = Tree<DataType>::PreOrderIterator{ m_head };
+      const auto iterator = Tree<DataType>::PreOrderIterator{ m_root };
       return iterator;
    }
 
@@ -868,11 +868,11 @@ public:
 
    /**
    * @returns A post-order iterator that will iterator over all nodes in the tree, starting
-   * with the head of the Tree.
+   * with the root of the Tree.
    */
    inline typename Tree::PostOrderIterator begin() const noexcept
    {
-      const auto iterator = Tree<DataType>::PostOrderIterator{ m_head };
+      const auto iterator = Tree<DataType>::PostOrderIterator{ m_root };
       return iterator;
    }
 
@@ -891,12 +891,12 @@ public:
    */
    inline typename Tree::LeafIterator beginLeaf() const noexcept
    {
-      const auto iterator = Tree<DataType>::LeafIterator{ m_head };
+      const auto iterator = Tree<DataType>::LeafIterator{ m_root };
       return iterator;
    }
 
    /**
-   * @return A LeafIterator that points past the last leaf TreeNode in the Tree.
+   * @return A LeafIterator that points past the last leaf Node in the Tree.
    */
    inline typename Tree::LeafIterator endLeaf() const noexcept
    {
@@ -905,7 +905,7 @@ public:
    }
 
 private:
-   TreeNode<DataType>* m_head{ nullptr };
+   Node<DataType>* m_root{ nullptr };
 };
 
 /**
@@ -928,7 +928,7 @@ public:
    typedef std::forward_iterator_tag            iterator_category;
 
    /**
-   * @returns True if the Tree::Iterator points to a valid TreeNode; false otherwise.
+   * @returns True if the Tree::Iterator points to a valid Node; false otherwise.
    */
    explicit operator bool() const noexcept
    {
@@ -937,9 +937,9 @@ public:
    }
 
    /**
-   * @returns The TreeNode pointed to by the Tree::Iterator.
+   * @returns The Node pointed to by the Tree::Iterator.
    */
-   inline TreeNode<DataType>& operator*() noexcept
+   inline Node<DataType>& operator*() noexcept
    {
       return *m_currentNode;
    }
@@ -947,15 +947,15 @@ public:
    /**
    * @overload
    */
-   inline const TreeNode<DataType>& operator*() const noexcept
+   inline const Node<DataType>& operator*() const noexcept
    {
       return *m_currentNode;
    }
 
    /**
-   * @returns A pointer to the TreeNode.
+   * @returns A pointer to the Node.
    */
-   inline TreeNode<DataType>* const operator&() noexcept
+   inline Node<DataType>* const operator&() noexcept
    {
       return m_currentNode;
    }
@@ -963,15 +963,15 @@ public:
    /**
    * @overload
    */
-   inline const TreeNode<DataType>* const operator&() const noexcept
+   inline const Node<DataType>* const operator&() const noexcept
    {
       return m_currentNode;
    }
 
    /**
-   * @returns A pointer to the TreeNode pointed to by the Tree:Iterator.
+   * @returns A pointer to the Node pointed to by the Tree:Iterator.
    */
-   inline TreeNode<DataType>* const operator->() noexcept
+   inline Node<DataType>* const operator->() noexcept
    {
       return m_currentNode;
    }
@@ -979,7 +979,7 @@ public:
    /**
    * @overload
    */
-   inline const TreeNode<DataType>* const operator->() const noexcept
+   inline const Node<DataType>* const operator->() const noexcept
    {
       return m_currentNode;
    }
@@ -1021,16 +1021,16 @@ protected:
    /**
    * Constructs a Iterator started at the specified node.
    */
-   explicit Iterator(const TreeNode<DataType>* node) noexcept :
-      m_currentNode{ const_cast<TreeNode<DataType>*>(node) },
-      m_startingNode{ const_cast<TreeNode<DataType>*>(node) }
+   explicit Iterator(const Node<DataType>* node) noexcept :
+      m_currentNode{ const_cast<Node<DataType>*>(node) },
+      m_startingNode{ const_cast<Node<DataType>*>(node) }
    {
    }
 
-   TreeNode<DataType>* m_currentNode{ nullptr };
+   Node<DataType>* m_currentNode{ nullptr };
 
-   const TreeNode<DataType>* m_startingNode{ nullptr };
-   const TreeNode<DataType>* m_endingNode{ nullptr };
+   const Node<DataType>* m_startingNode{ nullptr };
+   const Node<DataType>* m_endingNode{ nullptr };
 };
 
 /**
@@ -1048,7 +1048,7 @@ public:
    /**
    * Constructs an iterator that starts and ends at the specified node.
    */
-   explicit PreOrderIterator(const TreeNode<DataType>* node) noexcept :
+   explicit PreOrderIterator(const Node<DataType>* node) noexcept :
       Iterator{ node }
    {
       if (!node)
@@ -1143,7 +1143,7 @@ public:
    /**
    * Constructs an iterator that starts and ends at the specified node.
    */
-   explicit PostOrderIterator(const TreeNode<DataType>* node) noexcept :
+   explicit PostOrderIterator(const Node<DataType>* node) noexcept :
       Iterator{ node }
    {
       if (!node)
@@ -1160,13 +1160,13 @@ public:
       }
 
       assert(traversingNode);
-      m_currentNode = const_cast<TreeNode<DataType>*>(traversingNode);
+      m_currentNode = const_cast<Node<DataType>*>(traversingNode);
 
       // Commpute and set the ending node:
 
       if (node->GetNextSibling())
       {
-         auto* traversingNode = node->GetNextSibling();
+         traversingNode = node->GetNextSibling();
          while (traversingNode->HasChildren())
          {
             traversingNode = traversingNode->GetFirstChild();
@@ -1246,7 +1246,7 @@ public:
    /**
    * Constructs an iterator that starts at the specified node and iterates to the end.
    */
-   explicit LeafIterator(const TreeNode<DataType>* node) noexcept :
+   explicit LeafIterator(const Node<DataType>* node) noexcept :
       Iterator{ node }
    {
       if (!node)
@@ -1264,7 +1264,7 @@ public:
             firstNode = firstNode->GetFirstChild();
          }
 
-         m_currentNode = const_cast<TreeNode<DataType>*>(firstNode);
+         m_currentNode = const_cast<Node<DataType>*>(firstNode);
       }
 
       // Compute and set the ending node:
@@ -1379,7 +1379,7 @@ public:
    /**
    * Constructs an iterator that starts at the specified node and iterates to the end.
    */
-   explicit SiblingIterator(const TreeNode<DataType>* node) noexcept :
+   explicit SiblingIterator(const Node<DataType>* node) noexcept :
       Iterator{ node }
    {
    }

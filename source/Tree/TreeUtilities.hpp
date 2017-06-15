@@ -39,7 +39,7 @@ namespace TreeUtilities
          << "   rankdir = TB;\n"
          << "   edge [arrowsize=0.4, fontsize=10]\n";
 
-      const TreeNode<NodeType>* head = tree.GetHead();
+      const Node<NodeType>* head = tree.GetRoot();
 
       graphStream << "\n" << "   // Node Declarations:\n";
 
