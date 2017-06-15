@@ -10,11 +10,11 @@ The following is an example of how one might construct a simple, binary tree:
 #include <Tree.hpp>
 //...
 
-Tree<std::string> tree{ "Head" };
-tree.GetHead()->AppendChild("Left Child");
-tree.GetHead()->AppendChild("Right Child");
-tree.GetHead()->GetFirstChild()->AppendChild("First Grandchild of Left Child");
-tree.GetHead()->GetFirstChild()->AppendChild("Second Grandchild of Left Child");
+Tree<std::string> tree{ "Root" };
+tree.GetRoot()->AppendChild("Left Child");
+tree.GetRoot()->AppendChild("Right Child");
+tree.GetRoot()->GetFirstChild()->AppendChild("First Grandchild of Left Child");
+tree.GetRoot()->GetFirstChild()->AppendChild("Second Grandchild of Left Child");
 ```
 
 Iterating over the tree in a post-order fashion isn't very hard either. Continuing with the `Tree<std::string>` constructed above, and using a `std::for_each` to perform some unspecified task, one might write the following to iterate over the tree:
@@ -53,7 +53,7 @@ std::for_each(
 });
 ```
 
-In the above example, notice that you can construct any iterator from any `TreeNode<DataType>` object without having to go through an instance of `Tree<DataType>`. Also note that while the example above uses a `LeafIterator`, the use of any of the other iterator types is also perfectly valid.
+In the above example, notice that you can construct any iterator from any `Tree<DataType>::Node` object without having to go through an instance of `Tree<DataType>`. Also note that while the example above uses a `LeafIterator`, the use of any of the other iterator types is also perfectly valid.
 
 For more examples, check out the benchmarks and the unit tests.
 
@@ -63,10 +63,10 @@ Using the `TreeUtilities.hpp` header, you can now also generate DOT files for us
 
 ```C++
 Tree<std::string> tree{ "F" };
-tree.GetHead()->AppendChild("B")->AppendChild("A");
-tree.GetHead()->GetFirstChild()->AppendChild("D")->AppendChild("C");
-tree.GetHead()->GetFirstChild()->GetLastChild()->AppendChild("E");
-tree.GetHead()->AppendChild("G")->AppendChild("I")->AppendChild("H");
+tree.GetRoot()->AppendChild("B")->AppendChild("A");
+tree.GetRoot()->GetFirstChild()->AppendChild("D")->AppendChild("C");
+tree.GetRoot()->GetFirstChild()->GetLastChild()->AppendChild("E");
+tree.GetRoot()->AppendChild("G")->AppendChild("I")->AppendChild("H");
 
 TreeUtilities::OutputToDotFile(tree, "C:\\PathToFile\\TreeGraph.dot");
 ```
