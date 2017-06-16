@@ -27,7 +27,6 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
-#include <type_traits>
 
 /**
 * The Tree class declares a basic tree, built on top of templatized Node nodes.
@@ -90,8 +89,9 @@ public:
    /**
    * @brief Swaps all member variables of the left-hand side with that of the right-hand side.
    */
-   friend void swap(Tree<DataType>& lhs, Tree<DataType>& rhs)
-      noexcept(noexcept(swap(lhs.m_root, rhs.m_root)))
+   friend void swap(
+      Tree<DataType>& lhs,
+      Tree<DataType>& rhs) noexcept(noexcept(swap(lhs.m_root, rhs.m_root)))
    {
       // Enable Argument Dependent Lookup (ADL):
       using std::swap;
@@ -221,9 +221,11 @@ template<typename DataType>
 class Tree<DataType>::Node
 {
 public:
-   typedef DataType           value_type;
-   typedef DataType&          reference;
-   typedef const DataType&    const_reference;
+
+   // Typedefs needed for STL compliance:
+   using value_type = DataType;
+   using reference = DataType&;
+   using const_reference = const DataType&;
 
    /**
    * @brief Node default constructs a new Node. All outgoing links from this new node will
@@ -235,8 +237,7 @@ public:
    * @brief Node constructs a new Node encapsulating the specified data. All outgoing links
    * from the node will be initialized to nullptr.
    */
-   Node(DataType data)
-      noexcept(std::is_nothrow_move_constructible_v<DataType>) :
+   Node(DataType data) noexcept(std::is_nothrow_move_constructible_v<DataType>) :
       m_data{ std::move(data) }
    {
    }
@@ -247,8 +248,7 @@ public:
    * The nodes in the Node are deep-copied, while the data contained in the tree is
    * shallow-copied.
    */
-   Node(const Node& other)
-      noexcept(std::is_nothrow_copy_constructible_v<DataType>) :
+   Node(const Node& other) noexcept(std::is_nothrow_copy_constructible_v<DataType>) :
       m_data{ other.m_data }
    {
       Copy(other, *this);
@@ -294,8 +294,7 @@ public:
    /**
    * @brief Assignment operator.
    */
-   Node& operator=(Node other)
-      noexcept(noexcept(swap(*this, other)))
+   Node& operator=(Node other) noexcept(noexcept(swap(*this, other)))
    {
       swap(*this, other);
       return *this;
@@ -358,7 +357,9 @@ public:
    /**
    * @brief Swaps all member variables of the left-hand side with that of the right-hand side.
    */
-   friend void swap(Node& lhs, Node& rhs) noexcept(noexcept(swap(lhs.m_data, rhs.m_data)))
+   friend void swap(
+      Node& lhs,
+      Node& rhs) noexcept(noexcept(swap(lhs.m_data, rhs.m_data)))
    {
       // Enable Argument Dependent Lookup (ADL):
       using std::swap;
@@ -614,9 +615,7 @@ public:
    *                                      const Node& rhs);
    */
    template<typename ComparatorType>
-   void SortChildren(
-      const ComparatorType& comparator)
-      noexcept(noexcept(comparator))
+   void SortChildren(const ComparatorType& comparator) noexcept(noexcept(comparator))
    {
       if (!m_firstChild)
       {
@@ -638,8 +637,7 @@ private:
    template<typename ComparatorType>
    void MergeSort(
       Node*& list,
-      const ComparatorType& comparator)
-      noexcept(noexcept(comparator))
+      const ComparatorType& comparator) noexcept(noexcept(comparator))
    {
       if (!list || !list->m_nextSibling)
       {
@@ -709,8 +707,7 @@ private:
    Node* MergeSortedHalves(
       Node*& lhs,
       Node*& rhs,
-      const ComparatorType& comparator)
-      noexcept(noexcept(comparator))
+      const ComparatorType& comparator) noexcept(noexcept(comparator))
    {
       Node* result = nullptr;
       if (comparator(*lhs, *rhs))
@@ -811,7 +808,9 @@ private:
    * @param[in] source              The Node to copy information from.
    * @param[out] sink               The Node to place a copy of the information into.
    */
-   void Copy(const Node& source, Node& sink)
+   void Copy(
+      const Node& source,
+      Node& sink)
    {
       if (!source.HasChildren())
       {
@@ -893,7 +892,7 @@ private:
    Node* m_previousSibling{ nullptr };
    Node* m_nextSibling{ nullptr };
 
-   DataType m_data{};
+   DataType m_data{ };
 
    unsigned int m_childCount{ 0 };
 
@@ -910,14 +909,15 @@ template<typename DataType>
 class Tree<DataType>::Iterator
 {
 public:
+
    // Typedefs needed for STL compliance:
-   typedef DataType                             value_type;
-   typedef DataType*                            pointer;
-   typedef DataType&                            reference;
-   typedef const DataType&                      const_reference;
-   typedef std::size_t                          size_type;
-   typedef std::ptrdiff_t                       difference_type;
-   typedef std::forward_iterator_tag            iterator_category;
+   using value_type = DataType;
+   using pointer = DataType*;
+   using reference = DataType&;
+   using const_reference = const_reference;
+   using size_type = std::size_t;
+   using difference_type = std::ptrdiff_t;
+   using iterator_category = std::forward_iterator_tag;
 
    /**
    * @returns True if the Tree::Iterator points to a valid Node; false otherwise.
@@ -995,6 +995,7 @@ public:
    }
 
 protected:
+
    /**
    * Default constructor.
    */
@@ -1032,6 +1033,7 @@ template<typename DataType>
 class Tree<DataType>::PreOrderIterator final : public Tree<DataType>::Iterator
 {
 public:
+
    /**
    * Default constructor.
    */
@@ -1127,6 +1129,7 @@ template<typename DataType>
 class Tree<DataType>::PostOrderIterator final : public Tree<DataType>::Iterator
 {
 public:
+
    /**
    * Default constructor.
    */
@@ -1220,6 +1223,7 @@ public:
    }
 
 private:
+
    bool m_traversingUpTheTree{ false };
 };
 
@@ -1230,6 +1234,7 @@ template<typename DataType>
 class Tree<DataType>::LeafIterator final : public Tree<DataType>::Iterator
 {
 public:
+
    /**
    * Default constructor.
    */
@@ -1363,6 +1368,7 @@ template<typename DataType>
 class Tree<DataType>::SiblingIterator final : public Tree<DataType>::Iterator
 {
 public:
+
    /**
    * Default constructor.
    */
