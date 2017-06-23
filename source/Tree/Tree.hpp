@@ -597,7 +597,7 @@ public:
       const auto nodeCount = std::count_if(
          Tree<DataType>::PostOrderIterator(this),
          Tree<DataType>::PostOrderIterator(),
-         [](const auto&) noexcept
+         [] (const auto&) noexcept
       {
          return true;
       });
@@ -820,7 +820,7 @@ private:
       std::for_each(
          Tree<DataType>::SiblingIterator(source.GetFirstChild()),
          Tree<DataType>::SiblingIterator(),
-         [&](Tree<DataType>::const_reference node)
+         [&] (Tree<DataType>::const_reference node)
       {
          sink.AppendChild(node.GetData());
       });

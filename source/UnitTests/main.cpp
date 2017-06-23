@@ -1017,7 +1017,7 @@ TEST_CASE("Selectively Delecting Nodes")
 
          std::vector<std::string> actual;
          std::transform(std::begin(tree), std::end(tree), std::back_inserter(actual),
-            [](const auto& node) noexcept { return node.GetData().m_data; });
+            [] (const auto& node) noexcept { return node.GetData().m_data; });
 
          VerifyTraversal(expected, actual);
 

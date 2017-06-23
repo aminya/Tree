@@ -67,7 +67,7 @@ namespace
       typename ChronoType,
       typename DataType
    >
-      void OptimizeMemoryLayout(Tree<DataType>& tree)
+   void OptimizeMemoryLayout(Tree<DataType>& tree)
    {
       using TraversalType = PostOrderTraversal;
 

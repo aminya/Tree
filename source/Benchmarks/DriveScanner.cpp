@@ -148,13 +148,13 @@ namespace
       if (errorCode)
       {
          std::cout << "Could not create directory iterator.\n";
-         return{};
+         return { };
       }
 
       std::vector<NodeAndPath> directoriesToProcess;
       std::vector<NodeAndPath> filesToProcess;
 
-      const auto end = std::experimental::filesystem::directory_iterator{};
+      const auto end = std::experimental::filesystem::directory_iterator{ };
       while (itr != end)
       {
          const auto path = itr->path();
@@ -324,7 +324,7 @@ void DriveScanner::IterateOverDirectoryAndScan(
    std::experimental::filesystem::directory_iterator& itr,
    Tree<FileInfo>::Node& node) noexcept
 {
-   const auto end = std::experimental::filesystem::directory_iterator{};
+   const auto end = std::experimental::filesystem::directory_iterator{ };
    while (itr != end)
    {
       ProcessDirectory(itr->path(), node);
@@ -375,7 +375,7 @@ void DriveScanner::Start()
       return;
    }
 
-   Stopwatch<std::chrono::seconds>([&]() noexcept
+   Stopwatch<std::chrono::seconds>([&] () noexcept
    {
       std::pair<std::vector<NodeAndPath>, std::vector<NodeAndPath>> directoriesAndFiles =
          CreateTaskItems(m_rootPath);
@@ -394,7 +394,7 @@ void DriveScanner::Start()
 
       for (auto i{ 0u }; i < numberOfThreads; ++i)
       {
-         scanningThreads.emplace_back(std::thread{ [&]() noexcept { ProcessQueue(taskQueue, resultQueue); } });
+         scanningThreads.emplace_back(std::thread{ [&] () noexcept { ProcessQueue(taskQueue, resultQueue); } });
       }
 
       for (auto&& file : directoriesAndFiles.second)
