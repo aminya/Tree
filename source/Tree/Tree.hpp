@@ -80,7 +80,6 @@ public:
    * @brief Assignment operator.
    */
    Tree<DataType>& operator=(Tree<DataType> other)
-      noexcept(noexcept(swap(*this, other)))
    {
       swap(*this, other);
       return *this;
@@ -237,7 +236,7 @@ public:
    * @brief Node constructs a new Node encapsulating the specified data. All outgoing links
    * from the node will be initialized to nullptr.
    */
-   Node(DataType data) noexcept(std::is_nothrow_move_constructible_v<DataType>) :
+   Node(DataType data) :
       m_data{ std::move(data) }
    {
    }
@@ -248,7 +247,7 @@ public:
    * The nodes in the Node are deep-copied, while the data contained in the tree is
    * shallow-copied.
    */
-   Node(const Node& other) noexcept(std::is_nothrow_copy_constructible_v<DataType>) :
+   Node(const Node& other) :
       m_data{ other.m_data }
    {
       Copy(other, *this);
@@ -294,7 +293,7 @@ public:
    /**
    * @brief Assignment operator.
    */
-   Node& operator=(Node other) noexcept(noexcept(swap(*this, other)))
+   Node& operator=(Node other)
    {
       swap(*this, other);
       return *this;
@@ -534,7 +533,7 @@ public:
    /**
    * @returns A pointer to the Node's parent, if it exists; nullptr otherwise.
    */
-   inline constexpr Node* const GetParent() const noexcept
+   inline constexpr Node* GetParent() const
    {
       return m_parent;
    }
@@ -542,7 +541,7 @@ public:
    /**
    * @returns A pointer to the Node's first child.
    */
-   inline constexpr Node* const GetFirstChild() const noexcept
+   inline constexpr Node* GetFirstChild() const
    {
       return m_firstChild;
    }
@@ -550,7 +549,7 @@ public:
    /**
    * @returns A pointer to the Node's last child.
    */
-   inline constexpr Node* const GetLastChild() const noexcept
+   inline constexpr Node* GetLastChild() const
    {
       return m_lastChild;
    }
@@ -558,7 +557,7 @@ public:
    /**
    * @returns A pointer to the Node's next sibling.
    */
-   inline constexpr Node* const GetNextSibling() const noexcept
+   inline constexpr Node* GetNextSibling() const
    {
       return m_nextSibling;
    }
@@ -566,7 +565,7 @@ public:
    /**
    * @returns A pointer to the Node's previous sibling.
    */
-   inline constexpr Node* const GetPreviousSibling() const noexcept
+   inline constexpr Node* GetPreviousSibling() const
    {
       return m_previousSibling;
    }
@@ -902,7 +901,7 @@ private:
 /**
 * @brief The Iterator class
 *
-* This is the base iterator class that all other iterators (sibling, leaf, post-, pre-, and 
+* This is the base iterator class that all other iterators (sibling, leaf, post-, pre-, and
 * in-order) will derive from. This class can only instantiated by derived types.
 */
 template<typename DataType>
@@ -914,7 +913,7 @@ public:
    using value_type = DataType;
    using pointer = DataType*;
    using reference = DataType&;
-   using const_reference = const_reference;
+   using const_reference = const reference;
    using size_type = std::size_t;
    using difference_type = std::ptrdiff_t;
    using iterator_category = std::forward_iterator_tag;
@@ -947,7 +946,7 @@ public:
    /**
    * @returns A pointer to the Node.
    */
-   inline Node* const operator&() noexcept
+   inline Node* operator&() noexcept
    {
       return m_currentNode;
    }
@@ -955,7 +954,7 @@ public:
    /**
    * @overload
    */
-   inline const Node* const operator&() const noexcept
+   inline const Node* operator&() const noexcept
    {
       return m_currentNode;
    }
@@ -963,7 +962,7 @@ public:
    /**
    * @returns A pointer to the Node pointed to by the Tree:Iterator.
    */
-   inline Node* const operator->() noexcept
+   inline Node* operator->() noexcept
    {
       return m_currentNode;
    }
@@ -971,7 +970,7 @@ public:
    /**
    * @overload
    */
-   inline const Node* const operator->() const noexcept
+   inline const Node* operator->() const noexcept
    {
       return m_currentNode;
    }
@@ -1052,23 +1051,23 @@ public:
 
       if (node->GetNextSibling())
       {
-         m_endingNode = node->GetNextSibling();
+         this->m_endingNode = node->GetNextSibling();
       }
       else
       {
-         m_endingNode = node;
-         while (m_endingNode->GetParent() && !m_endingNode->GetParent()->GetNextSibling())
+         this->m_endingNode = node;
+         while (this->m_endingNode->GetParent() && !this->m_endingNode->GetParent()->GetNextSibling())
          {
-            m_endingNode = m_endingNode->GetParent();
+            this->m_endingNode = this->m_endingNode->GetParent();
          }
 
-         if (m_endingNode->GetParent())
+         if (this->m_endingNode->GetParent())
          {
-            m_endingNode = m_endingNode->GetParent()->GetNextSibling();
+            this->m_endingNode = this->m_endingNode->GetParent()->GetNextSibling();
          }
          else
          {
-            m_endingNode = nullptr;
+            this->m_endingNode = nullptr;
          }
       }
    }
@@ -1078,8 +1077,8 @@ public:
    */
    typename Tree::PreOrderIterator& operator++() noexcept
    {
-      assert(m_currentNode);
-      auto* traversingNode = m_currentNode;
+      assert(this->m_currentNode);
+      auto* traversingNode = this->m_currentNode;
 
       if (traversingNode->HasChildren())
       {
@@ -1106,7 +1105,7 @@ public:
          }
       }
 
-      m_currentNode = (traversingNode != m_endingNode) ? traversingNode : nullptr;
+      this->m_currentNode = (traversingNode != this->m_endingNode) ? traversingNode : nullptr;
       return *this;
    }
 
@@ -1155,7 +1154,7 @@ public:
       }
 
       assert(traversingNode);
-      m_currentNode = const_cast<Node*>(traversingNode);
+      this->m_currentNode = const_cast<Node*>(traversingNode);
 
       // Commpute and set the ending node:
 
@@ -1167,11 +1166,11 @@ public:
             traversingNode = traversingNode->GetFirstChild();
          }
 
-         m_endingNode = traversingNode;
+         this->m_endingNode = traversingNode;
       }
       else
       {
-         m_endingNode = node->GetParent();
+         this->m_endingNode = node->GetParent();
       }
    }
 
@@ -1180,8 +1179,8 @@ public:
    */
    typename Tree::PostOrderIterator& operator++() noexcept
    {
-      assert(m_currentNode);
-      auto* traversingNode = m_currentNode;
+      assert(this->m_currentNode);
+      auto* traversingNode = this->m_currentNode;
 
       if (traversingNode->HasChildren() && !m_traversingUpTheTree)
       {
@@ -1207,7 +1206,7 @@ public:
          traversingNode = traversingNode->GetParent();
       }
 
-      m_currentNode = (traversingNode != m_endingNode) ? traversingNode : nullptr;
+      this->m_currentNode = (traversingNode != this->m_endingNode) ? traversingNode : nullptr;
       return *this;
    }
 
@@ -1261,7 +1260,7 @@ public:
             firstNode = firstNode->GetFirstChild();
          }
 
-         m_currentNode = const_cast<Node*>(firstNode);
+         this->m_currentNode = const_cast<Node*>(firstNode);
       }
 
       // Compute and set the ending node:
@@ -1274,27 +1273,27 @@ public:
             lastNode = lastNode->GetFirstChild();
          }
 
-         m_endingNode = lastNode;
+         this->m_endingNode = lastNode;
       }
       else
       {
-         m_endingNode = node;
-         while (m_endingNode->GetParent() && !m_endingNode->GetParent()->GetNextSibling())
+         this->m_endingNode = node;
+         while (this->m_endingNode->GetParent() && !this->m_endingNode->GetParent()->GetNextSibling())
          {
-            m_endingNode = m_endingNode->GetParent();
+            this->m_endingNode = this->m_endingNode->GetParent();
          }
 
-         if (m_endingNode->GetParent())
+         if (this->m_endingNode->GetParent())
          {
-            m_endingNode = m_endingNode->GetParent()->GetNextSibling();
-            while (m_endingNode->HasChildren())
+            this->m_endingNode = this->m_endingNode->GetParent()->GetNextSibling();
+            while (this->m_endingNode->HasChildren())
             {
-               m_endingNode = m_endingNode->GetFirstChild();
+               this->m_endingNode = this->m_endingNode->GetFirstChild();
             }
          }
          else
          {
-            m_endingNode = nullptr;
+            this->m_endingNode = nullptr;
          }
       }
    }
@@ -1304,8 +1303,8 @@ public:
    */
    typename Tree::LeafIterator& operator++() noexcept
    {
-      assert(m_currentNode);
-      auto* traversingNode = m_currentNode;
+      assert(this->m_currentNode);
+      auto* traversingNode = this->m_currentNode;
 
       if (traversingNode->HasChildren())
       {
@@ -1345,7 +1344,7 @@ public:
          }
       }
 
-      m_currentNode = (traversingNode != m_endingNode) ? traversingNode : nullptr;
+      this->m_currentNode = (traversingNode != this->m_endingNode) ? traversingNode : nullptr;
       return *this;
    }
 
@@ -1387,9 +1386,9 @@ public:
    */
    typename Tree::SiblingIterator& operator++() noexcept
    {
-      if (m_currentNode)
+      if (this->m_currentNode)
       {
-         m_currentNode = m_currentNode->GetNextSibling();
+         this->m_currentNode = this->m_currentNode->GetNextSibling();
       }
 
       return *this;
