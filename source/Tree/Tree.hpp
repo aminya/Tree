@@ -135,11 +135,11 @@ public:
    /**
    * @returns The zero-indexed depth of the Node in its Tree.
    */
-   static unsigned int Depth(Node node) noexcept
+   static unsigned int Depth(const Node& node) noexcept
    {
       unsigned int depth = 0;
 
-      Node* nodePtr = &node;
+      const Node* nodePtr = &node;
       while (nodePtr->GetParent())
       {
          ++depth;
