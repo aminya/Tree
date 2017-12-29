@@ -365,7 +365,7 @@ void DriveScanner::Start()
       return;
    }
 
-   Stopwatch<std::chrono::seconds>([&]() noexcept
+   Stopwatch<std::chrono::seconds>([&] () noexcept
    {
       std::pair<std::vector<TreeAndPath>, std::vector<TreeAndPath>> directoriesAndFiles =
          CreateTaskItems(m_rootPath);
@@ -384,7 +384,7 @@ void DriveScanner::Start()
 
       for (auto i{ 0u }; i < numberOfThreads; ++i)
       {
-         scanningThreads.emplace_back([&]() noexcept { ProcessQueue(taskQueue, resultQueue); });
+         scanningThreads.emplace_back([&] () noexcept { ProcessQueue(taskQueue, resultQueue); });
       }
 
       for (auto&& file : directoriesAndFiles.second)
@@ -401,5 +401,5 @@ void DriveScanner::Start()
    }, "Scanned Drive in ");
 
    ComputeDirectorySizes(*m_theTree);
-   //PruneEmptyFilesAndDirectories(*m_theTree);
+   PruneEmptyFilesAndDirectories(*m_theTree);
 }

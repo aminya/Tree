@@ -18,11 +18,15 @@ namespace
    auto RunTrials(LambdaType&& lambda)
    {
       std::vector<ChronoType> elapsedTimes;
+#if _DEBUG
+      elapsedTimes.reserve(10);
+#else
       elapsedTimes.reserve(1'000);
+#endif
 
       for (auto index{ 0u }; index < elapsedTimes.capacity(); ++index)
       {
-         const auto clock = Stopwatch<ChronoType>([&]() noexcept { lambda(); });
+         const auto clock = Stopwatch<ChronoType>([&] () noexcept { lambda(); });
          elapsedTimes.emplace_back(clock.GetElapsedTime());
       }
 
@@ -40,12 +44,12 @@ int main()
    std::cout.imbue(std::locale{ "" });
    std::cout << "Scanning Drive to Create a Large Tree...\n" << std::endl;
 
-   DriveScanner scanner{ std::experimental::filesystem::path{ "C:\\" } };
+   DriveScanner scanner{ std::experimental::filesystem::path{ "C:\\Users\\Tim" } };
    scanner.Start();
 
    std::cout << "\n";
 
-   const auto preOrderTraversal = [&]() noexcept
+   const auto preOrderTraversal = [&] () noexcept
    {
       std::uintmax_t treeSize{ 0 };
       std::uintmax_t totalBytes{ 0 };
@@ -53,7 +57,7 @@ int main()
       std::for_each(
          scanner.m_theTree->beginPreOrder(),
          scanner.m_theTree->endPreOrder(),
-         [&](const auto& node) noexcept
+         [&] (const auto& node) noexcept
       {
          treeSize += 1;
 
@@ -64,7 +68,7 @@ int main()
       });
    };
 
-   const auto postOrderTraversal = [&]() noexcept
+   const auto postOrderTraversal = [&] () noexcept
    {
       std::uintmax_t treeSize{ 0 };
       std::uintmax_t totalBytes{ 0 };
@@ -72,7 +76,7 @@ int main()
       std::for_each(
          std::begin(*scanner.m_theTree),
          std::end(*scanner.m_theTree),
-         [&](const auto& node) noexcept
+         [&] (const auto& node) noexcept
       {
          treeSize += 1;
 
@@ -97,7 +101,7 @@ int main()
 
    std::cout << "\n";
 
-   Stopwatch<ChronoType>([&]() noexcept
+   Stopwatch<ChronoType>([&] () noexcept
    {
       scanner.m_theTree->OptimizeMemoryLayoutFor<PostOrderTraversal>();
    }, "Optimized Layout in ");
@@ -123,7 +127,7 @@ int main()
       std::uintmax_t treeSize{ 0 };
       std::uintmax_t totalBytes{ 0 };
 
-      const auto traversalTime = Stopwatch<ChronoType>([&]() noexcept
+      const auto traversalTime = Stopwatch<ChronoType>([&] () noexcept
       {
          const auto& underlyingVector = scanner.m_theTree->GetDataAsVector();
 
