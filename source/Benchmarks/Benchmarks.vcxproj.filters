@@ -30,6 +30,12 @@
     <ClInclude Include="DriveScanner.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ScopedHandle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WinHack.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Benchmarks.cpp">
@@ -37,6 +43,9 @@
     </ClCompile>
     <ClCompile Include="DriveScanner.cpp">
       <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ScopedHandle.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

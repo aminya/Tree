@@ -158,12 +158,15 @@
     <ClInclude Include="DriveScanner.h" />
     <ClInclude Include="FileInfo.hpp" />
     <ClInclude Include="IgnoreUnused.hpp" />
+    <ClInclude Include="ScopedHandle.h" />
     <ClInclude Include="Stopwatch.hpp" />
     <ClInclude Include="ThreadSafeQueue.hpp" />
+    <ClInclude Include="WinHack.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Benchmarks.cpp" />
     <ClCompile Include="DriveScanner.cpp" />
+    <ClCompile Include="ScopedHandle.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

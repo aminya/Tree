@@ -1,6 +1,7 @@
 #include "DriveScanner.h"
 
 #include "IgnoreUnused.hpp"
+#include "ScopedHandle.h"
 #include "Stopwatch.hpp"
 
 #include <algorithm>
@@ -14,8 +15,8 @@
 #include <boost/asio/post.hpp>
 
 #ifdef WIN32
-   #include <windows.h>
    #include <fileapi.h>
+   #include <WinIoCtl.h>
 #endif
 
 namespace
@@ -155,6 +156,170 @@ namespace
 
       return std::make_shared<Tree<FileInfo>>(Tree<FileInfo>(std::move(fileInfo)));
    }
+
+   /**
+   * @returns A handle representing the repartse point found at the given path. If
+   * the path is not a reparse point, then an invalid handle will be returned instead.
+   */
+   ScopedHandle OpenReparsePoint(const std::experimental::filesystem::path& path)
+   {
+      const HANDLE handle = CreateFile(
+         /* fileName = */ path.wstring().c_str(),
+         /* desiredAccess = */GENERIC_READ,
+         /* shareMode = */ 0,
+         /* securityAttributes = */ 0,
+         /* creationDisposition = */ OPEN_EXISTING,
+         /* flagsAndAttributes = */ FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+         /* templateFile = */ 0);
+
+      if (handle == INVALID_HANDLE_VALUE)
+      {
+         // @todo
+      }
+
+      return ScopedHandle{ handle };
+   }
+
+   /**
+   * @brief Reads the reparse point found at the given path into the output buffer.
+   *
+   * @returns True if the path could be read as a reparse point, and false otherwise.
+   */
+   template<std::size_t BufferSize>
+   bool ReadReparsePoint(
+      const std::wstring& path,
+      std::byte (&reparseBuffer)[BufferSize])
+   {
+      ScopedHandle handle = OpenReparsePoint(path);
+      if (!handle.IsValid())
+      {
+         return false;
+      }
+
+      DWORD bytesReturned;
+
+      const auto successfullyRetrieved = DeviceIoControl(
+         /* device = */ handle,
+         /* controlCode = */ FSCTL_GET_REPARSE_POINT,
+         /* inBuffer = */ NULL,
+         /* inBufferSize = */ 0,
+         /* outBuffer = */ reinterpret_cast<LPVOID>(reparseBuffer),
+         /* outBufferSize = */ BufferSize,
+         /* bytesReturned = */ &bytesReturned,
+         /* overlapped = */ 0) == TRUE;
+
+      if (!successfullyRetrieved)
+      {
+         const auto error = GetLastError();
+         return false;
+      }
+      else
+      {
+         return true;
+      }
+   }
+
+   /**
+   * @returns True if the given file path matches the given reparse tag, and false otherwise. 
+   */
+   bool IsReparseTag(
+      const std::experimental::filesystem::path& path,
+      DWORD targetTag)
+   {
+      std::byte buffer[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+      const auto successfullyRead = ReadReparsePoint(path, buffer);
+
+      return successfullyRead
+         ? reinterpret_cast<REPARSE_DATA_BUFFER*>(buffer)->ReparseTag == targetTag
+         : false;
+   }
+
+   /**
+   * @returns True if the given file path represents a mount point, and false otherwise.
+   *
+   * @note Junctions in Windows are considered mount points.
+   */
+   bool IsMountPoint(const std::experimental::filesystem::path& path)
+   {
+      const auto isMountPoint = IsReparseTag(path, IO_REPARSE_TAG_MOUNT_POINT);
+
+      if (isMountPoint)
+      {
+         const std::lock_guard<decltype(streamMutex)> lock{ streamMutex };
+         std::wcout << L"Found Mount Point: " << path.wstring() << L'\n';
+      }
+
+      return isMountPoint;
+   }
+
+   /**
+   * @returns True if the given file path represents a symlink, and false otherwise.
+   */
+   bool IsSymlink(const std::experimental::filesystem::path& path)
+   {
+      const auto isSymlink = IsReparseTag(path, IO_REPARSE_TAG_SYMLINK);
+
+      if (isSymlink)
+      {
+         const std::lock_guard<decltype(streamMutex)> lock{ streamMutex };
+         std::wcout << L"Found Symlink: " << path.wstring() << L'\n';
+      }
+
+      return isSymlink;
+   }
+
+   /**
+   * @returns True is the given file path matches any of the listed reparse tag, and false
+   * otherwise.
+   */
+   bool IsUnknownReparsePoint(const std::experimental::filesystem::path& path)
+   {
+      constexpr auto reparseTag =
+         IO_REPARSE_TAG_MOUNT_POINT |
+         IO_REPARSE_TAG_HSM |
+         IO_REPARSE_TAG_DRIVE_EXTENDER |
+         IO_REPARSE_TAG_HSM2 |
+         IO_REPARSE_TAG_SIS |
+         IO_REPARSE_TAG_WIM |
+         IO_REPARSE_TAG_CSV |
+         IO_REPARSE_TAG_DFS |
+         IO_REPARSE_TAG_FILTER_MANAGER |
+         IO_REPARSE_TAG_IIS_CACHE |
+         IO_REPARSE_TAG_DFSR |
+         IO_REPARSE_TAG_DEDUP |
+         IO_REPARSE_TAG_APPXSTRM |
+         IO_REPARSE_TAG_NFS |
+         IO_REPARSE_TAG_FILE_PLACEHOLDER |
+         IO_REPARSE_TAG_DFM |
+         IO_REPARSE_TAG_WOF;
+
+      const auto isRandomReparse = IsReparseTag(path, reparseTag);
+
+      if (isRandomReparse)
+      {
+         const std::lock_guard<decltype(streamMutex)> lock{ streamMutex };
+         std::wcout << L"Found unkown: " << path.wstring() << L'\n';
+      }
+
+      return isRandomReparse;
+   }
+
+   /**
+   * @returns True if the given path represents a reparse point, and false otherwise.
+   */
+   bool IsReparsePoint(const std::experimental::filesystem::path& path)
+   {
+      const ScopedHandle handle = OpenReparsePoint(path);
+      if (!handle.IsValid())
+      {
+         return false;
+      }
+
+      BY_HANDLE_FILE_INFORMATION fileInfo = { 0 };
+
+      return GetFileInformationByHandle(handle, &fileInfo)
+         && fileInfo.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT;
+   }
 }
 
 DriveScanner::DriveScanner(const std::experimental::filesystem::path& path) :
@@ -205,8 +370,7 @@ void DriveScanner::ProcessDirectory(
    {
       ProcessFile(path, node);
    }
-   else if (std::experimental::filesystem::is_directory(path)
-      && !std::experimental::filesystem::is_symlink(path))
+   else if (std::experimental::filesystem::is_directory(path) && !IsSymlink(path) && !IsMountPoint(path))
    {
       try
       {
@@ -267,7 +431,7 @@ void DriveScanner::Start()
       });
 
       m_threadPool.join();
-   }, "Scanned Drive in ");
+   }, "\nScanned Drive in ");
 
    const auto treeSize = m_fileTree->Size();
 

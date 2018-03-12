@@ -96,6 +96,14 @@ int main()
 
    const auto tree = scanner.GetTree();
 
+   const auto leafCount = std::count_if(tree->beginLeaf(), tree->endLeaf(),
+      [] (const auto&)
+   {
+      return true;
+   });
+
+   std::cout << "Tree Leaf Count: " << leafCount << "\n";
+
    const auto preOrderTraversal = [&] () noexcept
    {
       std::uintmax_t treeSize{ 0 };

@@ -9,11 +9,11 @@
 #include <mutex>
 #include <string>
 
-#include "../Tree/Tree.hpp"
-
-#include "FileInfo.hpp"
-
 #include <boost/asio/thread_pool.hpp>
+
+#include "../Tree/Tree.hpp"
+#include "FileInfo.hpp"
+#include "WinHack.hpp"
 
 /**
 * @brief Wrapper around node and path.
@@ -85,5 +85,5 @@ private:
 
    std::mutex m_mutex;
    
-   boost::asio::thread_pool m_threadPool{ 6 };
+   boost::asio::thread_pool m_threadPool{ 4 };
 };
