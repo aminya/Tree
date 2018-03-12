@@ -6,37 +6,26 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 
 #include "../Tree/Tree.hpp"
 
 #include "FileInfo.hpp"
 
+#include <boost/asio/thread_pool.hpp>
+
 /**
-* @brief The NodeAndPath struct
+* @brief Wrapper around node and path.
 */
 struct NodeAndPath
 {
-   std::unique_ptr<Tree<FileInfo>::Node> node;
+   Tree<FileInfo>::Node& node;
    std::experimental::filesystem::path path;
-
-   NodeAndPath(
-      decltype(node) node,
-      decltype(path) path)
-      :
-      node{ std::move(node) },
-      path{ std::move(path) }
-   {
-   }
-
-   NodeAndPath() = default;
 };
 
-template<typename Type>
-class ThreadSafeQueue;
-
 /**
-* @brief The DriveScanner class
+* @brief The Drive Scanner class
 */
 class DriveScanner
 {
@@ -51,13 +40,12 @@ public:
    */
    void Start();
 
-   std::shared_ptr<Tree<FileInfo>> m_fileTree{ nullptr };
+   /**
+   * @returns The file tree.
+   */
+   std::shared_ptr<Tree<FileInfo>> GetTree();
 
 private:
-
-   void ProcessQueue(
-      ThreadSafeQueue<NodeAndPath>& taskQueue,
-      ThreadSafeQueue<NodeAndPath>& resultsQueue) noexcept;
 
    /**
    * @brief Helper function to process a single file.
@@ -87,11 +75,15 @@ private:
    * @param[in] itr             Reference to the directory to iterate over.
    * @param[in] Node        The Node to append the contents of the directory to.
    */
-   void IterateOverDirectoryAndScan(
+   void AddDirectoriesToQueue(
       std::experimental::filesystem::directory_iterator& itr,
       Tree<FileInfo>::Node& node) noexcept;
 
-   std::shared_ptr<Tree<FileInfo>> CreateTreeAndRootNode();
-
+   std::shared_ptr<Tree<FileInfo>> m_fileTree{ nullptr };
+ 
    const std::experimental::filesystem::path m_rootPath;
+
+   std::mutex m_mutex;
+   
+   boost::asio::thread_pool m_threadPool{ 6 };
 };

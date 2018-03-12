@@ -9,14 +9,13 @@
 template<typename Type>
 class ThreadSafeQueue
 {
-   static_assert(std::is_move_assignable<Type>::value, "Type has to be move-assignable.");
    static_assert(std::is_move_constructible<Type>::value, "Type has to be move-constructible.");
 
 public:
 
    void Push(Type data)
    {
-      std::lock_guard<decltype(m_mutex)> lock{ m_mutex };
+      const std::lock_guard<decltype(m_mutex)> lock{ m_mutex };
 
       m_queue.push(std::move(data));
 
@@ -26,7 +25,7 @@ public:
    template<typename... Args>
    void Emplace(Args&&... args)
    {
-      std::lock_guard<decltype(m_mutex)> lock{ m_mutex };
+      const std::lock_guard<decltype(m_mutex)> lock{ m_mutex };
 
       m_queue.emplace(std::forward<Args>(args)...);
 
@@ -56,7 +55,7 @@ public:
 
    bool TryPop(Type& data)
    {
-      std::lock_guard<decltype(m_mutex)> lock{ m_mutex };
+      const std::lock_guard<decltype(m_mutex)> lock{ m_mutex };
 
       if (m_queue.empty())
       {
@@ -71,11 +70,11 @@ public:
 
    std::shared_ptr<Type> TryPop()
    {
-      std::lock_guard<decltype(m_mutex)> lock{ m_mutex };
+      const std::lock_guard<decltype(m_mutex)> lock{ m_mutex };
 
       if (m_queue.empty())
       {
-         return{};
+         return { };
       }
 
       const auto result = std::make_shared<Type>(std::move(m_queue.front()));
@@ -86,11 +85,12 @@ public:
 
    bool IsEmpty() const
    {
-      std::lock_guard<decltype(m_mutex)> lock{ m_mutex };
+      const std::lock_guard<decltype(m_mutex)> lock{ m_mutex };
       return m_queue.empty();
    }
 
 private:
+
    mutable std::mutex m_mutex;
 
    std::queue<Type> m_queue;

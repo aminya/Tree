@@ -696,7 +696,7 @@ TEST_CASE("Selectively Delecting Nodes")
    SECTION("Removing a Leaf Node Without Siblings")
    {
       CONSTRUCTION_COUNT = 0;
-      auto treeSize = 0;
+      std::int64_t treeSize = 0;
 
       {
          Tree<VerboseNode> tree{ "F" };
@@ -743,7 +743,7 @@ TEST_CASE("Selectively Delecting Nodes")
    SECTION("Removing a Leaf Node with A Left Sibling")
    {
       CONSTRUCTION_COUNT = 0;
-      auto treeSize = 0;
+      std::int64_t treeSize = 0;
 
       {
          Tree<VerboseNode> tree{ "F" };
@@ -790,7 +790,7 @@ TEST_CASE("Selectively Delecting Nodes")
    SECTION("Removing a Leaf Node with A Right Sibling")
    {
       CONSTRUCTION_COUNT = 0;
-      auto treeSize = 0;
+      std::int64_t treeSize = 0;
 
       {
          Tree<VerboseNode> tree{ "F" };
@@ -837,7 +837,7 @@ TEST_CASE("Selectively Delecting Nodes")
    SECTION("Removing a Leaf Node with Both Left and Right Siblings")
    {
       CONSTRUCTION_COUNT = 0;
-      auto treeSize = 0;
+      std::int64_t treeSize = 0;
 
       {
          Tree<VerboseNode> tree{ "F" };
@@ -887,7 +887,7 @@ TEST_CASE("Selectively Delecting Nodes")
    SECTION("Removing a Node With a Left Sibling and Two Children")
    {
       CONSTRUCTION_COUNT = 0;
-      auto treeSize = 0;
+      std::int64_t treeSize = 0;
 
       {
          Tree<VerboseNode> tree{ "F" };
@@ -934,7 +934,7 @@ TEST_CASE("Selectively Delecting Nodes")
    SECTION("Deleting a Node by Calling DeleteFromTree()")
    {
       CONSTRUCTION_COUNT = 0;
-      auto treeSize = 0;
+      std::int64_t treeSize = 0;
 
       {
          Tree<VerboseNode> tree{ "F" };
@@ -981,7 +981,7 @@ TEST_CASE("Selectively Delecting Nodes")
    SECTION("Deleting Multiple Nodes from Tree")
    {
       CONSTRUCTION_COUNT = 0;
-      auto treeSize = 0;
+      std::int64_t treeSize = 0;
 
       {
          Tree<VerboseNode> tree{ "F" };

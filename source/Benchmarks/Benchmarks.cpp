@@ -94,14 +94,16 @@ int main()
 
    std::cout << "\n";
 
+   const auto tree = scanner.GetTree();
+
    const auto preOrderTraversal = [&] () noexcept
    {
       std::uintmax_t treeSize{ 0 };
       std::uintmax_t totalBytes{ 0 };
 
       std::for_each(
-         scanner.m_fileTree->beginPreOrder(),
-         scanner.m_fileTree->endPreOrder(),
+         tree->beginPreOrder(),
+         tree->endPreOrder(),
          [&] (const auto& node) noexcept
       {
          treeSize += 1;
@@ -119,8 +121,8 @@ int main()
       std::uintmax_t totalBytes{ 0 };
 
       std::for_each(
-         std::begin(*scanner.m_fileTree),
-         std::end(*scanner.m_fileTree),
+         std::begin(*tree),
+         std::end(*tree),
          [&] (const auto& node) noexcept
       {
          treeSize += 1;
