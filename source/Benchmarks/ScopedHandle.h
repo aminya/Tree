@@ -6,14 +6,13 @@ class ScopedHandle
 {
 public:
    explicit ScopedHandle(HANDLE handle);
+   ~ScopedHandle();
 
    ScopedHandle(const ScopedHandle& other);
    ScopedHandle& operator=(const ScopedHandle& other);
 
    ScopedHandle(ScopedHandle&& other);
    ScopedHandle& operator=(ScopedHandle&& other);
-
-   ~ScopedHandle();
 
    void Close();
 

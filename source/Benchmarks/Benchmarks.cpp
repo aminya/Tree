@@ -144,11 +144,11 @@ int main()
 
    std::cout
       << "Average Pre-Order Traversal Time: " << RunTrials<ChronoType>(preOrderTraversal)
-      << " " << StopwatchInternals::TypeName<ChronoType>::value << "\n";
+      << " " << StopwatchInternals::TypeName<ChronoType>::value << ".\n";
 
    std::cout
       << "Average Post-Order Traversal Time: " << RunTrials<ChronoType>(postOrderTraversal)
-      << " " << StopwatchInternals::TypeName<ChronoType>::value << "\n";
+      << " " << StopwatchInternals::TypeName<ChronoType>::value << ".\n";
 
    std::cout << std::endl;
 

@@ -71,7 +71,7 @@ namespace
       }
       catch (...)
       {
-         std::lock_guard<std::mutex> lock{ streamMutex };
+         const std::lock_guard<std::mutex> lock{ streamMutex };
          IgnoreUnused(lock);
 
          std::wcout << "Falling back on the Win API for: \"" << path.wstring() << "\"" << std::endl;

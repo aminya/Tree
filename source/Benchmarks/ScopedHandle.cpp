@@ -4,7 +4,7 @@
 
 namespace
 {
-   auto Duplicate(HANDLE handle) -> HANDLE
+   HANDLE Duplicate(HANDLE handle)
    {
       if (handle == INVALID_HANDLE_VALUE)
       {
@@ -14,12 +14,13 @@ namespace
       HANDLE duplicate;
 
       const auto successfullyDuplicated = !DuplicateHandle(
-         GetCurrentProcess(),
-         handle,
-         GetCurrentProcess(),
-         &duplicate,
-         0,
-         FALSE, DUPLICATE_SAME_ACCESS);
+         /* SourceProcessHandle = */ GetCurrentProcess(),
+         /* SourceHandle = */ handle,
+         /* TargetProcessHandle = */ GetCurrentProcess(),
+         /* TargetHandle = */ &duplicate,
+         /* DesiredAccess = */ 0,
+         /* InheritHandle = */ FALSE,
+         /* Options = */ DUPLICATE_SAME_ACCESS);
 
       return successfullyDuplicated ? duplicate : nullptr;
    }
@@ -28,6 +29,11 @@ namespace
 ScopedHandle::ScopedHandle(HANDLE handle) :
    m_handle{ handle }
 {
+}
+
+ScopedHandle::~ScopedHandle()
+{
+   Close();
 }
 
 ScopedHandle::ScopedHandle(const ScopedHandle& other)
@@ -60,11 +66,6 @@ ScopedHandle& ScopedHandle::operator=(ScopedHandle&& other)
    }
 
    return *this;
-}
-
-ScopedHandle::~ScopedHandle()
-{
-   Close();
 }
 
 void ScopedHandle::Close()
