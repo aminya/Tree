@@ -13,7 +13,7 @@ namespace
 #if _DEBUG
    constexpr auto TRIAL_COUNT{ 1 };
 #else
-   constexpr auto TRIAL_COUNT{ 1'000 };
+   constexpr auto TRIAL_COUNT{ 100 };
 #endif
 
    template<
@@ -84,7 +84,7 @@ namespace
 
 int main()
 {
-   using ChronoType = std::chrono::microseconds;
+   using ChronoType = std::chrono::milliseconds;
 
    std::cout.imbue(std::locale{ "" });
    std::cout << "Scanning Drive to Create a Large Tree...\n" << std::endl;
@@ -97,10 +97,7 @@ int main()
    const auto tree = scanner.GetTree();
 
    const auto leafCount = std::count_if(tree->beginLeaf(), tree->endLeaf(),
-      [] (const auto&)
-   {
-      return true;
-   });
+      [] (const auto&) noexcept { return true; });
 
    std::cout << "Tree Leaf Count: " << leafCount << "\n";
 

@@ -14,13 +14,13 @@ namespace
       HANDLE duplicate;
 
       const auto successfullyDuplicated = !DuplicateHandle(
-         /* SourceProcessHandle = */ GetCurrentProcess(),
-         /* SourceHandle = */ handle,
-         /* TargetProcessHandle = */ GetCurrentProcess(),
-         /* TargetHandle = */ &duplicate,
-         /* DesiredAccess = */ 0,
-         /* InheritHandle = */ FALSE,
-         /* Options = */ DUPLICATE_SAME_ACCESS);
+         /* sourceProcessHandle = */ GetCurrentProcess(),
+         /* sourceHandle = */ handle,
+         /* targetProcessHandle = */ GetCurrentProcess(),
+         /* targetHandle = */ &duplicate,
+         /* desiredAccess = */ 0,
+         /* inheritHandle = */ FALSE,
+         /* options = */ DUPLICATE_SAME_ACCESS);
 
       return successfullyDuplicated ? duplicate : nullptr;
    }

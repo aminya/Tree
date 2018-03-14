@@ -36,6 +36,8 @@ typedef struct _REPARSE_DATA_BUFFER {
 
 #define REPARSE_DATA_BUFFER_HEADER_LENGTH FIELD_OFFSET(REPARSE_DATA_BUFFER, GenericReparseBuffer.DataBuffer)
 
+// @see https://msdn.microsoft.com/en-us/library/windows/desktop/aa365511(v=vs.85).aspx
+
 #define IO_REPARSE_TAG_MOUNT_POINT              (0xA0000003L)       // winnt
 #define IO_REPARSE_TAG_HSM                      (0xC0000004L)       // winnt
 #define IO_REPARSE_TAG_DRIVE_EXTENDER           (0x80000005L)

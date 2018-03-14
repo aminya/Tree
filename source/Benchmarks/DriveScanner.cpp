@@ -8,16 +8,12 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
-#include <system_error>
-#include <thread>
 #include <vector>
 
 #include <boost/asio/post.hpp>
 
-#ifdef WIN32
-   #include <fileapi.h>
-   #include <WinIoCtl.h>
-#endif
+#include <fileapi.h>
+#include <WinIoCtl.h>
 
 namespace
 {
@@ -39,7 +35,6 @@ namespace
    {
       std::uintmax_t fileSize{ 0 };
 
-#ifdef WIN32
       WIN32_FIND_DATA fileData;
       const HANDLE fileHandle = FindFirstFileW(path.wstring().data(), &fileData);
       if (fileHandle == INVALID_HANDLE_VALUE)
@@ -49,7 +44,6 @@ namespace
 
       const auto highWord = static_cast<std::uintmax_t>(fileData.nFileSizeHigh);
       fileSize = (highWord << sizeof(fileData.nFileSizeLow) * 8) | fileData.nFileSizeLow;
-#endif
 
       return fileSize;
    }
@@ -165,17 +159,12 @@ namespace
    {
       const HANDLE handle = CreateFile(
          /* fileName = */ path.wstring().c_str(),
-         /* desiredAccess = */GENERIC_READ,
+         /* desiredAccess = */ GENERIC_READ,
          /* shareMode = */ 0,
          /* securityAttributes = */ 0,
          /* creationDisposition = */ OPEN_EXISTING,
          /* flagsAndAttributes = */ FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
          /* templateFile = */ 0);
-
-      if (handle == INVALID_HANDLE_VALUE)
-      {
-         // @todo
-      }
 
       return ScopedHandle{ handle };
    }
@@ -185,10 +174,9 @@ namespace
    *
    * @returns True if the path could be read as a reparse point, and false otherwise.
    */
-   template<std::size_t BufferSize>
    bool ReadReparsePoint(
       const std::wstring& path,
-      std::byte (&reparseBuffer)[BufferSize])
+      std::vector<std::byte>& reparseBuffer)
    {
       ScopedHandle handle = OpenReparsePoint(path);
       if (!handle.IsValid())
@@ -196,27 +184,19 @@ namespace
          return false;
       }
 
-      DWORD bytesReturned;
+      DWORD bytesReturned{ 0 };
 
       const auto successfullyRetrieved = DeviceIoControl(
          /* device = */ handle,
          /* controlCode = */ FSCTL_GET_REPARSE_POINT,
          /* inBuffer = */ NULL,
          /* inBufferSize = */ 0,
-         /* outBuffer = */ reinterpret_cast<LPVOID>(reparseBuffer),
-         /* outBufferSize = */ BufferSize,
+         /* outBuffer = */ reinterpret_cast<LPVOID>(reparseBuffer.data()),
+         /* outBufferSize = */ MAXIMUM_REPARSE_DATA_BUFFER_SIZE,
          /* bytesReturned = */ &bytesReturned,
          /* overlapped = */ 0) == TRUE;
 
-      if (!successfullyRetrieved)
-      {
-         const auto error = GetLastError();
-         return false;
-      }
-      else
-      {
-         return true;
-      }
+      return successfullyRetrieved && bytesReturned;
    }
 
    /**
@@ -226,11 +206,18 @@ namespace
       const std::experimental::filesystem::path& path,
       DWORD targetTag)
    {
-      std::byte buffer[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+      static auto buffer = []
+      {
+         std::vector<std::byte> buffer;
+         buffer.resize(MAXIMUM_REPARSE_DATA_BUFFER_SIZE);
+
+         return buffer;
+      }();
+
       const auto successfullyRead = ReadReparsePoint(path, buffer);
 
       return successfullyRead
-         ? reinterpret_cast<REPARSE_DATA_BUFFER*>(buffer)->ReparseTag == targetTag
+         ? reinterpret_cast<REPARSE_DATA_BUFFER*>(buffer.data())->ReparseTag == targetTag
          : false;
    }
 
@@ -317,8 +304,13 @@ namespace
 
       BY_HANDLE_FILE_INFORMATION fileInfo = { 0 };
 
-      return GetFileInformationByHandle(handle, &fileInfo)
-         && fileInfo.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT;
+      const auto successfullyRetrieved = GetFileInformationByHandle(handle, &fileInfo);
+      if (!successfullyRetrieved)
+      {
+         return false;
+      }
+
+      return fileInfo.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT;
    }
 }
 
@@ -396,8 +388,9 @@ void DriveScanner::ProcessDirectory(
          FileType::DIRECTORY
       };
 
-      const std::lock_guard<decltype(m_mutex)> lock{ m_mutex };
+      std::unique_lock<decltype(m_mutex)> lock{ m_mutex };
       auto* const lastChild = node.AppendChild(std::move(directoryInfo));
+      lock.unlock();
 
       auto itr = std::experimental::filesystem::directory_iterator{ path };
       AddDirectoriesToQueue(itr, *lastChild);
@@ -420,6 +413,11 @@ void DriveScanner::AddDirectoriesToQueue(
    }
 }
 
+std::shared_ptr<Tree<FileInfo>> DriveScanner::GetTree()
+{
+   return m_fileTree;
+}
+
 void DriveScanner::Start()
 {
    Stopwatch<std::chrono::seconds>([&] () noexcept
@@ -437,9 +435,4 @@ void DriveScanner::Start()
 
    ComputeDirectorySizes(*m_fileTree);
    PruneEmptyFilesAndDirectories(*m_fileTree);
-}
-
-std::shared_ptr<Tree<FileInfo>> DriveScanner::GetTree()
-{
-   return m_fileTree;
 }
