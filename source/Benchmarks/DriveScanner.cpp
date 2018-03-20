@@ -10,7 +10,10 @@
 #include <mutex>
 #include <vector>
 
+#pragma warning(push )
+#pragma warning(disable: 4996)
 #include <boost/asio/post.hpp>
+#pragma warning(pop)
 
 #include <fileapi.h>
 #include <WinIoCtl.h>
@@ -57,10 +60,10 @@ namespace
    */
    std::uintmax_t ComputeFileSize(const std::experimental::filesystem::path& path) noexcept
    {
+      assert(!std::experimental::filesystem::is_directory(path));
+
       try
       {
-         assert(!std::experimental::filesystem::is_directory(path));
-
          return std::experimental::filesystem::file_size(path);
       }
       catch (...)
@@ -157,7 +160,7 @@ namespace
    */
    ScopedHandle OpenReparsePoint(const std::experimental::filesystem::path& path)
    {
-      const HANDLE handle = CreateFile(
+      const auto handle = CreateFile(
          /* fileName = */ path.wstring().c_str(),
          /* desiredAccess = */ GENERIC_READ,
          /* shareMode = */ 0,
@@ -178,7 +181,7 @@ namespace
       const std::wstring& path,
       std::vector<std::byte>& reparseBuffer)
    {
-      ScopedHandle handle = OpenReparsePoint(path);
+      const auto handle = OpenReparsePoint(path);
       if (!handle.IsValid())
       {
          return false;
@@ -192,7 +195,7 @@ namespace
          /* inBuffer = */ NULL,
          /* inBufferSize = */ 0,
          /* outBuffer = */ reinterpret_cast<LPVOID>(reparseBuffer.data()),
-         /* outBufferSize = */ MAXIMUM_REPARSE_DATA_BUFFER_SIZE,
+         /* outBufferSize = */ static_cast<DWORD>(reparseBuffer.size()),
          /* bytesReturned = */ &bytesReturned,
          /* overlapped = */ 0) == TRUE;
 
@@ -206,13 +209,7 @@ namespace
       const std::experimental::filesystem::path& path,
       DWORD targetTag)
    {
-      static auto buffer = []
-      {
-         std::vector<std::byte> buffer;
-         buffer.resize(MAXIMUM_REPARSE_DATA_BUFFER_SIZE);
-
-         return buffer;
-      }();
+      static std::vector<std::byte> buffer{ MAXIMUM_REPARSE_DATA_BUFFER_SIZE };
 
       const auto successfullyRead = ReadReparsePoint(path, buffer);
 

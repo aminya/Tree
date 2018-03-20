@@ -9,7 +9,10 @@
 #include <mutex>
 #include <string>
 
+#pragma warning(push )
+#pragma warning(disable: 4996)
 #include <boost/asio/thread_pool.hpp>
+#pragma warning(pop)
 
 #include "../Tree/Tree.hpp"
 #include "FileInfo.hpp"
@@ -52,8 +55,8 @@ private:
    *
    * @note This function assumes the path is valid and accessible.
    *
-   * @param[in] path            The location on disk to scan.
-   * @param[in] fileNode        The Node in Tree to append newly discoved files to.
+   * @param[in] path                The location on disk to scan.
+   * @param[in] fileNode            The Node in Tree to append newly discoved files to.
    */
    void ProcessFile(
       const std::experimental::filesystem::path& path,
@@ -62,18 +65,18 @@ private:
    /**
    * @brief Performs a recursive depth-first exploration of the file system.
    *
-   * @param[in] path            The location on disk to scan.
-   * @param[in] fileNode        The Node in Tree to append newly discoved files to.
+   * @param[in] path                The location on disk to scan.
+   * @param[in] fileNode            The Node in Tree to append newly discoved files to.
    */
    void ProcessDirectory(
       const std::experimental::filesystem::path& path,
       Tree<FileInfo>::Node& fileNode) noexcept;
 
    /**
-   * @brief Helper function to facilitate exception-free iteration over a directory.
+   * @brief Adds directories to thread-pool queue.
    *
-   * @param[in] itr             Reference to the directory to iterate over.
-   * @param[in] Node        The Node to append the contents of the directory to.
+   * @param[in] itr                 Reference to the directory to iterate over.
+   * @param[in] Node                The Node to append the contents of the directory to.
    */
    void AddDirectoriesToQueue(
       std::experimental::filesystem::directory_iterator& itr,
@@ -84,6 +87,6 @@ private:
    const std::experimental::filesystem::path m_rootPath;
 
    std::mutex m_mutex;
-   
-   boost::asio::thread_pool m_threadPool{ 4 };
+
+   boost::asio::thread_pool m_threadPool{ 6 };
 };
