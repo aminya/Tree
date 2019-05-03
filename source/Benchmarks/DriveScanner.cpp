@@ -10,12 +10,12 @@
 #include <mutex>
 #include <vector>
 
-#pragma warning(push )
-#pragma warning(disable: 4996)
+#pragma warning(push)
+#pragma warning(disable : 4996)
 #include <boost/asio/post.hpp>
 #pragma warning(pop)
 
-#include <fileapi.h>
+#include <FileApi.h>
 #include <WinIoCtl.h>
 
 namespace
@@ -23,17 +23,17 @@ namespace
    std::mutex streamMutex;
 
    /**
-   * @brief Use the `FindFirstFileW(...)` function to retrieve the file size.
-   *
-   * The `std::experimental::filesystem::file_size(...)` function uses a different native function
-   * to get at the file size for a given file, and this function (while probably faster than
-   * `FindFirstFileW(...)`) has a tendency to throw. If such exceptional behaviour were to occur,
-   * then this function can be used to hopefully still get at the file size.
-   *
-   * @param path[in]               The path to the troublesome file.
-   *
-   * @returns The size of the file if it's accessible, and zero otherwise.
-   */
+    * @brief Use the `FindFirstFileW(...)` function to retrieve the file size.
+    *
+    * The `std::experimental::filesystem::file_size(...)` function uses a different native function
+    * to get at the file size for a given file, and this function (while probably faster than
+    * `FindFirstFileW(...)`) has a tendency to throw. If such exceptional behaviour were to occur,
+    * then this function can be used to hopefully still get at the file size.
+    *
+    * @param path[in]               The path to the troublesome file.
+    *
+    * @returns The size of the file if it's accessible, and zero otherwise.
+    */
    std::uintmax_t GetFileSizeUsingWinAPI(const std::experimental::filesystem::path& path)
    {
       std::uintmax_t fileSize{ 0 };
@@ -52,12 +52,12 @@ namespace
    }
 
    /**
-   * @brief Helper function to safely wrap the retrieval of a file's size.
-   *
-   * @param path[in]               The path to the file.
-   *
-   * @return The size of the file if it's accessible, and zero otherwise.
-   */
+    * @brief Helper function to safely wrap the retrieval of a file's size.
+    *
+    * @param path[in]               The path to the file.
+    *
+    * @return The size of the file if it's accessible, and zero otherwise.
+    */
    std::uintmax_t ComputeFileSize(const std::experimental::filesystem::path& path) noexcept
    {
       assert(!std::experimental::filesystem::is_directory(path));
@@ -77,14 +77,14 @@ namespace
    }
 
    /**
-   * @brief Removes nodes whose corresponding file or directory size is zero. This is often
-   * necessary because a directory may contain only a single other directory within it that is
-   * empty. In such a case, the outer directory has a size of zero, but
-   * std::experimental::filesystem::is_empty will still have reported this directory as being
-   * non-empty.
-   *
-   * @param[in, out] tree           The tree to be pruned.
-   */
+    * @brief Removes nodes whose corresponding file or directory size is zero. This is often
+    * necessary because a directory may contain only a single other directory within it that is
+    * empty. In such a case, the outer directory has a size of zero, but
+    * std::experimental::filesystem::is_empty will still have reported this directory as being
+    * non-empty.
+    *
+    * @param[in, out] tree           The tree to be pruned.
+    */
    void PruneEmptyFilesAndDirectories(Tree<FileInfo>& tree)
    {
       std::vector<Tree<FileInfo>::Node*> toBeDeleted;
@@ -108,11 +108,11 @@ namespace
    }
 
    /**
-   * @brief Performs a post-processing step that iterates through the tree and computes the size
-   * of all directories.
-   *
-   * @param[in, out] tree          The tree whose nodes need their directory sizes computed.
-   */
+    * @brief Performs a post-processing step that iterates through the tree and computes the size
+    * of all directories.
+    *
+    * @param[in, out] tree          The tree whose nodes need their directory sizes computed.
+    */
    void ComputeDirectorySizes(Tree<FileInfo>& tree)
    {
       for (auto&& node : tree)
@@ -132,54 +132,50 @@ namespace
    }
 
    /**
-   * @brief Contructs the root node for the file tree.
-   *
-   * @param[in] path                The path to the directory that should constitute the root node.
-   */
-   std::shared_ptr<Tree<FileInfo>> CreateTreeAndRootNode(const std::experimental::filesystem::path& path)
+    * @brief Contructs the root node for the file tree.
+    *
+    * @param[in] path                The path to the directory that should constitute the root node.
+    */
+   std::shared_ptr<Tree<FileInfo>>
+   CreateTreeAndRootNode(const std::experimental::filesystem::path& path)
    {
       if (!std::experimental::filesystem::is_directory(path))
       {
          return nullptr;
       }
 
-      FileInfo fileInfo
-      {
-         path.wstring(),
-         /* extension = */ L"",
-         DriveScanner::SIZE_UNDEFINED,
-         FileType::DIRECTORY
-      };
+      FileInfo fileInfo{ path.wstring(),
+                         /* extension = */ L"",
+                         DriveScanner::SIZE_UNDEFINED,
+                         FileType::DIRECTORY };
 
       return std::make_shared<Tree<FileInfo>>(Tree<FileInfo>(std::move(fileInfo)));
    }
 
    /**
-   * @returns A handle representing the repartse point found at the given path. If
-   * the path is not a reparse point, then an invalid handle will be returned instead.
-   */
+    * @returns A handle representing the repartse point found at the given path. If
+    * the path is not a reparse point, then an invalid handle will be returned instead.
+    */
    ScopedHandle OpenReparsePoint(const std::experimental::filesystem::path& path)
    {
       const auto handle = CreateFile(
-         /* fileName = */ path.wstring().c_str(),
-         /* desiredAccess = */ GENERIC_READ,
-         /* shareMode = */ 0,
-         /* securityAttributes = */ 0,
-         /* creationDisposition = */ OPEN_EXISTING,
-         /* flagsAndAttributes = */ FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
-         /* templateFile = */ 0);
+          /* fileName = */ path.wstring().c_str(),
+          /* desiredAccess = */ GENERIC_READ,
+          /* shareMode = */ 0,
+          /* securityAttributes = */ 0,
+          /* creationDisposition = */ OPEN_EXISTING,
+          /* flagsAndAttributes = */ FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+          /* templateFile = */ nullptr);
 
       return ScopedHandle{ handle };
    }
 
    /**
-   * @brief Reads the reparse point found at the given path into the output buffer.
-   *
-   * @returns True if the path could be read as a reparse point, and false otherwise.
-   */
-   bool ReadReparsePoint(
-      const std::wstring& path,
-      std::vector<std::byte>& reparseBuffer)
+    * @brief Reads the reparse point found at the given path into the output buffer.
+    *
+    * @returns True if the path could be read as a reparse point, and false otherwise.
+    */
+   bool ReadReparsePoint(const std::wstring& path, std::vector<std::byte>& reparseBuffer)
    {
       const auto handle = OpenReparsePoint(path);
       if (!handle.IsValid())
@@ -189,40 +185,39 @@ namespace
 
       DWORD bytesReturned{ 0 };
 
-      const auto successfullyRetrieved = DeviceIoControl(
-         /* device = */ handle,
-         /* controlCode = */ FSCTL_GET_REPARSE_POINT,
-         /* inBuffer = */ NULL,
-         /* inBufferSize = */ 0,
-         /* outBuffer = */ reinterpret_cast<LPVOID>(reparseBuffer.data()),
-         /* outBufferSize = */ static_cast<DWORD>(reparseBuffer.size()),
-         /* bytesReturned = */ &bytesReturned,
-         /* overlapped = */ 0) == TRUE;
+      const auto successfullyRetrieved =
+          DeviceIoControl(
+              /* device = */ handle,
+              /* controlCode = */ FSCTL_GET_REPARSE_POINT,
+              /* inBuffer = */ NULL,
+              /* inBufferSize = */ 0,
+              /* outBuffer = */ reinterpret_cast<LPVOID>(reparseBuffer.data()),
+              /* outBufferSize = */ static_cast<DWORD>(reparseBuffer.size()),
+              /* bytesReturned = */ &bytesReturned,
+              /* overlapped = */ 0) == TRUE;
 
       return successfullyRetrieved && bytesReturned;
    }
 
    /**
-   * @returns True if the given file path matches the given reparse tag, and false otherwise. 
-   */
-   bool IsReparseTag(
-      const std::experimental::filesystem::path& path,
-      DWORD targetTag)
+    * @returns True if the given file path matches the given reparse tag, and false otherwise.
+    */
+   bool IsReparseTag(const std::experimental::filesystem::path& path, DWORD targetTag)
    {
       static std::vector<std::byte> buffer{ MAXIMUM_REPARSE_DATA_BUFFER_SIZE };
 
       const auto successfullyRead = ReadReparsePoint(path, buffer);
 
       return successfullyRead
-         ? reinterpret_cast<REPARSE_DATA_BUFFER*>(buffer.data())->ReparseTag == targetTag
-         : false;
+                 ? reinterpret_cast<REPARSE_DATA_BUFFER*>(buffer.data())->ReparseTag == targetTag
+                 : false;
    }
 
    /**
-   * @returns True if the given file path represents a mount point, and false otherwise.
-   *
-   * @note Junctions in Windows are considered mount points.
-   */
+    * @returns True if the given file path represents a mount point, and false otherwise.
+    *
+    * @note Junctions in Windows are considered mount points.
+    */
    bool IsMountPoint(const std::experimental::filesystem::path& path)
    {
       const auto isMountPoint = IsReparseTag(path, IO_REPARSE_TAG_MOUNT_POINT);
@@ -237,8 +232,8 @@ namespace
    }
 
    /**
-   * @returns True if the given file path represents a symlink, and false otherwise.
-   */
+    * @returns True if the given file path represents a symlink, and false otherwise.
+    */
    bool IsSymlink(const std::experimental::filesystem::path& path)
    {
       const auto isSymlink = IsReparseTag(path, IO_REPARSE_TAG_SYMLINK);
@@ -253,29 +248,18 @@ namespace
    }
 
    /**
-   * @returns True is the given file path matches any of the listed reparse tag, and false
-   * otherwise.
-   */
+    * @returns True is the given file path matches any of the listed reparse tag, and false
+    * otherwise.
+    */
    bool IsUnknownReparsePoint(const std::experimental::filesystem::path& path)
    {
       constexpr auto reparseTag =
-         IO_REPARSE_TAG_MOUNT_POINT |
-         IO_REPARSE_TAG_HSM |
-         IO_REPARSE_TAG_DRIVE_EXTENDER |
-         IO_REPARSE_TAG_HSM2 |
-         IO_REPARSE_TAG_SIS |
-         IO_REPARSE_TAG_WIM |
-         IO_REPARSE_TAG_CSV |
-         IO_REPARSE_TAG_DFS |
-         IO_REPARSE_TAG_FILTER_MANAGER |
-         IO_REPARSE_TAG_IIS_CACHE |
-         IO_REPARSE_TAG_DFSR |
-         IO_REPARSE_TAG_DEDUP |
-         IO_REPARSE_TAG_APPXSTRM |
-         IO_REPARSE_TAG_NFS |
-         IO_REPARSE_TAG_FILE_PLACEHOLDER |
-         IO_REPARSE_TAG_DFM |
-         IO_REPARSE_TAG_WOF;
+          IO_REPARSE_TAG_MOUNT_POINT | IO_REPARSE_TAG_HSM | IO_REPARSE_TAG_DRIVE_EXTENDER |
+          IO_REPARSE_TAG_HSM2 | IO_REPARSE_TAG_SIS | IO_REPARSE_TAG_WIM | IO_REPARSE_TAG_CSV |
+          IO_REPARSE_TAG_DFS | IO_REPARSE_TAG_FILTER_MANAGER | IO_REPARSE_TAG_IIS_CACHE |
+          IO_REPARSE_TAG_DFSR | IO_REPARSE_TAG_DEDUP | IO_REPARSE_TAG_APPXSTRM |
+          IO_REPARSE_TAG_NFS | IO_REPARSE_TAG_FILE_PLACEHOLDER | IO_REPARSE_TAG_DFM |
+          IO_REPARSE_TAG_WOF;
 
       const auto isRandomReparse = IsReparseTag(path, reparseTag);
 
@@ -289,8 +273,8 @@ namespace
    }
 
    /**
-   * @returns True if the given path represents a reparse point, and false otherwise.
-   */
+    * @returns True if the given path represents a reparse point, and false otherwise.
+    */
    bool IsReparsePoint(const std::experimental::filesystem::path& path)
    {
       const ScopedHandle handle = OpenReparsePoint(path);
@@ -311,15 +295,13 @@ namespace
    }
 }
 
-DriveScanner::DriveScanner(const std::experimental::filesystem::path& path) :
-   m_rootPath{ path },
-   m_fileTree{ CreateTreeAndRootNode(path) }
+DriveScanner::DriveScanner(const std::experimental::filesystem::path& path)
+    : m_fileTree{ CreateTreeAndRootNode(path) }, m_rootPath{ path }
 {
 }
 
 void DriveScanner::ProcessFile(
-   const std::experimental::filesystem::path& path,
-   Tree<FileInfo>::Node& node) noexcept
+    const std::experimental::filesystem::path& path, Tree<FileInfo>::Node& node) noexcept
 {
    const auto fileSize = ComputeFileSize(path);
    if (fileSize == 0u)
@@ -327,21 +309,17 @@ void DriveScanner::ProcessFile(
       return;
    }
 
-   FileInfo fileInfo
-   {
-      path.filename().stem().wstring(),
-      path.filename().extension().wstring(),
-      fileSize,
-      FileType::REGULAR
-   };
+   FileInfo fileInfo{ path.filename().stem().wstring(),
+                      path.filename().extension().wstring(),
+                      fileSize,
+                      FileType::REGULAR };
 
    const std::lock_guard<decltype(m_mutex)> lock{ m_mutex };
    node.AppendChild(std::move(fileInfo));
 }
 
 void DriveScanner::ProcessDirectory(
-   const std::experimental::filesystem::path& path,
-   Tree<FileInfo>::Node& node) noexcept
+    const std::experimental::filesystem::path& path, Tree<FileInfo>::Node& node) noexcept
 {
    bool isRegularFile = false;
    try
@@ -359,7 +337,9 @@ void DriveScanner::ProcessDirectory(
    {
       ProcessFile(path, node);
    }
-   else if (std::experimental::filesystem::is_directory(path) && !IsSymlink(path) && !IsMountPoint(path))
+   else if (
+       std::experimental::filesystem::is_directory(path) &&
+       !IsReparsePoint(path))
    {
       try
       {
@@ -377,13 +357,10 @@ void DriveScanner::ProcessDirectory(
          return;
       }
 
-      FileInfo directoryInfo
-      {
-         path.filename().wstring(),
-         /* extension = */ L"",
-         DriveScanner::SIZE_UNDEFINED,
-         FileType::DIRECTORY
-      };
+      FileInfo directoryInfo{ path.filename().wstring(),
+                              /* extension = */ L"",
+                              DriveScanner::SIZE_UNDEFINED,
+                              FileType::DIRECTORY };
 
       std::unique_lock<decltype(m_mutex)> lock{ m_mutex };
       auto* const lastChild = node.AppendChild(std::move(directoryInfo));
@@ -395,16 +372,13 @@ void DriveScanner::ProcessDirectory(
 }
 
 void DriveScanner::AddDirectoriesToQueue(
-   std::experimental::filesystem::directory_iterator& itr,
-   Tree<FileInfo>::Node& node) noexcept
+    std::experimental::filesystem::directory_iterator& itr, Tree<FileInfo>::Node& node) noexcept
 {
-   const auto end = std::experimental::filesystem::directory_iterator{ };
+   const auto end = std::experimental::filesystem::directory_iterator{};
    while (itr != end)
    {
-      boost::asio::post(m_threadPool, [&, path = itr->path()] () noexcept
-      {
-         ProcessDirectory(path, node);
-      });
+      boost::asio::post(
+          m_threadPool, [&, path = itr->path() ]() noexcept { ProcessDirectory(path, node); });
 
       ++itr;
    }
@@ -417,18 +391,16 @@ std::shared_ptr<Tree<FileInfo>> DriveScanner::GetTree()
 
 void DriveScanner::Start()
 {
-   Stopwatch<std::chrono::seconds>([&] () noexcept
-   {
-      boost::asio::post(m_threadPool, [&] () noexcept
-      {
-         auto itr = std::experimental::filesystem::directory_iterator{ m_rootPath };
-         AddDirectoriesToQueue(itr, *m_fileTree->GetRoot());
-      });
+   Stopwatch<std::chrono::seconds>(
+       [&]() noexcept {
+          boost::asio::post(m_threadPool, [&]() noexcept {
+             auto itr = std::experimental::filesystem::directory_iterator{ m_rootPath };
+             AddDirectoriesToQueue(itr, *m_fileTree->GetRoot());
+          });
 
-      m_threadPool.join();
-   }, "\nScanned Drive in ");
-
-   const auto treeSize = m_fileTree->Size();
+          m_threadPool.join();
+       },
+       "\nScanned Drive in ");
 
    ComputeDirectorySizes(*m_fileTree);
    PruneEmptyFilesAndDirectories(*m_fileTree);

@@ -34,3 +34,6 @@ Debug
 Release
 .vs
 *.db
+*.psess
+
+*.vspx

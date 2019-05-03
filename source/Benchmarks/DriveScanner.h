@@ -70,7 +70,7 @@ private:
    */
    void ProcessDirectory(
       const std::experimental::filesystem::path& path,
-      Tree<FileInfo>::Node& fileNode) noexcept;
+      Tree<FileInfo>::Node& node) noexcept;
 
    /**
    * @brief Adds directories to thread-pool queue.
@@ -88,5 +88,5 @@ private:
 
    std::mutex m_mutex;
 
-   boost::asio::thread_pool m_threadPool{ 6 };
+   boost::asio::thread_pool m_threadPool{ 4 };
 };
