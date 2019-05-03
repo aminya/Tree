@@ -606,6 +606,38 @@ TEST_CASE("Sibling Iterator")
 
 TEST_CASE("Sorting")
 {
+   SECTION("Preserve Next and Previous Pointers")
+   {
+      Tree<std::string> tree{ "X" };
+
+      tree.GetRoot()->AppendChild("Z");
+      tree.GetRoot()->AppendChild("A");
+
+      REQUIRE(
+          tree.GetRoot()->GetFirstChild()->GetNextSibling()->GetPreviousSibling() ==
+          tree.GetRoot()->GetFirstChild());
+
+      tree.GetRoot()->SortChildren([](const auto& lhs, const auto& rhs) noexcept {
+         return (lhs < rhs);
+      });
+
+      REQUIRE(
+          tree.GetRoot()->GetFirstChild()->GetNextSibling()->GetPreviousSibling() ==
+          tree.GetRoot()->GetFirstChild());
+
+      const std::vector<std::string> expected = { "A", "Z", "X" };
+
+      std::vector<std::string> actual;
+      std::transform(
+          std::begin(tree),
+          std::end(tree),
+          std::back_inserter(actual),
+          [](const auto& node) noexcept { return node.GetData(); });
+
+      VerifyTraversal(expected, actual);
+      VerifyParentIsIdentical(tree);
+   }
+
    SECTION("One Generation of Children")
    {
       Tree<std::string> tree{ "X" };

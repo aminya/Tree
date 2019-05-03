@@ -707,11 +707,6 @@ class Tree<DataType>::Node
             tail = tail->m_nextSibling;
 
             lhs = lhs->m_nextSibling;
-
-            if (lhs)
-            {
-               lhs->m_previousSibling = nullptr;
-            }
          }
          else
          {
@@ -719,38 +714,27 @@ class Tree<DataType>::Node
             tail = tail->m_nextSibling;
 
             rhs = rhs->m_nextSibling;
-
-            if (rhs)
-            {
-               rhs->m_previousSibling = nullptr;
-            }
          }
       }
 
       while (lhs)
       {
+         Node* penultimate = tail;
          tail->m_nextSibling = lhs;
          tail = tail->m_nextSibling;
+         tail->m_previousSibling = penultimate;
 
          lhs = lhs->m_nextSibling;
-
-         if (lhs)
-         {
-            lhs->m_previousSibling = nullptr;
-         }
       }
 
       while (rhs)
       {
+         Node* penultimate = tail;
          tail->m_nextSibling = rhs;
          tail = tail->m_nextSibling;
+         tail->m_previousSibling = penultimate;
 
          rhs = rhs->m_nextSibling;
-
-         if (rhs)
-         {
-            rhs->m_previousSibling = nullptr;
-         }
       }
 
       return result;
