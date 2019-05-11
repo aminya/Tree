@@ -592,9 +592,7 @@ class Tree<DataType>::Node
     *
     * @param[in] comparator          A callable type to be used as the basis for the sorting
     *                                comparison. This type should be equivalent to:
-    *                                   bool comparator(
-    *                                      const Node& lhs,
-    *                                      const Node& rhs);
+    *                                   bool comparator(const Node& lhs, const Node& rhs);
     */
    template <typename ComparatorType>
    void SortChildren(const ComparatorType& comparator) noexcept(noexcept(comparator))
@@ -604,71 +602,70 @@ class Tree<DataType>::Node
          return;
       }
 
-      MergeSort(m_firstChild, comparator);
+      Node* head = MergeSort(m_firstChild, comparator);
+
+      // @todo Set first and last child in constant time.
+      if (head->m_parent)
+      {
+         head->m_parent->m_firstChild = head;
+
+         Node* temp = head;
+         while (temp->m_nextSibling)
+         {
+            temp = temp->m_nextSibling;
+         }
+
+         head->m_parent->m_lastChild = temp;
+      }
    }
 
  private:
+
+   /**
+    * @brief Splits the linked-list of sibling nodes in two.
+    *
+    * @returns The head of the second list.
+    */
+   Node* Split(Node* head)
+   {
+      Node* hare = head;
+      Node* tortoise = head;
+
+      while (hare->m_nextSibling && hare->m_nextSibling->m_nextSibling)
+      {
+         hare = hare->m_nextSibling->m_nextSibling;
+         tortoise = tortoise->m_nextSibling;
+      }
+
+      Node* secondHead = tortoise->m_nextSibling;
+      tortoise->m_nextSibling = nullptr;
+
+      return secondHead;
+   }
+
    /**
     * @brief MergeSort is the main entry point into the merge sort implementation.
+    *
+    * @todo A recursive solution may run out of stack space!
     *
     * @param[in] list                The first Node in the list to be sorted.
     * @param[in] comparator          The comparator function to be called to figure out which node
     *                                is the lesser of the two.
     */
    template <typename ComparatorType>
-   void MergeSort(Node*& list, const ComparatorType& comparator) noexcept(noexcept(comparator))
+   Node* MergeSort(Node*& head, const ComparatorType& comparator) noexcept(noexcept(comparator))
    {
-      if (!list || !list->m_nextSibling)
+      if (!head || !head->m_nextSibling)
       {
-         return;
+         return head;
       }
 
-      Node* root = list;
-      Node* lhs = nullptr;
-      Node* rhs = nullptr;
+      Node* second = Split(head);
 
-      DivideList(root, lhs, rhs);
-
-      assert(lhs);
-      assert(rhs);
-
-      MergeSort(lhs, comparator);
-      MergeSort(rhs, comparator);
-
-      list = MergeSortedHalves(lhs, rhs, comparator);
-   }
-
-   /**
-    * @brief DivideList is a helper function that will divide the specified Node list in two.
-    *
-    * @param[in] root                The root of the Node list to be divided in two.
-    * @param[out] lhs                The first Node of the left hand side list.
-    * @param[out] rhs                The first Node of the right hand side list.
-    */
-   void DivideList(Node* root, Node*& lhs, Node*& rhs) noexcept
-   {
-      if (!root || !root->m_nextSibling)
-      {
-         return;
-      }
-
-      Node* tortoise = root;
-      Node* hare = root->m_nextSibling;
-
-      while (hare)
-      {
-         hare = hare->m_nextSibling;
-         if (hare)
-         {
-            tortoise = tortoise->m_nextSibling;
-            hare = hare->m_nextSibling;
-         }
-      }
-
-      lhs = root;
-      rhs = tortoise->m_nextSibling;
-
-      tortoise->m_nextSibling = nullptr;
+      head = MergeSort(head, comparator);
+      second = MergeSort(second, comparator);
+ 
+      return MergeSortedHalves(head, second, comparator);
    }
 
    /**
@@ -680,64 +677,51 @@ class Tree<DataType>::Node
     * @returns The first node of the merged Node list.
     */
    template <typename ComparatorType>
-   Node* MergeSortedHalves(Node*& lhs, Node*& rhs, const ComparatorType& comparator) noexcept(
+   Node* MergeSortedHalves(Node* lhs, Node* rhs, const ComparatorType& comparator) noexcept(
        noexcept(comparator))
    {
-      Node* result = nullptr;
+      Node* head = nullptr;
       if (comparator(*lhs, *rhs))
       {
-         result = lhs;
+         head = lhs;
          lhs = lhs->m_nextSibling;
       }
       else
       {
-         result = rhs;
+         head = rhs;
          rhs = rhs->m_nextSibling;
       }
 
-      result->m_previousSibling = nullptr;
+      head->m_previousSibling = nullptr;
 
-      Node* tail = result;
+      Node* tail = head;
+      Node* previous = nullptr;
 
       while (lhs && rhs)
       {
+         previous = tail;
+
          if (comparator(*lhs, *rhs))
          {
             tail->m_nextSibling = lhs;
-            tail = tail->m_nextSibling;
-
             lhs = lhs->m_nextSibling;
          }
          else
          {
             tail->m_nextSibling = rhs;
-            tail = tail->m_nextSibling;
-
             rhs = rhs->m_nextSibling;
          }
-      }
 
-      while (lhs)
-      {
-         Node* penultimate = tail;
-         tail->m_nextSibling = lhs;
          tail = tail->m_nextSibling;
-         tail->m_previousSibling = penultimate;
-
-         lhs = lhs->m_nextSibling;
+         tail->m_previousSibling = previous;
       }
 
-      while (rhs)
-      {
-         Node* penultimate = tail;
-         tail->m_nextSibling = rhs;
-         tail = tail->m_nextSibling;
-         tail->m_previousSibling = penultimate;
+      previous = tail;
+      tail->m_nextSibling = lhs ? lhs : rhs;
+      tail = tail->m_nextSibling;
+      tail->m_previousSibling = previous;
 
-         rhs = rhs->m_nextSibling;
-      }
-
-      return result;
+      return head;
    }
 
    /**

@@ -660,6 +660,9 @@ TEST_CASE("Sorting")
          return (lhs < rhs);
       });
 
+      REQUIRE(tree.GetRoot()->GetFirstChild()->GetPreviousSibling() == nullptr);
+      REQUIRE(tree.GetRoot()->GetLastChild()->GetNextSibling() == nullptr);
+
       const std::vector<std::string> expected = { "A", "B", "C", "D", "E", "F", "G",
                                                   "H", "I", "J", "K", "L", "M", "X" };
 
@@ -695,6 +698,9 @@ TEST_CASE("Sorting")
       std::for_each(std::begin(tree), std::end(tree), [](auto& node) noexcept {
          node.SortChildren([](auto& lhs, auto& rhs) noexcept { return lhs < rhs; });
       });
+
+      REQUIRE(tree.GetRoot()->GetFirstChild()->GetPreviousSibling() == nullptr);
+      REQUIRE(tree.GetRoot()->GetLastChild()->GetNextSibling() == nullptr);
 
       const auto sizeAfterSort = tree.Size();
 
